@@ -112,4 +112,4 @@ INSTALLED_APPS = (
 )
 
 MODULE_FMT = 'soc.modules.%s'
-MODULES = []
+MODULES = ['ghop']
