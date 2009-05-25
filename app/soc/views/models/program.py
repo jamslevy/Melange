@@ -52,6 +52,8 @@ from soc.views.helper import widgets
 from soc.views.models import presence
 from soc.views.models import document as document_view
 from soc.views.models import sponsor as sponsor_view
+from soc.views.models import survey as survey_view
+from soc.views.models import midterm as midterm_view
 from soc.views.sitemap import sidebar
 
 import soc.cache.logic
@@ -645,6 +647,8 @@ class View(presence.View):
       if entity.status == 'visible':
         # show the documents for this program, even for not logged in users
         items += document_view.view.getMenusForScope(entity, params)
+        items += survey_view.view.getMenusForScope(entity, params)
+        items += midterm_view.view.getMenusForScope(entity, params)
         items += self._getTimeDependentEntries(entity, params, id, user)
 
       try:
@@ -679,6 +683,18 @@ class View(presence.View):
         # add link to list all Program Document
         items += [(redirects.getListDocumentsRedirect(entity, 'program'),
             "List Documents", 'any_access')]
+        # add link to create a new Program Survey
+        items += [(redirects.getCreateSurveyRedirect(entity, 'program'),
+            "Create a New Survey", 'any_access')]
+        # add link to list all Program Surveys
+        items += [(redirects.getListSurveysRedirect(entity, 'program'),
+            "List Surveys", 'any_access')]
+        # add link to create a new Program Midterm Survey
+        items += [(redirects.getCreateMidtermSurveyRedirect(entity, 'program'),
+            "Create a New Midterm Survey", 'any_access')]
+        # add link to list all Program Midterm  Surveys
+        items += [(redirects.getListMidtermSurveysRedirect(entity, 'program'),
+            "List Midterm Surveys", 'any_access')]
 
       except out_of_band.Error:
         pass
