@@ -345,6 +345,45 @@ def getListDocumentsRedirect(entity, prefix):
   return '/document/list/%s/%s' % (prefix, entity.key().id_or_name())
 
 
+def getCreateSurveyRedirect(entity, prefix):
+  """Returns the redirect for new documents.
+  """
+
+  return '/survey/create/%s/%s' % (prefix, entity.key().id_or_name())
+
+
+def getListSurveysRedirect(entity, prefix):
+  """Returns the redirect for listing documents.
+  """
+
+  return '/survey/list/%s/%s' % (prefix, entity.key().id_or_name())
+
+def getListSurveyResultsRedirect(entity, prefix):
+  """Returns the redirect for listing documents.
+  """
+
+  return '/survey/list_results/%s/%s' % (prefix, entity.key().id_or_name())
+
+def getCreateMidtermSurveyRedirect(entity, prefix):
+  """Returns the redirect for new documents.
+  """
+
+  return '/midterm/create/%s/%s' % (prefix, entity.key().id_or_name())
+
+
+def getListMidtermSurveysRedirect(entity, prefix):
+  """Returns the redirect for listing documents.
+  """
+
+  return '/midterm/list/%s/%s' % (prefix, entity.key().id_or_name())
+
+def getListMidtermSurveyResultsRedirect(entity, prefix):
+  """Returns the redirect for listing documents.
+  """
+
+  return '/midterm/list_results/%s/%s' % (prefix, entity.key().id_or_name())
+
+
 def getToSRedirect(presence):
   """Returns link to 'show' the ToS Document if it exists, None otherwise.
 
