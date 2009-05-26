@@ -62,8 +62,8 @@ class View(base.View):
     rights['create'] = ['checkIsUser']
     rights['edit'] = ['checkIsMidtermSurveyWritable']
     rights['delete'] = ['checkIsMidtermSurveyWritable']
-    rights['list'] = ['checkDocumentList']
-    rights['pick'] = ['checkDocumentPick']
+    rights['list'] = ['checkMidtermList']
+    rights['pick'] = ['checkMidtermPick']
 
     new_params = {}
     new_params['logic'] = midterm_logic
@@ -108,7 +108,7 @@ class View(base.View):
         'clean_content': cleaning.clean_html_content('content'),
         'clean_link_id': cleaning.clean_link_id('link_id'),
         'clean_scope_path': cleaning.clean_scope_path('scope_path'),
-        'clean': cleaning.validate_document_acl(self, True),
+        'clean': cleaning.validate_midterm_acl(self, True),
         }
     new_params['extra_dynaexclude'] = ['author', 'created', 'content',
                                        'home_for', 'modified_by', 'modified',
@@ -119,7 +119,7 @@ class View(base.View):
                                              required=False),
         'last_modified_by': forms.fields.CharField(
                                 widget=widgets.ReadOnlyInput(), required=False),
-        'clean': cleaning.validate_document_acl(self),
+        'clean': cleaning.validate_midterm_acl(self),
         }
     params = dicts.merge(params, new_params)
     super(View, self).__init__(params=params)
@@ -175,15 +175,26 @@ class View(base.View):
     """
 
     user = user_logic.getForCurrentAccount()
+    survey_fields = {}
+    schema = {}
     if not entity:
       fields['author'] = user
     else:
       fields['author'] = entity.author
-      #XXX Check for new fields
-    survey_fields = {}
-    schema = {}
-    #CHARS_PER_LINE = 15 # keep it on the low side to be safe
-    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection')
+      if hasattr(entity, 'this_survey'):
+        _survey = entity.this_survey
+        schema = _survey.get_schema()
+        for prop in _survey.dynamic_properties():
+          survey_fields[prop] = getattr(_survey, prop)
+    deleted = request.POST.get('__deleted__', '')
+    if deleted:
+      deleted = deleted.split(',')
+      for d in deleted:
+        if d in schema:
+          del schema[d]
+        if d in survey_fields:
+          del survey_fields[d]
+    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection', 'pick_multi')
     for key, value in request.POST.items():
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
@@ -202,11 +213,10 @@ class View(base.View):
             schema[field_name]["type"] = type
             if type == "selection":
               value = str(value.split(','))
-            #if type == "long_answer":
-              #schema[field_name]["row_count"] = len(value) / CHARS_PER_LINE
-
-        # set correct answer
-        # number of rows
+            elif type == "pick_multi":
+              # We may get many values for each key
+              value = request.POST.getlist(key)
+              value = [val.replace('id_' + key + '__','') for val in value]
         survey_fields[field_name] = value
     this_survey = midterm_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
@@ -216,8 +226,6 @@ class View(base.View):
       fields['this_survey'] = this_survey
 
     fields['modified_by'] = user
-    # Flush the cache! TODO - Not Working
-    if entity: home.flush(entity)
     super(View, self)._editPost(request, entity, fields)
 
   def _editGet(self, request, entity, form):

@@ -36,9 +36,11 @@ from django.utils.translation import ugettext
 from soc.logic import rights as rights_logic
 from soc.logic import validate
 from soc.logic.models import document as document_logic
+from soc.logic.models import midterm as midterm_logic
 from soc.logic.models.site import logic as site_logic
 from soc.logic.models.user import logic as user_logic
 from soc.models import document as document_model
+from soc.models import midterm as midterm_model
 
 
 DEF_LINK_ID_IN_USE_MSG = ugettext(
@@ -706,6 +708,47 @@ def validate_document_acl(view, creating=False):
   return wrapper
 
 
+def validate_midterm_acl(view, creating=False):
+  """Validates that the document ACL settings are correct.
+  """
+
+  def wrapper(self):
+    """Decorator wrapper method.
+    """
+    cleaned_data = self.cleaned_data
+    read_access = cleaned_data.get('read_access')
+    write_access = cleaned_data.get('write_access')
+
+    if not (read_access and write_access and ('prefix' in cleaned_data)):
+      return cleaned_data
+
+    if read_access != 'public':
+      ordening = midterm_model.Midterm.DOCUMENT_ACCESS
+      if ordening.index(read_access) < ordening.index(write_access):
+        raise forms.ValidationError(
+              "Read access should be less strict than write access.")
+
+    params = view.getParams()
+    rights = params['rights']
+
+    user = user_logic.getForCurrentAccount()
+
+    rights.setCurrentUser(user.account, user)
+
+    prefix = self.cleaned_data['prefix']
+    scope_path = self.cleaned_data['scope_path']
+    acl = midterm_logic.ACLMAP
+    validate_access(self, view, rights, prefix, scope_path, 'read_access', acl)
+    validate_access(self, view, rights, prefix, scope_path, 'write_access', acl)
+
+    if creating and not has_access(rights, 'restricted', scope_path, prefix):
+      raise forms.ValidationError(
+          "You do not have the required access to create this document.")
+
+    return cleaned_data
+
+  return wrapper
+
 def has_access(rights, access_level, scope_path, prefix):
   """Checks whether the current user has the required access.
   """
@@ -720,12 +763,13 @@ def has_access(rights, access_level, scope_path, prefix):
 
   return rights.hasMembership(roles, django_args)
 
-def validate_access(self, view, rights, prefix, scope_path, field):
+def validate_access(self, view, rights, prefix, scope_path, field, acl=None):
   """Validates that the user has access to the ACL for the specified fields.
   """
 
   access_level = self.cleaned_data[field]
 
+  if acl: access_level = acl[access_level]
   if not has_access(rights, access_level, scope_path, prefix):
     self._errors[field] = ErrorList([DEF_NO_RIGHTS_FOR_ACL_MSG])
     del self.cleaned_data[field]

@@ -52,17 +52,20 @@ class SurveyContent(db.Expando):
     schema = self.get_schema()
     for property in self.dynamic_properties():
       # map out the order of the survey fields
-      survey_order[schema[property]["index"]] = property
+      try:
+        survey_order[schema[property]["index"]] = property
+      except KeyError:
+        pass
     return survey_order
-
+    
   def ordered_properties(self):
     properties = []
     survey_order = self.get_survey_order().items()
     for position,key in survey_order:
       properties.insert(position, key)
-    return properties
+    return properties 
 
-
+      
 class Survey(soc.models.work.Work):
   """Model of a survey.
 
@@ -142,13 +145,13 @@ class SurveyRecord(db.Expando):
     Right now it gets all dynamic values, but
     it could also be confined to the SurveyContent entity linked to
     the this_survey entity.
-
+    
     Deprecated Unordered Version
-
+    
     values = []
     for property in self.dynamic_properties():
       values.append(getattr(self, property))
-    return values
+    return values    
     """
 
 

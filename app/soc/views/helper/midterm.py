@@ -21,15 +21,20 @@ __authors__ = [
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
-from soc.views.helper import surveys
-from soc.logic.models.midterm import midterm_results_logic
-from soc.logic import dicts
-from soc.logic.lists import Lists
 from django import forms
 from django.forms import widgets
 from django.template import loader
 
-class MidtermSurveyForm(surveys.SurveyForm):
+from google.appengine.ext.db import djangoforms
+
+from soc.logic import dicts
+from soc.logic.lists import Lists
+from soc.logic.models.user import logic as user_logic
+from soc.logic.models.midterm import midterm_results_logic
+from soc.models.midterm import MidtermRecord
+from soc.models.survey import SurveyContent
+
+class MidtermSurveyForm(djangoforms.ModelForm):
   def __init__(self, *args, **kwargs):
     """ This class is used to produce survey forms for several
     circumstances:
@@ -46,46 +51,72 @@ class MidtermSurveyForm(surveys.SurveyForm):
     that fields are listed in a certain order, an alternative to
     the schema dictionary will have to be used.
     """
-    kwargs['initial'] = {}
-    this_survey = kwargs.get('this_survey', None)
-    survey_record = kwargs.get('survey_record', None)
-    if this_survey:
-      fields = {}
-      survey_order = {}
-      schema = this_survey.get_schema()
-      for property in this_survey.dynamic_properties():
-        if survey_record: # use previously entered value
-          value = getattr(survey_record, property)
-        else: # use prompts set by survey creator
-          value = getattr(this_survey, property)
-        # map out the order of the survey fields
-        survey_order[schema[property]["index"]] = property
-        # correct answers? Necessary for grading
-        if schema[property]["type"] == "long_answer":
-          fields[property] = forms.fields.CharField(
-                                widget=widgets.Textarea()) #custom rows
-          kwargs['initial'][property] = value
-        if schema[property]["type"] == "short_answer":
-          fields[property] = forms.fields.CharField(max_length=40)
-          kwargs['initial'][property] = value
-        if schema[property]["type"] == "selection":
-          these_choices = []
-          # add all properties, but select chosen one
-          options = eval(getattr(this_survey, property))
-          if survey_record:
-            these_choices.append((value, value))
-            options.remove(value)
-          for option in options:
-            these_choices.append((option, option))
-          fields[property] = forms.ChoiceField(choices=tuple(these_choices),
-                                               widget=forms.Select())
-      for position, property in survey_order.items():
-        MidtermSurveyForm.base_fields.insert(position, property, fields[property])
 
+    self.kwargs = kwargs
+    self.this_survey = self.kwargs.get('this_survey', None)
+    self.midterm_record = self.kwargs.get('midterm_record', None)
+    del self.kwargs['this_survey']
+    del self.kwargs['midterm_record']
     super(MidtermSurveyForm, self).__init__(*args, **kwargs)
 
+  def get_fields(self):
+    if not self.this_survey: return
+    kwargs = self.kwargs
+    self.survey_fields = {}
+    schema = self.this_survey.get_schema()
+    for property in self.this_survey.dynamic_properties():
+      if self.midterm_record: # use previously entered value
+        value = getattr(self.midterm_record, property)
+      else: # use prompts set by survey creator
+        value = getattr(self.this_survey, property)
+      if property not in schema: continue
+      # correct answers? Necessary for grading
+      if schema[property]["type"] == "long_answer":
+        self.survey_fields[property] = forms.fields.CharField(
+                                    widget=widgets.Textarea(),initial=value)
+                                    #custom rows
+      if schema[property]["type"] == "short_answer":
+        self.survey_fields[property] = forms.fields.CharField(
+                                    max_length=40,initial=value)
+      if schema[property]["type"] == "selection":
+        these_choices = []
+        # add all properties, but select chosen one
+        options = eval(getattr(self.this_survey, property))
+        if self.midterm_record:
+          these_choices.append((value, value))
+          options.remove(value)
+        for option in options:
+          these_choices.append((option, option))
+        self.survey_fields[property] = forms.ChoiceField(choices=tuple(these_choices),
+                                              widget=forms.Select())
+      if schema[property]["type"] == "pick_multi":
+        if self.midterm_record:
+          # Pass list as 'initial' so MultipleChoiceField checks filled values
+          value = value.split(',')
+        else:
+          value = None
+        these_choices = [(v,v) for v in getattr(self.this_survey, property)]
+        self.survey_fields[property] = forms.MultipleChoiceField(
+            choices=tuple(these_choices),
+            widget=forms.CheckboxSelectMultiple(), initial=value)
 
-class MidtermEditSurvey(surveys.EditSurvey):
+    return self.insert_fields()
+
+  def insert_fields(self):
+    survey_order = self.this_survey.get_survey_order() 
+    for position, property in survey_order.items():
+      self.fields[property] = self.survey_fields[property]
+    return self.fields
+
+  class Meta(object):
+    model = SurveyContent
+    exclude = ['schema']
+
+
+
+
+
+class MidtermEditSurvey(widgets.Widget):
   """Edit Survey, or Create Survey if not this_survey arg given.
   """
 
@@ -94,7 +125,8 @@ class MidtermEditSurvey(surveys.EditSurvey):
   <script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
   """
   QUESTION_TYPES = {"short_answer": "Short Answer", "selection": "Selection",
-                    "long_answer": "Long Answer", }
+                    "long_answer": "Long Answer",
+                    "pick_multi": "Pick Multiple"}
   BUTTON_TEMPLATE = """
   <button id="%(type_id)s" onClick="return false;">Add %(type_name)s Question</button>
   """
@@ -115,9 +147,9 @@ class MidtermEditSurvey(surveys.EditSurvey):
     """ Renders the survey editor widget to HTML
     """
 
-    survey = MidtermSurveyForm(this_survey=self.this_survey, survey_record=None)
-    survey = str(survey)
-    if len(survey) == 0: survey = self.SURVEY_TEMPLATE
+    survey = MidtermSurveyForm(this_survey=self.this_survey, midterm_record=None)
+    survey.get_fields()
+    if len(survey.fields) == 0: survey = self.SURVEY_TEMPLATE
     options = ""
     for type_id, type_name in self.QUESTION_TYPES.items():
       options += self.BUTTON_TEMPLATE % {'type_id': type_id,
@@ -127,7 +159,7 @@ class MidtermEditSurvey(surveys.EditSurvey):
                                  'options_html':options_html}
     return result
 
-class MidtermTakeSurvey(surveys.TakeSurvey):
+class MidtermTakeSurvey(widgets.Widget):
   """Take Survey, or Update Survey.
   """
 
@@ -135,6 +167,7 @@ class MidtermTakeSurvey(surveys.TakeSurvey):
   <table> %(survey)s </table> </div>
   <script type="text/javascript" src="/soc/content/js/take_survey.js"></script>
   """
+
   def render(self, this_survey):
     """Renders survey taking widget to HTML.
 
@@ -148,11 +181,12 @@ class MidtermTakeSurvey(surveys.TakeSurvey):
     """
 
     user = user_logic.getForCurrentAccount()
-    survey_record = MidtermSurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, this_survey.survey_parent.get()
+    midterm_record = MidtermRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                     user, this_survey.midterm_parent.get()
                                     ).get()
-    survey = MidtermSurveyForm(this_survey=this_survey, survey_record=survey_record)
-    if survey_record:
+    survey = MidtermSurveyForm(this_survey=this_survey, midterm_record=midterm_record)
+    survey.get_fields()
+    if midterm_record:
       help_text = "Edit and re-submit this survey."
       status = "edit"
     else:
@@ -163,9 +197,10 @@ class MidtermTakeSurvey(surveys.TakeSurvey):
     return result
 
 
-class MidtermSurveyResults(surveys.SurveyResults):
+class MidtermSurveyResults(widgets.Widget):
   """Render List of Survey Results For Given Survey.
   """
+
   def render(self, this_survey, params, filter=filter, limit=1000, offset=0,
              order=[], idx=0, context={}):
     logic = midterm_results_logic
@@ -188,13 +223,14 @@ class MidtermSurveyResults(surveys.SurveyResults):
       key_order = content.get('key_order')
 
     context['list'] = Lists(contents)
+
     for list in context['list']._contents:
       if len(list['data']) < 1:
         return "<p>No Midterm Results Have Been Submitted</p>"
       list['row'] = 'soc/midterm/list/results_row.html'
       list['heading'] = 'soc/midterm/list/results_heading.html'
       list['description'] = 'Midterm Results:'
-    context['properties'] = this_survey.this_survey.dynamic_properties()
+    context['properties'] = this_survey.this_survey.ordered_properties()
     context['entity_type'] = "Midterm Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Midterm Results"

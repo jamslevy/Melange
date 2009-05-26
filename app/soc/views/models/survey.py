@@ -179,8 +179,23 @@ class View(base.View):
       fields['author'] = user
     else:
       fields['author'] = entity.author
+      if hasattr(entity, 'this_survey'):
+        _survey = entity.this_survey
+        schema = _survey.get_schema()
+        for prop in _survey.dynamic_properties():
+          survey_fields[prop] = getattr(_survey, prop)
+    deleted = request.POST.get('__deleted__', '')
+    if deleted:
+      deleted = deleted.split(',')
+      for d in deleted:
+        if d in schema:
+          del schema[d]
+        if d in survey_fields:
+          del survey_fields[d]
     PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection')
     for key, value in request.POST.items():
+      #XXX: This only adds new fields?
+      # The schema seems to get zapped when a single deletions occurs.
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
         # is needed

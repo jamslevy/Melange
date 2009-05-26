@@ -44,6 +44,7 @@ from soc.views.models import sponsor
 from soc.views.models import student
 from soc.views.models import student_project
 from soc.views.models import student_proposal
+from soc.views.models import survey, midterm
 from soc.views.models import timeline
 from soc.views.models import user
 from soc.views.models import user_self
@@ -93,6 +94,8 @@ class Callback(object):
     self.core.registerSitemapEntry(student.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(student_project.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(student_proposal.view.getDjangoURLPatterns())
+    self.core.registerSitemapEntry(survey.view.getDjangoURLPatterns())
+    self.core.registerSitemapEntry(midterm.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(timeline.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user_self.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user.view.getDjangoURLPatterns())

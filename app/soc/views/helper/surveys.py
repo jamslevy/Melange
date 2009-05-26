@@ -91,7 +91,7 @@ class SurveyForm(djangoforms.ModelForm):
     return self.insert_fields()
 
   def insert_fields(self):
-    survey_order = self.this_survey.get_survey_order()
+    survey_order = self.this_survey.get_survey_order() 
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
     return self.fields
