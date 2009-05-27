@@ -179,7 +179,7 @@ widget.find(":button").click(function(){
 widget.find('a.delete img').click(function(){
 	this_field = $(this).parents('tr:first');
     var deleted_id = $(this_field).find('label').attr('for');
-delete_this = confirm("Are you sure you want to delete this field?");
+delete_this = confirm("Deleting this field will remove all answers submitted for this field. Continue?");
 if (delete_this) {
   var edit_form = $('#EditForm');
   var deleted_field = $('#__deleted__');

@@ -53,8 +53,10 @@ class SurveyForm(djangoforms.ModelForm):
 
     self.kwargs = kwargs
     self.this_survey = self.kwargs.get('this_survey', None)
+    self.this_user = self.kwargs.get('this_user', None)
     self.survey_record = self.kwargs.get('survey_record', None)
     del self.kwargs['this_survey']
+    del self.kwargs['this_user']
     del self.kwargs['survey_record']
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
@@ -94,6 +96,15 @@ class SurveyForm(djangoforms.ModelForm):
     survey_order = self.this_survey.get_survey_order() 
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
+    field_count = len( self.fields.items() )
+    import soc.models.student_project
+    import soc.models.student
+    import soc.models.mentor
+    this_student = soc.models.student.Student
+    if this_user.self.fields.insert(0, 'project', forms.fields.ModelChoiceField(), # queryset=,initial=
+                                              widget=forms.Select()) )    
+    self.fields.insert(field_count + 1, 'pass/fail', 
+    forms.fields.ChoiceField(choices=('pass','fail'), widget=forms.Select() )
     return self.fields
 
   class Meta(object):
@@ -109,7 +120,7 @@ class EditSurvey(widgets.Widget):
   """
 
   WIDGET_HTML = """
-  <div id="survey_widget"><table> %(survey)s </table> %(options_html)s </div>
+  <div class="survey_admin" id="survey_widget"><table> %(survey)s </table> %(options_html)s </div>
   <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
   <script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
   """
@@ -158,7 +169,7 @@ class TakeSurvey(widgets.Widget):
   <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
   """
 
-  def render(self, this_survey):
+  def render(self, user, this_survey, survey_record):
     """Renders survey taking widget to HTML.
 
     Checks if user has already submitted form. If so, show existing form
@@ -169,12 +180,11 @@ class TakeSurvey(widgets.Widget):
     and we can just disable the submit button, and add a check on the
     POST handler. )
     """
-
-    user = user_logic.getForCurrentAccount()
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey.survey_parent.get()
                                     ).get()
-    survey = SurveyForm(this_survey=this_survey, survey_record=survey_record)
+    survey = SurveyForm(this_survey=this_survey, 
+    this_user=user, survey_record=survey_record)
     survey.get_fields()
     if survey_record:
       help_text = "Edit and re-submit this survey."

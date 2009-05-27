@@ -134,6 +134,9 @@ class View(base.View):
     """Performs any required processing to get an entity's public page.
 
     Should return True if the public page should be displayed.
+    
+    Survey "public" pages are access-controlled such that a survey
+    can only be taken by a student or a mentor.  
 
     Args:
       request: the django request object
@@ -141,9 +144,20 @@ class View(base.View):
       context: the context object
     """
 
-    if len(request.POST) == 0: return True
+    # this won't work -- there's *always* a survey entity. We want to 
+    # check if there is a survey record from this user. 
     user = user_logic.getForCurrentAccount()
-    this_survey = survey_logic.create_survey_record(user, entity, request.POST)
+    # DO CHECK
+    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                     user, entity.get() ).get() 
+    if len(request.POST) == 0: # not submitting completed survey record
+      pass
+    else: # submitting a completed survey record
+      context['notice'] = "Survey Submission Saved"
+      survey_record = survey_logic.update_survey_record(user, entity, survey_record, request.POST)
+    from soc.views.helper.surveys import TakeSurvey
+    take_survey = TakeSurvey()
+    context['survey_form'] = take_survey.render(user, this_survey, survey_record)
     return True
 
   def _editContext(self, request, context):
@@ -161,9 +175,21 @@ class View(base.View):
     if not getattr(self, '_entity', None): return
     results = surveys.SurveyResults()
 
-    context['supplemental'] = results.render(self._entity, self._params,
+    context['survey_records'] = results.render(self._entity, self._params,
                                              filter={})
+                                             
     super(View, self)._editContext(request, context)
+
+
+
+  def _constructResponse(self, request, entity, context,
+                         form, params, template=None):
+    template = "soc/survey/edit.html"
+    return super(View, self)._constructResponse(request, entity, context,
+form, params, template=template)
+
+
+
 
   def _editPost(self, request, entity, fields):
     """See base.View._editPost().

@@ -59,12 +59,9 @@ class Logic(work.Logic):
     db.put(this_survey)
     return this_survey
 
-  def create_survey_record(self, user, survey_entity, survey_fields):
-    """ Create a new survey record.
+  def update_survey_record(self, user, survey_entity, survey_record, survey_fields):
+    """ Create a new survey record, or get an existing one.
     """
-
-    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, survey_entity).get()
     if survey_record:
       for prop in survey_record.dynamic_properties():
         delattr(survey_record, prop)

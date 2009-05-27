@@ -28,7 +28,7 @@ from django.utils.translation import ugettext
 import soc.models.linkable
 import soc.models.work
 import soc.models.user
-
+import soc.models.student_projects
 
 class SurveyContent(db.Expando):
   """Expando Class for Surveys
@@ -113,12 +113,6 @@ class Survey(soc.models.work.Work):
   this_survey = db.ReferenceProperty(SurveyContent,
                                      collection_name="survey_parent")
 
-  def take_survey(self):
-    #return self.survey_content # temporary
-    from soc.views.helper.surveys import TakeSurvey
-    survey = TakeSurvey()
-    return survey.render(self.this_survey)
-
 
 class SurveyRecord(db.Expando):
   """Record produced each time Survey is taken.
@@ -136,6 +130,7 @@ class SurveyRecord(db.Expando):
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
                               required=True, collection_name="taken_surveys",
                               verbose_name=ugettext('Created by'))
+  project = db.ReferenceProperty(soc.models.student_project.StudentProject, collection_name="survey_records")
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
 
