@@ -104,7 +104,6 @@ options.find('button').click(function(e){
 			break;
 
 	}
-
 		if (new_field) {
 			
 			field_count = survey.find('tr').length;
@@ -117,6 +116,7 @@ options.find('button').click(function(e){
 													 .append(field_name + ":").end()
 						  .find('td').append(new_field);
 			survey.append(field_template).trigger('init'); 
+
 
 		}
    });

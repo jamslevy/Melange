@@ -76,9 +76,19 @@ class Survey(soc.models.work.Work):
 
   URL_NAME = 'survey'
   # We should use euphemisms like "student" and "mentor" if possible
-  DOCUMENT_ACCESS = ['admin', 'restricted', 'member', 'user']
+  SURVEY_ACCESS = ['admin', 'restricted', 'member', 'user']
+  SURVEY_TAKING_ACCESS = ['student', 'mentor']
+  
+  # This is gsoc specific, so eventually we can subclass this
+  GRADE_OPTIONS = {
+  'midterm':['mid_term_passed', 'mid_term_failed'],
+   'final':['final_passed', 'final_failed'], 
+   'N/A':[] }
+  # there should be a gsoc-specific property determining
+  # whether the survey is for the midterm or the final 
 
   #: field storing the prefix of this document
+  # Should this be removed from surveys?
   prefix = db.StringProperty(default='user', required=True,
       choices=['site', 'club', 'sponsor', 'program', 'org', 'user'],
       verbose_name=ugettext('Prefix'))
@@ -87,21 +97,26 @@ class Survey(soc.models.work.Work):
       ' determines which access scheme is used.')
 
   #: field storing the required access to read this document
-  read_access = db.StringProperty(default='public', required=True,
-      choices=DOCUMENT_ACCESS + ['public'],
-      verbose_name=ugettext('Read Access'))
+  read_access = db.StringProperty(default='restricted', required=True,
+      choices=SURVEY_ACCESS,
+      verbose_name=ugettext('Survey Read Access'))
   read_access.help_text = ugettext(
-      'Indicates the state of the survey, '
-      'determines the access scheme.')
+      'Indicates who can read the results of this survey.')
 
   #: field storing the required access to write to this document
   write_access = db.StringProperty(default='admin', required=True,
-      choices=DOCUMENT_ACCESS,
-      verbose_name=ugettext('Write Access'))
+      choices=SURVEY_ACCESS,
+      verbose_name=ugettext('Survey Write Access'))
   write_access.help_text = ugettext(
-      'Indicates the state of the survey, '
-      'determines the access scheme.')
+      'Indicates who can edit this survey.')
 
+  #: field storing the required access to write to this document
+  taking_access = db.StringProperty(default='mentor', required=True,
+      choices=SURVEY_TAKING_ACCESS,
+      verbose_name=ugettext('Survey Taking Access'))
+  taking_access.help_text = ugettext(
+      'Indicates who can take this survey.')
+      
   #: field storing whether a link to the survey should be featured in
   #: the sidebar menu (and possibly elsewhere); FAQs, Terms of Service,
   #: and the like are examples of "featured" survey
@@ -110,6 +125,7 @@ class Survey(soc.models.work.Work):
   is_featured.help_text = ugettext(
       'Field used to indicate if a Work should be featured, for example,'
       ' in the sidebar menu.')
+  # this property should be named 'survey_content'
   this_survey = db.ReferenceProperty(SurveyContent,
                                      collection_name="survey_parent")
 

@@ -144,7 +144,7 @@ class EditSurvey(widgets.Widget):
     self.survey_form = SurveyForm(survey_content=self.survey_content, 
     this_user=self.this_user, survey_record=None)
     self.survey_form.get_fields()
-    if len(self.survey_form.fields) == 0: survey = self.SURVEY_TEMPLATE
+    if len(self.survey_form.fields) == 0: self.survey_form = self.SURVEY_TEMPLATE
     options = ""
     for type_id, type_name in self.QUESTION_TYPES.items():
       options += self.BUTTON_TEMPLATE % {'type_id': type_id,
@@ -200,35 +200,62 @@ class TakeSurvey(widgets.Widget):
   def get_take_survey_fields(self):
     # these survey fields are only present when taking the survey
     # check for this program - is this student or a mentor? 
-    # I'm assuming for now this is a student
+    # I'm assuming for now this is a student -- this should all be refactored as access 
     field_count = len( self.survey.fields.items() )
-    import soc.models.student_project
-    import soc.models.student
-    import soc.models.mentor
-    import soc.models.program #.Program
-    return
-    this_role = self.this_user.roles 
-    student.user 
-    self.survey_content
+    these_projects = self.get_projects()
+    if not these_projects:
+      # failed access check...no relevant project found
+      return False     
     project_pairs = []
-    # generalize this so it can also be about mentor
-    projects_for_this_program = soc.models.student_project.StudentProject.gql(
-    "WHERE student = :1", this_role).fetch(1000)
-
-    print ""
-    print projects_for_this_program
-    # this is a quick and dirty access check - 
-    for project in projects_for_this_program: # gql for this program!
+    for project in these_projects: # gql for this program!
       project_pairs.append((project.key()), (project.title) )
     self.survey.fields.insert(0, 'project', forms.fields.ChoiceField(
     choices=tuple( project_pairs ), widget=forms.Select() )) 
  
     if self.this_user == "mentor":
-      # field determining if student passes or fails
+      # if this is a mentor, add a field 
+      # determining if student passes or fails
+      # check out GRADE_OPTIONS in Survey model for gsoc-specific
+      # choices to offer ('mid_term_passed', etc.)
       self.survey.fields.insert(field_count + 1, 'pass/fail', 
       forms.fields.ChoiceField(choices=('pass','fail'), widget=forms.Select() ) )
       
-      
+
+  def get_projects(self):
+    """
+    This is a quick attempt to get a working access check,
+    and get a list of projects while we're at it.
+    
+    This method should be migrated to a access module"""
+    import soc.models.student_project
+    import soc.models.student
+    import soc.models.mentor
+    import soc.models.program #.Program
+    # Get program for survey
+    this_program = self.this_survey.scope # or links?
+    # this doesn't work because I haven't figured out
+    # how to use scope to thread from a survey to its
+    # program
+    print ""
+    print this_program
+    # Get role linking survey taker to program
+    # we need to make sure we're only getting roles linked to this program
+    this_role = self.this_user.roles.filter('scope =', program) #program
+    print ""
+    print this_role
+    # check that the survey_taker has a project with taking_access role type
+    # and since mentors can have multiple projects, we're retrieving a list
+    # how do we filter on an arbitrary property name?
+    """"
+    if self.this_survey.taking_access == 'mentor':
+       this_project = this_program.student_projects.filter("mentor = :1", this_role)
+    """
+    # is it better to use filter() or GQL?
+    these_projects = soc.models.student_project.StudentProject.gql(
+    "WHERE mentor = :1 AND program = :2", this_role, this_program).fetch(1000)
+    print ""
+    print these_projects
+          
       
 class SurveyResults(widgets.Widget):
   """Render List of Survey Results For Given Survey.

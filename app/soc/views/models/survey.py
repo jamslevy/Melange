@@ -78,6 +78,7 @@ class View(base.View):
         'link_id', 'scope_path', 'name', 'short_name', 'title',
         'content', 'prefix','read_access','write_access']
 
+    # which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
     new_params['no_create_with_scope'] = True
     new_params['no_create_with_key_fields'] = True
