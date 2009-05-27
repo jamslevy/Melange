@@ -28,7 +28,7 @@ from django.utils.translation import ugettext
 import soc.models.linkable
 import soc.models.work
 import soc.models.user
-import soc.models.student_projects
+import soc.models.student_project
 
 class SurveyContent(db.Expando):
   """Expando Class for Surveys

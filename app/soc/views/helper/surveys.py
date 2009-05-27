@@ -31,6 +31,7 @@ from soc.logic import dicts
 from soc.logic.lists import Lists
 from soc.logic.models.user import logic as user_logic
 from soc.logic.models.survey import results_logic
+from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyContent, SurveyRecord
 
 class SurveyForm(djangoforms.ModelForm):
@@ -52,24 +53,24 @@ class SurveyForm(djangoforms.ModelForm):
     """
 
     self.kwargs = kwargs
-    self.this_survey = self.kwargs.get('this_survey', None)
+    self.survey_content = self.kwargs.get('survey_content', None)
     self.this_user = self.kwargs.get('this_user', None)
     self.survey_record = self.kwargs.get('survey_record', None)
-    del self.kwargs['this_survey']
+    del self.kwargs['survey_content']
     del self.kwargs['this_user']
     del self.kwargs['survey_record']
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
   def get_fields(self):
-    if not self.this_survey: return
+    if not self.survey_content: return
     kwargs = self.kwargs
     self.survey_fields = {}
-    schema = self.this_survey.get_schema()
-    for property in self.this_survey.dynamic_properties():
+    schema = self.survey_content.get_schema()
+    for property in self.survey_content.dynamic_properties():
       if self.survey_record: # use previously entered value
         value = getattr(self.survey_record, property)
       else: # use prompts set by survey creator
-        value = getattr(self.this_survey, property)
+        value = getattr(self.survey_content, property)
       if property not in schema: continue
       # correct answers? Necessary for grading
       if schema[property]["type"] == "long_answer":
@@ -82,7 +83,7 @@ class SurveyForm(djangoforms.ModelForm):
       if schema[property]["type"] == "selection":
         these_choices = []
         # add all properties, but select chosen one
-        options = eval(getattr(self.this_survey, property))
+        options = eval(getattr(self.survey_content, property))
         if self.survey_record:
           these_choices.append((value, value))
           options.remove(value)
@@ -93,19 +94,12 @@ class SurveyForm(djangoforms.ModelForm):
     return self.insert_fields()
 
   def insert_fields(self):
-    survey_order = self.this_survey.get_survey_order() 
+    survey_order = self.survey_content.get_survey_order()
+    # first, insert dynamic survey fields 
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
-    field_count = len( self.fields.items() )
-    import soc.models.student_project
-    import soc.models.student
-    import soc.models.mentor
-    this_student = soc.models.student.Student
-    if this_user.self.fields.insert(0, 'project', forms.fields.ModelChoiceField(), # queryset=,initial=
-                                              widget=forms.Select()) )    
-    self.fields.insert(field_count + 1, 'pass/fail', 
-    forms.fields.ChoiceField(choices=('pass','fail'), widget=forms.Select() )
     return self.fields
+
 
   class Meta(object):
     model = SurveyContent
@@ -138,23 +132,25 @@ class EditSurvey(widgets.Widget):
 
   def __init__(self, *args, **kwargs):
     """Defines the name, key_name and model for this entity."""
-    self.this_survey = kwargs.get('this_survey', None)
-    if self.this_survey: del kwargs['this_survey']
+    self.survey_content = kwargs.get('survey_content', None)
+    self.this_user = user_logic.getForCurrentAccount()
+    if self.survey_content: del kwargs['survey_content']
     super(EditSurvey, self).__init__(*args, **kwargs)
 
   def render(self, name, value, attrs=None):
     """ Renders the survey editor widget to HTML
     """
 
-    survey = SurveyForm(this_survey=self.this_survey, survey_record=None)
-    survey.get_fields()
-    if len(survey.fields) == 0: survey = self.SURVEY_TEMPLATE
+    self.survey_form = SurveyForm(survey_content=self.survey_content, 
+    this_user=self.this_user, survey_record=None)
+    self.survey_form.get_fields()
+    if len(self.survey_form.fields) == 0: survey = self.SURVEY_TEMPLATE
     options = ""
     for type_id, type_name in self.QUESTION_TYPES.items():
       options += self.BUTTON_TEMPLATE % {'type_id': type_id,
                                          'type_name': type_name}
     options_html = self.OPTIONS_HTML % {'options': options}
-    result = self.WIDGET_HTML % {'survey': str(survey),
+    result = self.WIDGET_HTML % {'survey': str(self.survey_form),
                                  'options_html':options_html}
     return result
 
@@ -169,7 +165,10 @@ class TakeSurvey(widgets.Widget):
   <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
   """
 
-  def render(self, user, this_survey, survey_record):
+  def __init__(self, **kwargs):
+    self.this_user = kwargs.get('user', None)
+    
+  def render(self, survey_content, survey_record):
     """Renders survey taking widget to HTML.
 
     Checks if user has already submitted form. If so, show existing form
@@ -180,23 +179,57 @@ class TakeSurvey(widgets.Widget):
     and we can just disable the submit button, and add a check on the
     POST handler. )
     """
+    self.survey_content = survey_content
+    self.this_survey = self.survey_content.survey_parent.get()
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, this_survey.survey_parent.get()
-                                    ).get()
-    survey = SurveyForm(this_survey=this_survey, 
-    this_user=user, survey_record=survey_record)
-    survey.get_fields()
+                                     self.this_user, self.this_survey).get()
+    self.survey = SurveyForm(survey_content=survey_content, 
+    this_user=self.this_user, survey_record=survey_record)
+    self.survey.get_fields()
+    self.get_take_survey_fields()
     if survey_record:
       help_text = "Edit and re-submit this survey."
       status = "edit"
     else:
       help_text = "Please complete this survey."
       status = "create"
-    result = self.WIDGET_HTML % {'survey': str(survey), 'help_text': help_text,
+    result = self.WIDGET_HTML % {'survey': str(self.survey), 'help_text': help_text,
                                  'status': status}
     return result
 
+  def get_take_survey_fields(self):
+    # these survey fields are only present when taking the survey
+    # check for this program - is this student or a mentor? 
+    # I'm assuming for now this is a student
+    field_count = len( self.survey.fields.items() )
+    import soc.models.student_project
+    import soc.models.student
+    import soc.models.mentor
+    import soc.models.program #.Program
+    return
+    this_role = self.this_user.roles 
+    student.user 
+    self.survey_content
+    project_pairs = []
+    # generalize this so it can also be about mentor
+    projects_for_this_program = soc.models.student_project.StudentProject.gql(
+    "WHERE student = :1", this_role).fetch(1000)
 
+    print ""
+    print projects_for_this_program
+    # this is a quick and dirty access check - 
+    for project in projects_for_this_program: # gql for this program!
+      project_pairs.append((project.key()), (project.title) )
+    self.survey.fields.insert(0, 'project', forms.fields.ChoiceField(
+    choices=tuple( project_pairs ), widget=forms.Select() )) 
+ 
+    if self.this_user == "mentor":
+      # field determining if student passes or fails
+      self.survey.fields.insert(field_count + 1, 'pass/fail', 
+      forms.fields.ChoiceField(choices=('pass','fail'), widget=forms.Select() ) )
+      
+      
+      
 class SurveyResults(widgets.Widget):
   """Render List of Survey Results For Given Survey.
   """

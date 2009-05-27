@@ -1,6 +1,6 @@
    
-var DEFAULT_LONG_ANSWER_TEXT = 'Write a Custom Prompt...';
-var DEFAULT_SHORT_ANSWER_TEXT = 'Write a Custom Prompt...';
+var DEFAULT_LONG_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
+var DEFAULT_SHORT_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
 var DEFAULT_OPTION_TEXT = 'Add A New Option...';
 var SURVEY_PREFIX = 'survey__';
 var min_rows = 10;
@@ -80,8 +80,8 @@ widget.find('label').prepend(del_el).end()
 options.find('button').click(function(e){
 
 	var field_template =  $("<tr><th><label>" + del_el + "</label></th><td>  </td></tr>");
-	var field_name = prompt('enter a field name');
-	if (!field_name) return alert('invalid field name');
+	var field_name = prompt('Enter a label for this question');
+	if (!field_name) return alert('invalid label name');
 	new_field = false;
 	var type = $(this).attr('id') + "__";
 

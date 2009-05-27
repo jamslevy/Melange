@@ -31,7 +31,7 @@ from soc.logic import cleaning
 from soc.logic import dicts
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
-
+import soc.models.survey
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import redirects
@@ -146,18 +146,19 @@ class View(base.View):
 
     # this won't work -- there's *always* a survey entity. We want to 
     # check if there is a survey record from this user. 
+    this_survey = entity
     user = user_logic.getForCurrentAccount()
     # DO CHECK
-    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, entity.get() ).get() 
+    survey_record = soc.models.survey.SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                     user, this_survey ).get() 
     if len(request.POST) == 0: # not submitting completed survey record
       pass
     else: # submitting a completed survey record
       context['notice'] = "Survey Submission Saved"
-      survey_record = survey_logic.update_survey_record(user, entity, survey_record, request.POST)
+      survey_record = survey_logic.update_survey_record(user, this_survey, survey_record, request.POST)
     from soc.views.helper.surveys import TakeSurvey
-    take_survey = TakeSurvey()
-    context['survey_form'] = take_survey.render(user, this_survey, survey_record)
+    take_survey = TakeSurvey(user = user)
+    context['survey_form'] = take_survey.render(this_survey.this_survey, survey_record)
     return True
 
   def _editContext(self, request, context):
@@ -256,7 +257,7 @@ form, params, template=template)
 
     self._entity = entity
     form.fields['survey_content'] = forms.fields.CharField(
-        widget=surveys.EditSurvey(this_survey=entity.this_survey),
+        widget=surveys.EditSurvey(survey_content=entity.this_survey),
         required=False)
     form.fields['created_by'].initial = entity.author.name
     form.fields['last_modified_by'].initial = entity.modified_by.name
