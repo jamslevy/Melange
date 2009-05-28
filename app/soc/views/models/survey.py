@@ -132,12 +132,11 @@ class View(base.View):
                                   params=params, filter=kwargs)
 
   def _public(self, request, entity, context):
-    """Performs any required processing to get an entity's public page.
-
-    Should return True if the public page should be displayed.
+    """
     
-    Survey "public" pages are access-controlled such that a survey
-    can only be taken by a student or a mentor.  
+    For surveys, the "public" page is actually the access-protected 
+    survey-taking page. We should use a different method name just to 
+    make this clear. 
 
     Args:
       request: the django request object
@@ -149,7 +148,13 @@ class View(base.View):
     # check if there is a survey record from this user. 
     this_survey = entity
     user = user_logic.getForCurrentAccount()
-    # DO CHECK
+    # Check: Are we already passed the deadline?
+    import datettime
+    if this_survey.deadline and datetime.datetime.now() > this_survey.deadline:
+      # if it's after the deadline, should the default behavior be to render the survey
+      # but to disable submission, or just show a notice with no survey form?
+      context["notice"] = "The Deadline For This Survey Has Passed"
+      return True
     survey_record = soc.models.survey.SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey ).get() 
     if len(request.POST) == 0: # not submitting completed survey record
@@ -184,6 +189,7 @@ class View(base.View):
 
 
 
+  # this should just be for creating/editing survey!!!
   def _constructResponse(self, request, entity, context,
                          form, params, template=None):
     template = "soc/survey/edit.html"

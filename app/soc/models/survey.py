@@ -77,9 +77,10 @@ class Survey(soc.models.work.Work):
   URL_NAME = 'survey'
   # We should use euphemisms like "student" and "mentor" if possible
   SURVEY_ACCESS = ['admin', 'restricted', 'member', 'user']
-  SURVEY_TAKING_ACCESS = ['student', 'mentor']
   
-  # This is gsoc specific, so eventually we can subclass this
+  
+  # These are gsoc specific, so eventually we can subclass this
+  SURVEY_TAKING_ACCESS = ['student', 'mentor']
   GRADE_OPTIONS = {
   'midterm':['mid_term_passed', 'mid_term_failed'],
    'final':['final_passed', 'final_failed'], 
@@ -125,6 +126,14 @@ class Survey(soc.models.work.Work):
   is_featured.help_text = ugettext(
       'Field used to indicate if a Work should be featured, for example,'
       ' in the sidebar menu.')
+
+  # deadline for taking survey
+  deadline = db.DateTimeProperty(required=False)
+  deadline.help_text = ugettext(
+      'Indicates a date after which this survey'
+      ' cannot be taken.')
+
+
   # this property should be named 'survey_content'
   this_survey = db.ReferenceProperty(SurveyContent,
                                      collection_name="survey_parent")
