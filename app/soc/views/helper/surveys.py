@@ -213,14 +213,15 @@ class TakeSurvey(widgets.Widget):
     #insert a select field with options for each project
     for project in these_projects: 
       project_pairs.append((project.key()), (project.title) )
+    # add select field containing list of projects 
     self.survey.fields.insert(0, 'project', forms.fields.ChoiceField(
     choices=tuple( project_pairs ), widget=forms.Select() )) 
  
     if self.this_user == "mentor":
       # if this is a mentor, add a field 
       # determining if student passes or fails
-      # check out GRADE_OPTIONS in Survey model for gsoc-specific
-      # choices to offer ('mid_term_passed', etc.)
+      # Activate grades handler should determine whether new status
+      # is midterm_passed, final_passed, etc. 
       self.survey.fields.insert(field_count + 1, 'pass/fail', 
       forms.fields.ChoiceField(choices=('pass','fail'), widget=forms.Select() ) )
       
@@ -237,8 +238,7 @@ class TakeSurvey(widgets.Widget):
 
 
     # check that the survey_taker has a project with taking_access role type
-    # and since mentors can have multiple projects, we're retrieving a list
-    # can we generate query string based on taking_access property?
+    # these queries aren't yet properly working 
     
     if self.this_survey.taking_access == 'mentor':
       import soc.models.mentor
@@ -256,6 +256,7 @@ class TakeSurvey(widgets.Widget):
       ).filter("user=", self.this_user # should filter on user key
       ).filter("_program=",this_program.key()
       ).get()
+      if not this_student: return False
       these_projects = soc.models.student_project.StudentProject.filter(
       "student=", this_student).filter("program=",this_program).fetch(1000)
       
