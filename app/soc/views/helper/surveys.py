@@ -186,7 +186,10 @@ class TakeSurvey(widgets.Widget):
     self.survey = SurveyForm(survey_content=survey_content, 
     this_user=self.this_user, survey_record=survey_record)
     self.survey.get_fields()
-    self.get_take_survey_fields()
+    if self.this_survey.taking_access != "everyone":
+      # the access check component should be refactored out
+      role_fields = self.get_role_specific_fields()
+      if not role_fields: return False
     if survey_record:
       help_text = "Edit and re-submit this survey."
       status = "edit"
@@ -197,7 +200,7 @@ class TakeSurvey(widgets.Widget):
                                  'status': status}
     return result
 
-  def get_take_survey_fields(self):
+  def get_role_specific_fields(self):
     # these survey fields are only present when taking the survey
     # check for this program - is this student or a mentor? 
     # I'm assuming for now this is a student -- this should all be refactored as access 
@@ -207,7 +210,8 @@ class TakeSurvey(widgets.Widget):
       # failed access check...no relevant project found
       return False     
     project_pairs = []
-    for project in these_projects: # gql for this program!
+    #insert a select field with options for each project
+    for project in these_projects: 
       project_pairs.append((project.key()), (project.title) )
     self.survey.fields.insert(0, 'project', forms.fields.ChoiceField(
     choices=tuple( project_pairs ), widget=forms.Select() )) 
@@ -227,34 +231,37 @@ class TakeSurvey(widgets.Widget):
     and get a list of projects while we're at it.
     
     This method should be migrated to a access module"""
-    import soc.models.student_project
-    import soc.models.student
-    import soc.models.mentor
-    import soc.models.program #.Program
-    # Get program for survey
-    this_program = self.this_survey.scope # or links?
-    # this doesn't work because I haven't figured out
-    # how to use scope to thread from a survey to its
-    # program
-    print ""
-    print this_program
+    from soc.logic.models.survey import logic as survey_logic
+    this_program = survey_logic.getProgram(self.this_survey)
     # Get role linking survey taker to program
-    # we need to make sure we're only getting roles linked to this program
-    this_role = self.this_user.roles.filter('scope =', program) #program
-    print ""
-    print this_role
+
+
     # check that the survey_taker has a project with taking_access role type
     # and since mentors can have multiple projects, we're retrieving a list
-    # how do we filter on an arbitrary property name?
-    """"
+    # can we generate query string based on taking_access property?
+    
     if self.this_survey.taking_access == 'mentor':
-       this_project = this_program.student_projects.filter("mentor = :1", this_role)
-    """
-    # is it better to use filter() or GQL?
-    these_projects = soc.models.student_project.StudentProject.gql(
-    "WHERE mentor = :1 AND program = :2", this_role, this_program).fetch(1000)
-    print ""
-    print these_projects
+      import soc.models.mentor
+      this_mentor = soc.models.mentor.Mentor.all(
+      ).filter("user=", self.this_user # should filter on user key
+      ).filter("_program=",this_program.key()
+      ).get()
+      if not this_mentor: return False
+      these_projects = soc.models.student_project.StudentProject.filter(
+      "mentor=", this_mentor).filter("program=",this_program).fetch(1000)
+      
+    if self.this_survey.taking_access == 'student':
+      import soc.models.student
+      this_student = soc.models.student.Student.all(
+      ).filter("user=", self.this_user # should filter on user key
+      ).filter("_program=",this_program.key()
+      ).get()
+      these_projects = soc.models.student_project.StudentProject.filter(
+      "student=", this_student).filter("program=",this_program).fetch(1000)
+      
+      
+    if len(these_projects) == 0: return False
+    else: return these_projects
           
       
 class SurveyResults(widgets.Widget):

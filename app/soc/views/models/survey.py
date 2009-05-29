@@ -148,11 +148,10 @@ class View(base.View):
     # check if there is a survey record from this user. 
     this_survey = entity
     user = user_logic.getForCurrentAccount()
-    # Check: Are we already passed the deadline?
-    import datettime
+    
+    import datetime
     if this_survey.deadline and datetime.datetime.now() > this_survey.deadline:
-      # if it's after the deadline, should the default behavior be to render the survey
-      # but to disable submission, or just show a notice with no survey form?
+      # Are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
       return True
     survey_record = soc.models.survey.SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
@@ -189,9 +188,10 @@ class View(base.View):
 
 
 
-  # this should just be for creating/editing survey!!!
+  
   def _constructResponse(self, request, entity, context,
                          form, params, template=None):
+    # this is just for creating/editing survey
     template = "soc/survey/edit.html"
     return super(View, self)._constructResponse(request, entity, context,
 form, params, template=template)
@@ -205,7 +205,6 @@ form, params, template=template)
     Processes POST request items to add new dynamic field names,
     question types, and default prompt values to SurveyContent model.
     """
-
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
@@ -260,7 +259,9 @@ form, params, template=template)
 
   def _editGet(self, request, entity, form):
     """See base.View._editGet().
+    This is only for editing existing surveys
     """
+
 
     self._entity = entity
     form.fields['survey_content'] = forms.fields.CharField(
@@ -272,13 +273,8 @@ form, params, template=template)
     super(View, self)._editGet(request, entity, form)
 
   def getMenusForScope(self, entity, params):
-    """Returns the featured menu items for one specifc entity.
-
-    A link to the home page of the specified entity is also included.
-
-    Args:
-      entity: the entity for which the entry should be constructed
-      params: a dict with params for this View.
+    """
+    From Document view - needed for surveys?
     """
 
     filter = {

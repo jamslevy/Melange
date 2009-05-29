@@ -17,5 +17,13 @@ limitations under the License.
 {{ block.super }}
 {% if survey_records %}
 {{ survey_records|safe }}
+
+{% block submit_buttons %}
+{{ block.super }}
+   <td>
+    <input {% if passed_deadline %}disabled=TRUE{% endif %} type="button" onclick="location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" value="Activate Grades"/>
+   </td>
+{% endblock %}
+
 {% endif %}
 {% endblock %}

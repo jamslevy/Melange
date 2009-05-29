@@ -24,7 +24,6 @@ __authors__ = [
 from google.appengine.ext import db
 
 from soc.cache import sidebar
-from soc.cache import home
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
 from soc.models.survey import SurveyContent, Survey, SurveyRecord
@@ -71,6 +70,15 @@ class Logic(work.Logic):
       setattr(survey_record, name, value)
     db.put(survey_record)
     return survey_record
+
+
+  def getProgram(self, survey):
+    """ get program for a survey
+    """
+    import soc.models.program
+    return soc.models.program.Program.get_by_key_name(survey.scope_path)
+    
+
 
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.

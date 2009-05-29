@@ -662,17 +662,34 @@ div #survey_widget.survey_admin {
 margin-left:-100px;
 }
 
-div #survey_options {
-  margin: 20px 0 0 0;
+div #survey_widget th, div #survey_widget td {
+padding-top:15px;
 }
+
+/* fields */
+
+div #survey_widget textarea {
+  padding: 10px;
+  width:300px;
+}
+
+div #survey_widget input {
+width:320px;
+}
+
+div #survey_widget select {
+width:325px;
+}
+
+/* options */
 
 div #survey_options button {
   display: block;
   margin: 10px 0 0;
 }
 
-div #survey_widget textarea {
-  padding: 10px;
+div #survey_options {
+  margin: 20px 0 0 0;
 }
 
 div #survey_widget a.delete {
@@ -684,6 +701,6 @@ div #survey_widget label {
   max-width: 180px;
 }
 
-div #survey_widget input {
-width:250px;
+div #survey_widget tr.role-specific label{
+color:#666666;
 }

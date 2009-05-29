@@ -72,6 +72,12 @@ class Survey(soc.models.work.Work):
   This model describes meta-information and permissions.
 
   The actual questions of the survey are contained in the SurveyContent entity.
+  
+  Right now, this model has several properties from Document and it is unclear
+  if they are necessary.
+  
+  The inherited scope property is used to reference to a program.
+  Would it be more clear if a 'program' property were used? 
   """
 
   URL_NAME = 'survey'
@@ -80,7 +86,7 @@ class Survey(soc.models.work.Work):
   
   
   # These are gsoc specific, so eventually we can subclass this
-  SURVEY_TAKING_ACCESS = ['student', 'mentor']
+  SURVEY_TAKING_ACCESS = ['student', 'mentor', 'everyone']
   GRADE_OPTIONS = {
   'midterm':['mid_term_passed', 'mid_term_failed'],
    'final':['final_passed', 'final_failed'], 
@@ -112,7 +118,7 @@ class Survey(soc.models.work.Work):
       'Indicates who can edit this survey.')
 
   #: field storing the required access to write to this document
-  taking_access = db.StringProperty(default='mentor', required=True,
+  taking_access = db.StringProperty(default='student', required=True,
       choices=SURVEY_TAKING_ACCESS,
       verbose_name=ugettext('Survey Taking Access'))
   taking_access.help_text = ugettext(
@@ -128,6 +134,7 @@ class Survey(soc.models.work.Work):
       ' in the sidebar menu.')
 
   # deadline for taking survey
+  # default should be one week ahead
   deadline = db.DateTimeProperty(required=False)
   deadline.help_text = ugettext(
       'Indicates a date after which this survey'

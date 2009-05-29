@@ -3,10 +3,13 @@ var DEFAULT_LONG_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
 var DEFAULT_SHORT_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
 var DEFAULT_OPTION_TEXT = 'Add A New Option...';
 var SURVEY_PREFIX = 'survey__';
+
 var min_rows = 10;
 max_rows = min_rows * 2;
     
    
+ 
+
     
     
    $(function(){
@@ -62,11 +65,12 @@ var survey = widget.find('tbody:first');
 var options = widget.find('#survey_options');
 
    
-function renderHTML(){   
+function renderHTML(){
+  // render existing survey forms
 widget.find('label').prepend(del_el).end()
- .find('select').append(default_option)
-				.each(function(){
-				$(this).attr('name', SURVEY_PREFIX + $(this).getPosition() + 'selection__' + $(this).attr('name') ) });
+      .find('select').append(default_option)
+      .each(function(){
+      $(this).attr('name', SURVEY_PREFIX + $(this).getPosition() + 'selection__' + $(this).attr('name') ) });
 
  widget.find('input').each(function(){
  $(this).attr('name', SURVEY_PREFIX + $(this).getPosition() + 'short_answer__' + $(this).attr('name') ) });
@@ -76,15 +80,18 @@ widget.find('label').prepend(del_el).end()
  // TODO: replace scrollbar with jquery autogrow
  .attr('overflow', 'auto'); });
 }
+
+
    
 options.find('button').click(function(e){
-
+  // Choose a field type
 	var field_template =  $("<tr><th><label>" + del_el + "</label></th><td>  </td></tr>");
 	var field_name = prompt('Enter a label for this question');
 	if (!field_name) return alert('invalid label name');
 	new_field = false;
 	var type = $(this).attr('id') + "__";
 
+	// create the HTML for the field
 	switch($(this).attr('id')){
 		case "short_answer":  
 			var new_field = "<input type='text'/>";
@@ -105,7 +112,7 @@ options.find('button').click(function(e){
 
 	}
 		if (new_field) {
-			
+			// render HTML 
 			field_count = survey.find('tr').length;
 			new_field_count = field_count + 1 + '__';
 			new_field = $(new_field);
@@ -131,7 +138,9 @@ options.find('button').click(function(e){
 */
   
 survey.bind('init', function(){
-
+  // unnecessarily redundant
+  // this should be refactored as a jQuery function that acts on only a single field
+  // and it should be merged with renderHTML since they have comparable functionality
 
 widget.find('input').each(function(){ 
 if ($(this).val().length < 1 | $(this).val() == DEFAULT_SHORT_ANSWER_TEXT) $(this).preserveDefaultText(DEFAULT_SHORT_ANSWER_TEXT); 
@@ -147,6 +156,7 @@ if ($(this).val().length < 1 | $(this).val() == DEFAULT_LONG_ANSWER_TEXT) $(this
 widget.find('select').change(function(){
 
 if ($(this).find('option:selected').text() == DEFAULT_OPTION_TEXT) {
+  // create a new option for selection field
 var option_name = prompt("Name the new option");
 if (option_name == null) return false; if (option_name.length < 1) return false;
 $(this).prepend("<option>" + option_name + "</option>").find('option').each(function(){
@@ -177,6 +187,7 @@ widget.find(":button").click(function(){
 });
 
 widget.find('a.delete img').click(function(){
+  // delete a field
 	this_field = $(this).parents('tr:first');
     var deleted_id = $(this_field).find('label').attr('for');
 delete_this = confirm("Deleting this field will remove all answers submitted for this field. Continue?");
@@ -196,6 +207,49 @@ if (delete_this) {
 }
 });
 
+
+
+/* GSOC ROLE-SPECIFIC FIELD PLUGIN
+ * Choice between student/mentor renders required GSOC specific fields
+ */
+ 
+var taking_access_field = $('select#id_taking_access');
+ 
+taking_access_field.change(function(){
+  console.log('p');
+ var role_type = $(this).val();
+ addRoleFields(role_type);
+	});
+
+ 
+var addRoleFields = function(role_type){
+   // these should ideally be generated with django forms
+// TODO: apply info tooltips
+var CHOOSE_A_PROJECT_FIELD = '<tr class="role-specific"><th><label>Choose Project:</label></th><td> <select disabled=TRUE id="id_survey__NA__selection__project" name="survey__1__selection__see"><option>Survey Taker\'s Projects For This Program</option></select> </td></tr>';
+var CHOOSE_A_GRADE_FIELD =  '<tr class="role-specific"><th><label>Assign Grade:</label></th><td> <select disabled=TRUE id="id_survey__NA__selection__grade" name="survey__1__selection__see"><option>Pass/Fail</option></select> </td></tr>';
+
+  // flush existing role-specific fields
+  var role_specific_fields = survey.find('tr.role-specific');
+  role_specific_fields.remove();
+  
+      switch(role_type){
+      case "mentor":  
+        survey.prepend(CHOOSE_A_GRADE_FIELD);
+        survey.prepend(CHOOSE_A_PROJECT_FIELD);
+        break;
+
+      case "student": 
+        survey.prepend(CHOOSE_A_PROJECT_FIELD);
+        break;
+
+   };
+
+};
+
+// run on page load
+addRoleFields( taking_access_field.val() );
+
+
 }).trigger('init');
 
 
@@ -206,7 +260,10 @@ if (delete_this) {
 
 $('form').bind('submit', function(){
 
-
+/* 
+ * get rid of role-specific fields
+ */
+survey.find('tr.role-specific').remove();
  
 /*
  * Save survey content html from editPost 
@@ -231,23 +288,21 @@ $(this).find("#id_survey_html").attr('value', widget.html());
 		
 
 
+	// don't save default value
 	widget.find('input').each(function(){ 
 	if ( $(this).val() == DEFAULT_SHORT_ANSWER_TEXT) $(this).val('');
 	}); 
 
+	// don't save default value
 	widget.find('textarea').each(function(){ 
 	if ($(this).val() == DEFAULT_LONG_ANSWER_TEXT) $(this).val('');
 	}); 
 
-	$('input#id_s_html').val(widget.find('div#survey_options').remove().end().html()); // only needed for HTML
+	// get rid of the options
+	$('input#id_s_html').val(widget.find('div#survey_options').remove().end().html()); 
 
 });
 
-
-// prevent export if there are no results
-var exprtbtn = $('input[value="Export"]');
-if ($('div.list').length < 1) exprtbtn.hide();
-  
   
   
   

@@ -24,7 +24,7 @@ limitations under the License.
 {% block body %}
 <div id="created">Last modified on {{ entity.modified }} by {{ entity.modified_by.name }}</div>
 
-
+{% if survey_form %}
 <form method="post">
 
 {{ survey_form|safe }}
@@ -38,5 +38,5 @@ limitations under the License.
 </table>
 
 </form>
-
+{% endif %}
 {% endblock %}
