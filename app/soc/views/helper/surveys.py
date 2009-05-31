@@ -115,8 +115,6 @@ class EditSurvey(widgets.Widget):
 
   WIDGET_HTML = """
   <div class="survey_admin" id="survey_widget"><table> %(survey)s </table> %(options_html)s </div>
-  <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
-  <script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
   """
   QUESTION_TYPES = {"short_answer": "Short Answer", "selection": "Selection",
                     "long_answer": "Long Answer", }
@@ -161,8 +159,6 @@ class TakeSurvey(widgets.Widget):
 
   WIDGET_HTML = """ %(help_text)s <div class="%(status)s" id="survey_widget">
   <table> %(survey)s </table> </div>
-  <script type="text/javascript" src="/soc/content/js/take_survey.js"></script>
-  <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
   """
 
   def __init__(self, **kwargs):

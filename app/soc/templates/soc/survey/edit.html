@@ -4,7 +4,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
 
+{% block scripts %}
+{{ block.super }}
+<script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
+<script type="text/javascript" src="/soc/content/js/default-text.js"></script>
+<script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
+{% endblock %}
+
+
 {% block body %}
 {{ block.super }}
 {% if survey_records %}
@@ -20,9 +28,9 @@ limitations under the License.
 
 {% block submit_buttons %}
 {{ block.super }}
-   <td>
-    <input {% if passed_deadline %}disabled=TRUE{% endif %} type="button" onclick="location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" value="Activate Grades"/>
-   </td>
+ <td>
+  <input {% if passed_deadline %}disabled=TRUE{% endif %} type="button" onclick="location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" value="Activate Grades"/>
+ </td>
 {% endblock %}
 
 {% endif %}

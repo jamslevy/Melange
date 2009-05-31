@@ -1,3 +1,17 @@
+/* Copyright 2008 the Melange authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
     
    $(function(){
@@ -22,12 +36,11 @@ if (widget.hasClass('create')) {
 	
 	widget.find('input').each(function(){ 
 	  $(this).preserveDefaultText($(this).val());
-	  //.growfield();
 	}); 
 
 	widget.find('textarea').each(function(){ 
-	  $(this).preserveDefaultText($(this).val()).attr('overflow', 'auto');
-	  //.growfield();
+	  $(this).preserveDefaultText($(this).val()).attr('overflow', 'auto')
+	  .growfield();
 	
 	}); 
 
@@ -50,30 +63,3 @@ $('input#id_s_html').val(widget.find('div#survey_options').remove().end().html()
    
 
 
-
-/*
-* == Utils ==
-* 
-*/
-
-
-jQuery.fn.extend({
-preserveDefaultText: function(defaultValue, replaceValue)
-{
-$(this).focus(function()
-{
-if(typeof(replaceValue) == 'undefined')
-replaceValue = '';  
-if($(this).val() == defaultValue)
-$(this).val(replaceValue);
-});
-
-$(this).blur(function(){  
-if(typeof(replaceValue) == 'undefined')
-replaceValue = '';  
-if($(this).val() == replaceValue)
-$(this).val(defaultValue);
-});
-return $(this).val(defaultValue);
-}
-});

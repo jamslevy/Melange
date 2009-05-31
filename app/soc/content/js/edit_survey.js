@@ -1,4 +1,20 @@
-   
+   /* Copyright 2008 the Melange authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
 var DEFAULT_LONG_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
 var DEFAULT_SHORT_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
 var DEFAULT_OPTION_TEXT = 'Add A New Option...';
@@ -7,9 +23,6 @@ var SURVEY_PREFIX = 'survey__';
 var min_rows = 10;
 max_rows = min_rows * 2;
     
-   
- 
-
     
     
    $(function(){
@@ -144,12 +157,11 @@ survey.bind('init', function(){
 
 widget.find('input').each(function(){ 
 if ($(this).val().length < 1 | $(this).val() == DEFAULT_SHORT_ANSWER_TEXT) $(this).preserveDefaultText(DEFAULT_SHORT_ANSWER_TEXT); 
-//$(this).growfield();
 }); 
 
 widget.find('textarea').each(function(){ 
 if ($(this).val().length < 1 | $(this).val() == DEFAULT_LONG_ANSWER_TEXT) $(this).preserveDefaultText(DEFAULT_LONG_ANSWER_TEXT);
-//$(this).growfield();
+$(this).growfield(); // this is resulting in "jittering" behavior
 
 }); 
 
@@ -315,26 +327,7 @@ $(this).find("#id_survey_html").attr('value', widget.html());
 * 
 */
 
-
 jQuery.fn.extend({
-preserveDefaultText: function(defaultValue, replaceValue)
-{
-$(this).focus(function()
-{
-if(typeof(replaceValue) == 'undefined')
-replaceValue = '';  
-if($(this).val() == defaultValue)
-$(this).val(replaceValue);
-});
-
-$(this).blur(function(){  
-if(typeof(replaceValue) == 'undefined')
-replaceValue = '';  
-if($(this).val() == replaceValue)
-$(this).val(defaultValue);
-});
-return $(this).val(defaultValue);
-},
 
 // get position of survey field
 getPosition: function(){ 
@@ -343,7 +336,6 @@ getPosition: function(){
     var position = this_table.find('tr').index(this_row) + '__';
     return position;
      }
-
 
 });
 
