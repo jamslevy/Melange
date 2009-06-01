@@ -61,13 +61,18 @@ class Logic(work.Logic):
   def update_survey_record(self, user, survey_entity, survey_record, survey_fields):
     """ Create a new survey record, or get an existing one.
     """
+
     if survey_record:
       for prop in survey_record.dynamic_properties():
         delattr(survey_record, prop)
     if not survey_record:
       survey_record = SurveyRecord(user = user, this_survey = survey_entity)
+    schema = survey_entity.this_survey.get_schema()
     for name, value in survey_fields.items():
-      setattr(survey_record, name, value)
+      if name in schema and schema[name]['type'] == 'pick_multi':
+        setattr(survey_record, name, ','.join(survey_fields.getlist(name)))
+      else:
+        setattr(survey_record, name, value)
     db.put(survey_record)
     return survey_record
 

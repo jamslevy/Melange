@@ -193,7 +193,7 @@ widget.find(":button").click(function(){
     return false;
   }
 
-  fieldset.append("<br /><input type='checkbox' value='" + fieldset.attr('id') + "__" + option_value + "' name='" + fieldset.attr('name') + "' >"  + option_value + "</input>").end();
+  fieldset.append("<br /><input type='checkbox' checked='checked' value='" + fieldset.attr('id') + "__" + option_value + "' name='" + fieldset.attr('name') + "' >"  + option_value + "</input>").end();
 
   }
 });

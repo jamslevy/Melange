@@ -67,7 +67,8 @@ class SurveyForm(djangoforms.ModelForm):
     self.survey_fields = {}
     schema = self.survey_content.get_schema()
     for property in self.survey_content.dynamic_properties():
-      if self.survey_record: # use previously entered value
+      if self.survey_record and hasattr(self.survey_record, property):
+        # use previously entered value
         value = getattr(self.survey_record, property)
       else: # use prompts set by survey creator
         value = getattr(self.survey_content, property)
@@ -84,13 +85,25 @@ class SurveyForm(djangoforms.ModelForm):
         these_choices = []
         # add all properties, but select chosen one
         options = eval(getattr(self.survey_content, property))
-        if self.survey_record:
+        if self.survey_record and hasattr(self.survey_record, property):
           these_choices.append((value, value))
-          options.remove(value)
+          if value in options:
+            options.remove(value)
         for option in options:
           these_choices.append((option, option))
         self.survey_fields[property] = forms.ChoiceField(choices=tuple(these_choices),
                                               widget=forms.Select())
+      if schema[property]["type"] == "pick_multi":
+        if self.survey_record:
+          # Pass as 'initial' so MultipleChoiceField can render checked boxes
+          value = value.split(',')
+        else:
+          value = None
+        these_choices = [(v,v) for v in getattr(self.survey_content, property)]
+        self.survey_fields[property] = forms.MultipleChoiceField(
+            choices=tuple(these_choices),
+            widget=forms.CheckboxSelectMultiple(), initial=value)
+
     return self.insert_fields()
 
   def insert_fields(self):
@@ -99,7 +112,6 @@ class SurveyForm(djangoforms.ModelForm):
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
     return self.fields
-
 
   class Meta(object):
     model = SurveyContent
@@ -117,7 +129,8 @@ class EditSurvey(widgets.Widget):
   <div class="survey_admin" id="survey_widget"><table> %(survey)s </table> %(options_html)s </div>
   """
   QUESTION_TYPES = {"short_answer": "Short Answer", "selection": "Selection",
-                    "long_answer": "Long Answer", }
+                    "long_answer": "Long Answer",
+                    "pick_multi": "Pick Multiple"}
   BUTTON_TEMPLATE = """
   <button id="%(type_id)s" onClick="return false;">Add %(type_name)s Question</button>
   """
@@ -175,6 +188,7 @@ class TakeSurvey(widgets.Widget):
     and we can just disable the submit button, and add a check on the
     POST handler. )
     """
+
     self.survey_content = survey_content
     self.this_survey = self.survey_content.survey_parent.get()
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",

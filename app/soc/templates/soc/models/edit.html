@@ -58,17 +58,11 @@ Please use this form to edit the {{ entity_type }}.
    {% endif %}
    {% endblock %}
    <td>
-     {% if cancel_redirect %}
-     <input type="button" 
-       {% if entity %}
-       onclick="location.href='{{ cancel_redirect }}'" 
-       {% else %}
-       onClick="javascript: history.go(-1)">
-       {% endif %}
-     value="Cancel"/>
-     {% else %}
-     <input type="button" value="Back to Previous Page" onClick="javascript:history.go(-1)">
-     {% endif %}
+   {% if edit_cancel_redirect %}
+   <input type="button" onclick="location.href='{{ edit_cancel_redirect }}'" value="Cancel"/>
+   {% else %}
+   <input type="button" value="Back to Previous Page" onClick="javascript: history.go(-1)">
+   {% endif %}
    </td>
    {% if entity %}
    {% block delete_button %}
@@ -93,3 +87,6 @@ Please use this form to edit the {{ entity_type }}.
 </form>
 </p>
 {% endblock %}
+
+
+

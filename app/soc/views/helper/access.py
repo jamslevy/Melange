@@ -298,6 +298,7 @@ class Checker(object):
     retention = 30
 
     memcache_key = self.key(checker_name)
+    # pylint: disable-msg=E1101
     memcache.add(memcache_key, value, retention)
 
   def get(self, checker_name):
@@ -305,6 +306,7 @@ class Checker(object):
     """
 
     memcache_key = self.key(checker_name)
+    # pylint: disable-msg=E1101
     return memcache.get(memcache_key)
 
   def doCheck(self, checker_name, django_args, args):
@@ -871,7 +873,7 @@ class Checker(object):
         }
 
     entity = request_logic.getForFields(fields, unique=True)
-
+    # pylint: disable-msg=E1103
     if entity and (entity.scope.status not in ['invalid', 'inactive']):
       return
 

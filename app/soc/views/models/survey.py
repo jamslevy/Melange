@@ -205,6 +205,7 @@ form, params, template=template)
     Processes POST request items to add new dynamic field names,
     question types, and default prompt values to SurveyContent model.
     """
+
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
@@ -225,7 +226,7 @@ form, params, template=template)
           del schema[d]
         if d in survey_fields:
           del survey_fields[d]
-    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection')
+    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection', 'pick_multi')
     for key, value in request.POST.items():
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
@@ -244,6 +245,10 @@ form, params, template=template)
             schema[field_name]["type"] = type
             if type == "selection":
               value = str(value.split(','))
+            elif type == "pick_multi":
+              # We may get many values for each key
+              value = request.POST.getlist(key)
+              value = [val.replace('id_' + key + '__','') for val in value]
         survey_fields[field_name] = value
     this_survey = survey_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
@@ -259,7 +264,6 @@ form, params, template=template)
     """See base.View._editGet().
     This is only for editing existing surveys
     """
-
 
     self._entity = entity
     form.fields['survey_content'] = forms.fields.CharField(
@@ -292,19 +296,30 @@ form, params, template=template)
     return submenus
 
 
+def get_records(recs, props):
+  records = []
+  props = props[1:]
+  for rec in recs:
+    values = tuple(getattr(rec, prop, None) for prop in props)
+    records.append((rec.user.link_id,) + values)
+  return records
+
+
 def to_csv(survey):
   """CSV exporter"""
 
   try:
-    writer.writerow(survey.survey_records.run().next().dynamic_properties())
+    first = survey.survey_records.run().next()
   except StopIteration:
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
+  properties = ['user'] + survey.this_survey.ordered_properties()
+  recs = survey.survey_records.run()
+  recs = get_records(recs, properties)
   output = StringIO.StringIO()
   writer = csv.writer(output)
-  records = survey.survey_records.run()
-  values = [record.get_values() for record in records]
-  writer.writerows(values)
+  writer.writerow(properties)
+  writer.writerows(recs)
   return output.getvalue(), survey.link_id
 
 
