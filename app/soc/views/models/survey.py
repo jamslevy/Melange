@@ -227,8 +227,6 @@ form, params, template=template)
           del survey_fields[d]
     PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection')
     for key, value in request.POST.items():
-      #XXX: This only adds new fields?
-      # The schema seems to get zapped when a single deletions occurs.
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
         # is needed

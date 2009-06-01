@@ -228,7 +228,6 @@ if (delete_this) {
 var taking_access_field = $('select#id_taking_access');
  
 taking_access_field.change(function(){
-  console.log('p');
  var role_type = $(this).val();
  addRoleFields(role_type);
 	});
