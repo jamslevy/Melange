@@ -29,7 +29,9 @@ from google.appengine.ext import db
 from google.appengine.runtime import DeadlineExceededError
 
 from soc.cron import student_proposal_mailer
+from soc.cron import unique_user_id_adder
 from soc.models.job import Job
+
 
 class Error(Exception):
   """Base class for all exceptions raised by this module.
@@ -55,7 +57,7 @@ class Handler(object):
   def __init__(self):
     """Constructs a new Handler with all known jobs set.
     """
-
+    # pylint: disable-msg=C0103
     self.OUT_OF_TIME = 0
     self.ALREADY_CLAIMED = 1
     self.SUCCESS = 2
@@ -67,6 +69,10 @@ class Handler(object):
         student_proposal_mailer.setupStudentProposalMailing
     self.tasks['sendStudentProposalMail'] = \
         student_proposal_mailer.sendStudentProposalMail
+    self.tasks['setupUniqueUserIdAdder'] = \
+        unique_user_id_adder.setupUniqueUserIdAdder
+    self.tasks['addUniqueUserIds'] = \
+        unique_user_id_adder.addUniqueUserIds
 
   def claimJob(self, job_key):
     """A transaction to claim a job.
@@ -81,6 +87,7 @@ class Handler(object):
 
     job.status = 'started'
 
+    # pylint: disable-msg=E1103
     if job.put():
       return job
     else:

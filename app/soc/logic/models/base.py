@@ -25,6 +25,8 @@ __authors__ = [
   ]
 
 
+import logging
+
 from google.appengine.ext import db
 
 from django.utils.translation import ugettext
@@ -324,7 +326,13 @@ class Logic(object):
 
     query = self.getQueryForFields(filter=filter, order=order)
 
-    result = query.fetch(limit, offset)
+    try:
+      result = query.fetch(limit, offset)
+    except db.NeedIndexError, exception:
+      result = []
+      logging.exception("%s, model: %s filter: %s, order: %s" % 
+                        (exception, self._model, filter, order))
+      # TODO: send email
 
     if unique:
       return result[0] if result else None
@@ -507,8 +515,8 @@ class Logic(object):
       offset = offset + chunk
 
     return result
-
-  def entityIterator(self, queryGen, batchSize = 100):
+  # pylint: disable-msg=C0103
+  def entityIterator(self, queryGen, batch_size = 100):
     """Iterator that yields an entity in batches.
 
     Args:
@@ -519,7 +527,7 @@ class Logic(object):
     """
 
      # AppEngine will not fetch more than 1000 results
-    batchSize = min(batchSize,1000)
+    batch_size = min(batch_size, 1000)
 
     done = False
     count = 0
@@ -528,12 +536,12 @@ class Logic(object):
     while not done:
       query = queryGen()
       if key:
-        query.filter("__key__ > ",key)
-      results = query.fetch(batchSize)
+        query.filter("__key__ > ", key)
+      results = query.fetch(batch_size)
       for result in results:
         count += 1
         yield result
-      if batchSize > len(results):
+      if batch_size > len(results):
         done = True
       else:
         key = results[-1].key()

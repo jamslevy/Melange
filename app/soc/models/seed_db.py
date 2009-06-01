@@ -113,9 +113,12 @@ class Seeder(object):
 
 
 class UserSeeder(Seeder):
+  """A Seeder for Melange User model.
+  """
   def type(self):
     return User
-
+  
+  # pylint: disable-msg=W0221
   def seed(self, i, entities=None):
     user_properties = {
         'key_name': 'user_%04d' % i,
@@ -134,12 +137,15 @@ class UserSeeder(Seeder):
 
 
 class OrganizationSeeder(Seeder):
+  """A Seeder for Melange Organization model.
+  """
   def type(self):
     return Organization
-
+  
+  # pylint: disable-msg=W0221
   def seed(self, i, entities=None, current_user=None, gsoc2009=None):
     properties = {
-        'key_name': 'google/gsoc2009/%04d' % i,
+        'key_name': 'google/gsoc2009/org_%04d' % i,
         'link_id': 'org_%04d' % i,
         'name': 'Organization %04d' % i,
         'short_name': 'Org %04d' % i,
@@ -174,6 +180,60 @@ class OrganizationSeeder(Seeder):
 
     return dict(current_user=current_user,
                 gsoc2009=gsoc2009)
+
+
+class OrgApplicationSeeder(Seeder):
+  """A Seeder for Melange OrgApplication model.
+  """
+  def type(self):
+    return OrgApplication
+
+  def commonSeedArgs(self, request):
+    _, current_user = ensureUser()
+    gsoc2009 = Program.get_by_key_name('google/gsoc2009')
+
+    if not gsoc2009:
+      raise Error('Run seed_db first')
+
+    status = request.GET.get('status', 'pre-accepted')
+
+    return dict(current_user=current_user,
+                gsoc2009=gsoc2009,
+                status=status)
+
+  # pylint: disable-msg=W0221
+  def seed(self, i, entities=None, current_user=None, gsoc2009=None,
+           status=None):
+    properties = {
+        'key_name': 'google/gsoc2009/org_%04d' % i,
+        'link_id': 'org_%04d' % i,
+        'name': 'Org App %04d' % i,
+        'scope_path': 'google/gsoc2009',
+        'scope': gsoc2009,
+        'status': status,
+        'applicant': current_user,
+        'home_page': 'http://www.google.com',
+        'email': 'org@example.com',
+        'irc_channel': '#care',
+        'pub_mailing_list': 'http://groups.google.com',
+        'dev_mailing_list': 'http://groups.google.com',
+        'description': 'This is an awesome org!',
+        'why_applying': 'Because we can',
+        'member_criteria': 'They need to be awesome',
+        'license_name': 'Apache License, 2.0',
+        'ideas': 'http://code.google.com/p/soc/issues',
+        'contrib_disappears': 'We use google to find them',
+        'member_disappears': 'See above',
+        'encourage_contribs': 'We offer them cookies.',
+        'continued_contribs': 'We promise them a cake.',
+        'agreed_to_admin_agreement': True,
+        }
+
+    org_application = OrgApplication(**properties)
+    if entities is None:
+      org_application.put()
+    else:
+      entities.append(org_application)
 
 
 def seed(request, *args, **kwargs):
@@ -322,9 +382,9 @@ def seed(request, *args, **kwargs):
     }
 
   for i in range(10):
-    org_app_properties['key_name'] = 'google/gsoc2009/wannabe_%d' % i
-    org_app_properties['link_id'] = 'wannabe_%d' % i
-    org_app_properties['name'] = 'Wannabe %d' % i
+    org_app_properties['key_name'] = 'google/gsoc2009/org_%04d' % i
+    org_app_properties['link_id'] = 'org_%04d' % i
+    org_app_properties['name'] = 'Org App %04d' % i
     entity = OrgApplication(**org_app_properties)
     entity.put()
 
@@ -448,7 +508,7 @@ def seed(request, *args, **kwargs):
 
   site.home = home_document
   site.put()
-
+  # pylint: disable-msg=E1101
   memcache.flush_all()
 
   return http.HttpResponse('Done')
@@ -479,8 +539,8 @@ def seed_org_app(request, i):
     raise Error('Run seed_db first')
 
   properties = {
-      'key_name': 'google/gsoc2009/org_app_%d' % i,
-      'link_id': 'org_app_%d' % i,
+      'key_name': 'google/gsoc2009/org_%d' % i,
+      'link_id': 'org_%d' % i,
       'name': 'Org App %d' % i,
       'scope_path': 'google/gsoc2009',
       'scope': gsoc2009,
@@ -549,7 +609,8 @@ def seed_mentor(request, i):
 
   if not org:
     raise Error('Run seed_many for at least %d orgs first.' % i)
-
+  
+  # pylint: disable-msg=E1103
   properties = {
       'key_name': 'google/gsoc2009/org_%d/mentor' % i,
       'link_id': 'mentor',
@@ -577,16 +638,16 @@ def seed_mentor(request, i):
 def seed_student(request, i):
   """Returns the properties for a new student entity.
   """
-  
+
   gsoc2009 = Program.get_by_key_name('google/gsoc2009')
   user = User.get_by_key_name('user_%d' % i)
-  
+
   if not gsoc2009:
     raise Error('Run seed_db first')
-    
+
   if not user:
     raise Error('Run seed_many for at least %d users first.' % i)
-    
+
   properties = {
       'key_name':'google/gsoc2009/student_%d' % i,
       'link_id': 'student_%d' % i,
@@ -627,13 +688,13 @@ def seed_student_proposal(request, i):
   mentor = Mentor.get_by_key_name('google/gsoc2009/org_%d/mentor' % i)
   user = User.get_by_key_name('user_%d' % i)
   student = Student.get_by_key_name('google/gsoc2009/student_%d' % i)
-    
+
   if not user:
     raise Error('Run seed_many for at least %d users first.' % i)
 
   if not student:
     raise Error('Run seed_many for at least %d students first.' % i)
-  
+
   if not org:
     raise Error('Run seed_many for at least %d orgs first.' % i)
 
@@ -641,7 +702,8 @@ def seed_student_proposal(request, i):
     raise Error('Run seed_many for at least %d mentors first.' % i)
 
   all_properties = []
-
+  
+  # pylint: disable-msg=E1103
   for i in range(random.randint(5, 20)):
     link_id = 'proposal_%s_%d' % (org.link_id, i)
     scope_path = 'google/gsoc2009/' + user.link_id
@@ -669,6 +731,7 @@ def seed_student_proposal(request, i):
 SEEDABLE_MODEL_TYPES = {
     'user' : UserSeeder(),
     'organization' : OrganizationSeeder(),
+    'org_application' : OrgApplicationSeeder(),
     }
 
 
@@ -716,7 +779,7 @@ def new_seed_many(request, *args, **kwargs):
     # so, we look for what's after the _ and turn it into an int.
     link_id = highest_instance.link_id
     if '_' in link_id:
-      start_index = int(link_id.split('_')[1]) + 1
+      start_index = int(link_id.split('_')[-1]) + 1
     else:
       # couldn't find seeded_entities; guessing there are none
       start_index = 0
@@ -845,7 +908,7 @@ def clear(*args, **kwargs):
       entity.delete()
   except db.Timeout:
     return http.HttpResponseRedirect('#')
-
+  # pylint: disable-msg=E1101
   memcache.flush_all()
 
   return http.HttpResponse('Done')

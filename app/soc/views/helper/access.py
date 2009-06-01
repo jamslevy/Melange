@@ -42,7 +42,6 @@ from soc.logic.models.club_admin import logic as club_admin_logic
 from soc.logic.models.club_member import logic as club_member_logic
 from soc.logic.models.document import logic as document_logic
 from soc.logic.models.survey import logic as survey_logic
-from soc.logic.models.midterm import ACLMAP, logic as midterm_logic
 from soc.logic.models.host import logic as host_logic
 from soc.logic.models.mentor import logic as mentor_logic
 from soc.logic.models.org_admin import logic as org_admin_logic
@@ -1546,45 +1545,6 @@ class Checker(object):
 
     self.checkMembership('write', survey.prefix,
                          survey.write_access, django_args)
-
-  @allowSidebar
-  @allowDeveloper
-  def checkIsMidtermSurveyReadable(self, django_args, key_name_field=None):
-    """Checks whether a survey is readable.
-
-    Args:
-      django_args: a dictionary with django's arguments
-      key_name_field: key name field
-    """
-
-    if key_name_field:
-      key_name = django_args[key_name_field]
-      survey = midterm_logic.getFromKeyNameOr404(key_name)
-    else:
-      survey = midterm_logic.getFromKeyFieldsOr404(django_args)
-
-    self.checkMembership('read', survey.prefix,
-                         ACLMAP[survey.read_access], django_args)
-
-  @denySidebar
-  @allowDeveloper
-  def checkIsMidtermSurveyWritable(self, django_args, key_name_field=None):
-    """Checks whether a survey is writable.
-
-    Args:
-      django_args: a dictionary with django's arguments
-      key_name_field: key name field
-    """
-
-    if key_name_field:
-      key_name = django_args[key_name_field]
-      survey = midterm_logic.getFromKeyNameOr404(key_name)
-    else:
-      survey = midterm_logic.getFromKeyFieldsOr404(django_args)
-
-    self.checkMembership('write', survey.prefix,
-                         ACLMAP[survey.write_access], django_args)
-
 
 
   @allowSidebar

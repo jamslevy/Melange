@@ -22,6 +22,8 @@ __authors__ = [
   ]
 
 
+import time
+
 from django import forms
 from django.utils.translation import ugettext
 
@@ -99,11 +101,17 @@ class View(role.View):
 
     new_params['extra_dynaexclude'] = ['agreed_to_tos', 'school']
 
+    current_year = time.gmtime().tm_year
+    # the current year is not the minimum because a program could span
+    # more than one year
+    allowed_years = range(current_year-1, current_year+20)
+
     new_params['create_extra_dynaproperties'] = {
-        'expected_graduation': forms.IntegerField(required=True,
-                                                  max_value=2030,
-                                                  min_value=2009)
-        }
+        'expected_graduation': forms.TypedChoiceField(
+            choices=[(x,x) for x in allowed_years],
+            coerce=lambda val: int(val)
+            )
+        } 
 
     new_params['create_dynafields'] = [
         {'name': 'scope_path',
@@ -155,7 +163,8 @@ class View(role.View):
 
     user_entity = user_logic.logic.getForCurrentAccount()
     params['create_form'] = params['user_create_form']
-
+    
+    # pylint: disable-msg=E1103
     return self.create(request, access_type='unspecified', page_name=page_name,
         params=params, link_id=user_entity.link_id, **kwargs)
 
@@ -171,6 +180,7 @@ class View(role.View):
 
     user_entity = user_logic.logic.getForCurrentAccount()
 
+    # pylint: disable-msg=E1103
     fields = {'link_id': user_entity.link_id,
         'scope_path': kwargs['scope_path']}
 
