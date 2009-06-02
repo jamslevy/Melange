@@ -78,6 +78,8 @@ class View(base.View):
         'link_id', 'scope_path', 'name', 'short_name', 'title',
         'content', 'prefix','read_access','write_access']
 
+    new_params['edit_template'] = 'soc/survey/edit.html'
+
     # which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
     new_params['no_create_with_scope'] = True
@@ -186,19 +188,6 @@ class View(base.View):
                                              
     super(View, self)._editContext(request, context)
 
-
-
-  
-  def _constructResponse(self, request, entity, context,
-                         form, params, template=None):
-    # this is just for creating/editing survey
-    template = "soc/survey/edit.html"
-    return super(View, self)._constructResponse(request, entity, context,
-form, params, template=template)
-
-
-
-
   def _editPost(self, request, entity, fields):
     """See base.View._editPost().
 
@@ -296,6 +285,24 @@ form, params, template=template)
     return submenus
 
 
+FIELDS = 'author modified_by'
+PLAIN = 'is_featured content created modified'
+
+
+def get_csv_header(sur):
+  tpl = '# %s: %s\n'
+  fields = ['# Melange Survey export for \n#  %s\n#\n' % sur.title]
+  fields += [tpl % (k,v) for k,v in sur.toDict().items()]
+  fields += [tpl % (f, str(getattr(sur, f))) for f in PLAIN.split()]
+  fields += [tpl % (f, str(getattr(sur, f).link_id)) for f in FIELDS.split()]
+  fields.sort()
+  fields += ['#\n#---\n#\n']
+  schema =  str(sur.this_survey.get_schema())
+  indent = '},\n#' + ' ' * 9
+  fields += [tpl % ('Schema', schema.replace('},', indent)) + '#\n']
+  return ''.join(fields).replace('\n', '\r\n')
+
+
 def get_records(recs, props):
   records = []
   props = props[1:]
@@ -313,6 +320,7 @@ def to_csv(survey):
   except StopIteration:
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
+  header = get_csv_header(survey)
   properties = ['user'] + survey.this_survey.ordered_properties()
   recs = survey.survey_records.run()
   recs = get_records(recs, properties)
@@ -320,7 +328,7 @@ def to_csv(survey):
   writer = csv.writer(output)
   writer.writerow(properties)
   writer.writerows(recs)
-  return output.getvalue(), survey.link_id
+  return header + output.getvalue(), survey.link_id
 
 
 view = View()
