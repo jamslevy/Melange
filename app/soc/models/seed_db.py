@@ -25,6 +25,7 @@ __authors__ = [
 import itertools
 import logging
 import random
+import datetime
 
 from google.appengine.api import users
 from google.appengine.api import memcache
@@ -33,6 +34,7 @@ from google.appengine.ext import db
 from django import http
 
 from soc.logic.models.ranker_root import logic as ranker_root_logic
+from soc.logic.models.survey import logic as survey_logic
 from soc.logic import accounts
 from soc.logic import dicts
 from soc.models import student_proposal
@@ -48,6 +50,7 @@ from soc.models.ranker_root import RankerRoot
 from soc.models.site import Site
 from soc.models.student import Student
 from soc.models.student_proposal import StudentProposal
+from soc.models.survey import Survey, SurveyContent
 from soc.models.sponsor import Sponsor
 from soc.models.timeline import Timeline
 from soc.models.user import User
@@ -599,6 +602,46 @@ def seed_org(unused_request, i):
 
   return properties
 
+DEADLINE = datetime.datetime.now() + datetime.timedelta(10)
+
+def seed_survey(request, i):
+  """Returns the properties for a new survey.
+  """
+
+  _, current_user = ensureUser()
+  gsoc2009 = Program.get_by_key_name('google/gsoc2009')
+
+  if not gsoc2009:
+    raise Error('Run seed_db first')
+  fields = {'SelectionQ': "[u'SelectionQ Option 2', u'SelectionQ Option 1']",
+            'PickMultipleQ': ['PickMultipleQ Checkbox 1',
+                              'PickMultipleQ Checkbox 2',
+                              ],
+            'LongQ': 'LongQ Custom Prompt',
+            'ShortQ': 'ShortQ Custom Prompt',
+            }
+  schema = {u'PickMultipleQ': {'index': 5, 'type': 'pick_multi'},
+            u'LongQ': {'index': 2, 'type': 'long_answer'},
+            u'ShortQ': {'index': 3, 'type': 'short_answer'},
+            u'SelectionQ': {'index': 4, 'type': 'selection'}
+            }
+  properties = {
+      'key_name': 'program/google/gsoc2009/survey_%d' % i,
+      'link_id': 'survey_%d' %i,
+      'scope_path': 'google/gsoc2009',
+      'scope': None,
+      'prefix': 'program',
+      'author': current_user,
+      'title': 'My Survey %d' %i,
+      'short_name': 'Survey %d' %i,
+      'modified_by': current_user,
+      'is_featured': True,
+      'fields': fields,
+      'schema': schema,
+      'deadline': DEADLINE,
+      'taking_access': 'everyone',
+      }
+  return properties
 
 def seed_mentor(request, i):
   """Returns the properties of a new student proposal.
@@ -831,6 +874,7 @@ def seed_many(request, *args, **kwargs):
     'mentor': (seed_mentor, Mentor),
     'student': (seed_student, Student),
     'student_proposal': (seed_student_proposal, StudentProposal),
+    'survey': (seed_survey, Survey),
     }
 
   goal = int(get_args['goal'])
@@ -852,6 +896,11 @@ def seed_many(request, *args, **kwargs):
 
     for properties in props if isinstance(props, list) else [props]:
       entity = model(**properties)
+      if seed_type == 'survey':
+        survey_content = survey_logic.create_survey(properties['fields'],
+                                                    properties['schema'],
+                                                    this_survey=None)
+        entity.this_survey = survey_content
       entity.put()
 
   if end < goal:
@@ -888,6 +937,9 @@ def clear(*args, **kwargs):
       Notification.all(),
       Mentor.all(),
       Student.all(),
+      Survey.all(),
+      SurveyContent.all(),
+      SurveyRecord.all(),
       OrgAdmin.all(),
       ranker.all(),
       RankerRoot.all(),

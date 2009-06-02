@@ -94,7 +94,7 @@ class SurveyForm(djangoforms.ModelForm):
         self.survey_fields[property] = forms.ChoiceField(choices=tuple(these_choices),
                                               widget=forms.Select())
       if schema[property]["type"] == "pick_multi":
-        if self.survey_record:
+        if self.survey_record and isinstance(value, basestring):
           # Pass as 'initial' so MultipleChoiceField can render checked boxes
           value = value.split(',')
         else:
