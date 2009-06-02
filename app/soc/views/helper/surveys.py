@@ -145,7 +145,7 @@ class EditSurvey(widgets.Widget):
     """Defines the name, key_name and model for this entity."""
     self.survey_content = kwargs.get('survey_content', None)
     self.this_user = user_logic.getForCurrentAccount()
-    if self.survey_content: del kwargs['survey_content']
+    if 'survey_content' in kwargs: del kwargs['survey_content']
     super(EditSurvey, self).__init__(*args, **kwargs)
 
   def render(self, name, value, attrs=None):

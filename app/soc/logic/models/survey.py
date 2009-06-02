@@ -69,7 +69,8 @@ class Logic(work.Logic):
       survey_record = SurveyRecord(user = user, this_survey = survey_entity)
     schema = survey_entity.this_survey.get_schema()
     for name, value in survey_fields.items():
-      if name in schema and schema[name]['type'] == 'pick_multi':
+      pick_multi = name in schema and schema[name]['type'] == 'pick_multi'
+      if pick_multi and hasattr(survey_fields, 'getlist'):
         setattr(survey_record, name, ','.join(survey_fields.getlist(name)))
       else:
         setattr(survey_record, name, value)

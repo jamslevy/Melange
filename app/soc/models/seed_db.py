@@ -613,12 +613,13 @@ def seed_survey(request, i):
 
   if not gsoc2009:
     raise Error('Run seed_db first')
+  link_id = 'survey_%d' % i
   fields = {'SelectionQ': "[u'SelectionQ Option 2', u'SelectionQ Option 1']",
-            'PickMultipleQ': ['PickMultipleQ Checkbox 1',
-                              'PickMultipleQ Checkbox 2',
+            'PickMultipleQ': ['PickMultipleQ Checkbox 1 for %s' % link_id,
+                              'PickMultipleQ Checkbox 2 for %s' % link_id,
                               ],
-            'LongQ': 'LongQ Custom Prompt',
-            'ShortQ': 'ShortQ Custom Prompt',
+            'LongQ': 'LongQ Custom Prompt for %s' % link_id,
+            'ShortQ': 'ShortQ Custom Prompt for %s' % link_id,
             }
   schema = {u'PickMultipleQ': {'index': 5, 'type': 'pick_multi'},
             u'LongQ': {'index': 2, 'type': 'long_answer'},
@@ -626,14 +627,14 @@ def seed_survey(request, i):
             u'SelectionQ': {'index': 4, 'type': 'selection'}
             }
   properties = {
-      'key_name': 'program/google/gsoc2009/survey_%d' % i,
-      'link_id': 'survey_%d' %i,
+      'key_name': 'program/google/gsoc2009/%s' % link_id,
+      'link_id': link_id,
       'scope_path': 'google/gsoc2009',
       'scope': None,
       'prefix': 'program',
       'author': current_user,
-      'title': 'My Survey %d' %i,
-      'short_name': 'Survey %d' %i,
+      'title': 'My Survey %d' % i,
+      'short_name': 'Survey %d' % i,
       'modified_by': current_user,
       'is_featured': True,
       'fields': fields,
@@ -642,6 +643,46 @@ def seed_survey(request, i):
       'taking_access': 'everyone',
       }
   return properties
+
+
+def seed_survey_answer(request, i):
+  """Returns the properties of a student's survey answers.
+  """
+
+  ensureUser()
+  survey = Survey.get_by_key_name('program/google/gsoc2009/survey_%d' % i)
+  user = User.get_by_key_name('user_%d' % i)
+  #student = Student.get_by_key_name('google/gsoc2009/student_%d' % i)
+
+  if not user:
+    raise Error('Run seed_many for at least %d users first.' % i)
+
+  if not survey:
+    raise Error('Run seed_many for at least %d surveys first.' % i)
+
+  all_properties = []
+  scope_path = 'google/gsoc2009/'
+  checkbox = 'PickMultipleQ Checkbox 2 for survey_%d' % i
+  # pylint: disable-msg=E1103
+  for i in range(5):
+    #student = Student.get_by_key_name('google/gsoc2009/student_%d' % i)
+    user = User.get_by_key_name('user_%d' % i)
+
+    properties = {
+        'scope_path': scope_path,
+        'user': user,
+        'project': None,
+        '_survey': survey,
+        '_fields': {'ShortQ':'Test', 'SelectionQ': u'SelectionQ Option 2',
+                   'LongQ': 'Long answer... \n' * 10,
+                   'PickMultipleQ': checkbox,
+                   }
+        }
+
+    all_properties.append(properties)
+
+  return all_properties
+
 
 def seed_mentor(request, i):
   """Returns the properties of a new student proposal.
@@ -875,6 +916,7 @@ def seed_many(request, *args, **kwargs):
     'student': (seed_student, Student),
     'student_proposal': (seed_student_proposal, StudentProposal),
     'survey': (seed_survey, Survey),
+    'survey_answer': (seed_survey_answer, SurveyRecord),
     }
 
   goal = int(get_args['goal'])
@@ -899,8 +941,18 @@ def seed_many(request, *args, **kwargs):
       if seed_type == 'survey':
         survey_content = survey_logic.create_survey(properties['fields'],
                                                     properties['schema'],
-                                                    this_survey=None)
+                                                    this_survey=None
+                                                    )
         entity.this_survey = survey_content
+      elif seed_type == 'survey_answer':
+        record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                  properties['user'], properties['_survey']
+                                  ).get()
+        entity = survey_logic.update_survey_record(properties['user'],
+                                                   properties['_survey'],
+                                                   record,
+                                                   properties['_fields']
+                                                   )
       entity.put()
 
   if end < goal:
