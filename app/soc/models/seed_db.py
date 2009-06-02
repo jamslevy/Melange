@@ -50,7 +50,7 @@ from soc.models.ranker_root import RankerRoot
 from soc.models.site import Site
 from soc.models.student import Student
 from soc.models.student_proposal import StudentProposal
-from soc.models.survey import Survey, SurveyContent
+from soc.models.survey import Survey, SurveyContent, SurveyRecord
 from soc.models.sponsor import Sponsor
 from soc.models.timeline import Timeline
 from soc.models.user import User
