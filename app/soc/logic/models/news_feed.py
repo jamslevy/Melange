@@ -23,8 +23,8 @@ __authors__ = [
 
 
 from google.appengine.ext import db
-import soc.model.newsfeed
-
+import soc.models.news_feed
+import soc.models.linkable 
 
 class Logic():
   """Logic methods for the Newsfeed.
@@ -38,18 +38,31 @@ class Logic():
   def addToFeed(self, entity, update_type):
     """Sends out a message if there is only one unread notification.
     """
+    # debugging
     import logging
     logging.info(entity)
     logging.info(update_type)
-    if not entity.scope: 
-      logging.info("NO SCOPE")
-      return 
-    new_feed_item = soc.model.newsfeed.FeedItem( 
+    new_feed_item = soc.models.newsfeed.FeedItem( 
     entity=entity,      # .should this just be key or key_name?
     update_type = update_type,
-    scope = entity.scope) 
+    scope_path = entity.scope_path)
+    db.put(new_feed_item)  
+    logging.info('just saved feed item %s' % new_feed_item.__dict__ ) 
+    
+
+  def retrieveFeed(self, entity, count=10):
+    """ Retrieves feed for a given entity 
+    """
+    # argh old method wasn't working at all...
+    # let's start from scratch.
+    
+    # use django time translation 
+    return [{'name': "Entity Name", 
+            'update_type': "deleted",
+            "relative_time": "three minutes ago" }]
     
     
+        
 
 
 logic = Logic()
