@@ -140,6 +140,8 @@ class Survey(soc.models.work.Work):
       'Indicates a date after which this survey'
       ' cannot be taken.')
 
+  has_grades = db.BooleanProperty(
+      verbose_name=ugettext('Sets whether this survey is gradable by mentors'))
 
   # this property should be named 'survey_content'
   this_survey = db.ReferenceProperty(SurveyContent,
@@ -165,6 +167,7 @@ class SurveyRecord(db.Expando):
   project = db.ReferenceProperty(soc.models.student_project.StudentProject, collection_name="survey_records")
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
+  grade = db.StringProperty(required=False)
 
   def get_values(self):
     """Method to get dynamic property values for a survey record.

@@ -13,25 +13,84 @@ See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
 
+{% load forms_helpers %}
+
 {% block scripts %}
 {{ block.super }}
 <script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
 <script type="text/javascript" src="/soc/content/js/default-text.js"></script>
-<script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-1.1.js"></script>
+<script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-trunk.js"></script>
 {% endblock %}
 
 
 {% block body %}
-{{ block.super }}
-{% if survey_records %}
-{{ survey_records|safe }}
+<p>
+<p>
+{% block instructions %}
+Please use this form to edit the {{ entity_type }}.
+{% endblock %}
+</p>
 
+{% if error_message %}
+  <div class="error">{{ error_message|safe }}</div>
+{% endif %}
+
+<form method="POST">
+  <table>
+{% block form_table %}
+{% as_table form %}
+{% endblock %}
+  </table>
+  <table>
+  <tr>
+   <td colspan="4">&nbsp;</td>
+  </tr>
+  <tr>
 {% block submit_buttons %}
-{{ block.super }}
- <td>
+{% block save_button %}
+{% if entity %}
+   <td> 
+    <input style="font-weight: bold" type="submit" value="Save Changes"/></span>
+   </td>
+{% else %}
+       <td> 
+    <input style="font-weight: bold" type="submit" value="Submit"/></span>
+   </td>
+{% endif %}
+{% endblock %}
+   <td>
+{% if edit_cancel_redirect %}
+   <input type="button" onclick="location.href='{{ edit_cancel_redirect }}'" value="Cancel"/>
+{% else %}
+   <input type="button" value="Back to Previous Page" onClick="javascript: history.go(-1)">
+{% endif %}
+   </td>
+{% if entity %}
+{% block delete_button %}
+   <td>
+
+   <input type="button" class="button" value="Delete"
+    onclick="if(confirm('Are you sure you want to delete this {{ entity_type }}?')) {
+                location.href='/{{ entity_type_url|lower }}/delete/{{ entity_suffix }}';
+}"/>
+
+   </td>
+{% endblock %}
+{% if export_link %}
+   <td>
+    <input type="button" onclick="location.href='/{{ entity_type_url|lower }}/export/{{ entity_suffix }}'" value="Export"/>
+   </td>
+{% endif %}
+   <td>
   <input {% if passed_deadline %}disabled=TRUE{% endif %} type="button" onclick="location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" value="Activate Grades"/>
  </td>
+{% endif %}
 {% endblock %}
-
+  </tr>
+ </table>
+</form>
+</p>
+{% if survey_records %}
+{{ survey_records|safe }}
 {% endif %}
 {% endblock %}

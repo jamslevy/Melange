@@ -125,7 +125,7 @@ options.find('button').click(function(e){
 
 	}
 		if (new_field) {
-			// render HTML 
+			
 			field_count = survey.find('tr').length;
 			new_field_count = field_count + 1 + '__';
 			new_field = $(new_field);
@@ -193,7 +193,7 @@ widget.find(":button").click(function(){
     return false;
   }
 
-  fieldset.append("<br /><input type='checkbox' value='" + fieldset.attr('id') + "__" + option_value + "' name='" + fieldset.attr('name') + "' >"  + option_value + "</input>").end();
+  fieldset.append("<br /><input type='checkbox' checked='checked' value='" + fieldset.attr('id') + "__" + option_value + "' name='" + fieldset.attr('name') + "' >"  + option_value + "</input>").end();
 
   }
 });
@@ -264,6 +264,7 @@ addRoleFields( taking_access_field.val() );
 }).trigger('init');
 
 
+
 /*
 * == Survey Submission Handler ==
 * 
@@ -310,7 +311,7 @@ $(this).find("#id_survey_html").attr('value', widget.html());
 	}); 
 
 	// get rid of the options
-	$('input#id_s_html').val(widget.find('div#survey_options').remove().end().html()); 
+	$('input#id_s_html').val(widget.find('div#survey_options').remove().end().html()); // only needed for HTML
 
 });
 

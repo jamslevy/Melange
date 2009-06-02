@@ -25,6 +25,7 @@ import csv
 import re
 import StringIO
 from django import forms
+from django import http
 
 from soc.cache import home
 from soc.logic import cleaning
@@ -62,6 +63,7 @@ class View(base.View):
     rights['delete'] = ['checkIsSurveyWritable']
     rights['list'] = ['checkDocumentList']
     rights['pick'] = ['checkDocumentPick']
+    rights['grade'] = ['checkIsSurveyGradable']
 
     new_params = {}
     new_params['logic'] = survey_logic
@@ -70,6 +72,12 @@ class View(base.View):
     new_params['name'] = "Survey"
     new_params['pickable'] = True
 
+    new_params['extra_django_patterns'] = [
+        (r'^%(url_name)s/(?P<access_type>activate)/%(scope)s$',
+         'soc.views.models.%(module_name)s.activate',
+         'Create a new %(name)s'),
+        ]
+
     new_params['export_content_type'] = 'text/text'
     new_params['export_extension'] = '.csv'
     new_params['export_function'] = to_csv
@@ -77,6 +85,8 @@ class View(base.View):
     new_params['list_key_order'] = [
         'link_id', 'scope_path', 'name', 'short_name', 'title',
         'content', 'prefix','read_access','write_access']
+
+    new_params['edit_template'] = 'soc/survey/edit.html'
 
     # which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
@@ -186,25 +196,13 @@ class View(base.View):
                                              
     super(View, self)._editContext(request, context)
 
-
-
-  
-  def _constructResponse(self, request, entity, context,
-                         form, params, template=None):
-    # this is just for creating/editing survey
-    template = "soc/survey/edit.html"
-    return super(View, self)._constructResponse(request, entity, context,
-form, params, template=template)
-
-
-
-
   def _editPost(self, request, entity, fields):
     """See base.View._editPost().
 
     Processes POST request items to add new dynamic field names,
     question types, and default prompt values to SurveyContent model.
     """
+
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
@@ -225,7 +223,7 @@ form, params, template=template)
           del schema[d]
         if d in survey_fields:
           del survey_fields[d]
-    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection')
+    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection', 'pick_multi')
     for key, value in request.POST.items():
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
@@ -244,6 +242,10 @@ form, params, template=template)
             schema[field_name]["type"] = type
             if type == "selection":
               value = str(value.split(','))
+            elif type == "pick_multi":
+              # We may get many values for each key
+              value = request.POST.getlist(key)
+              value = [val.replace('id_' + key + '__','') for val in value]
         survey_fields[field_name] = value
     this_survey = survey_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
@@ -260,8 +262,11 @@ form, params, template=template)
     This is only for editing existing surveys
     """
 
-
     self._entity = entity
+
+    if 'activate' in request.GET and int(request.GET['activate']):
+      self._entity.has_grades = True
+      self._entity.put()
     form.fields['survey_content'] = forms.fields.CharField(
         widget=surveys.EditSurvey(survey_content=entity.this_survey),
         required=False)
@@ -291,21 +296,55 @@ form, params, template=template)
       submenus.append(submenu)
     return submenus
 
+  def activate(self, request, **kwargs):
+    path = request.path.replace('/activate/', '/edit/')
+    return http.HttpResponseRedirect(path + '?activate=1')
+
+
+FIELDS = 'author modified_by'
+PLAIN = 'is_featured content created modified'
+
+
+def get_csv_header(sur):
+  tpl = '# %s: %s\n'
+  fields = ['# Melange Survey export for \n#  %s\n#\n' % sur.title]
+  fields += [tpl % (k,v) for k,v in sur.toDict().items()]
+  fields += [tpl % (f, str(getattr(sur, f))) for f in PLAIN.split()]
+  fields += [tpl % (f, str(getattr(sur, f).link_id)) for f in FIELDS.split()]
+  fields.sort()
+  fields += ['#\n#---\n#\n']
+  schema =  str(sur.this_survey.get_schema())
+  indent = '},\n#' + ' ' * 9
+  fields += [tpl % ('Schema', schema.replace('},', indent)) + '#\n']
+  return ''.join(fields).replace('\n', '\r\n')
+
+
+def get_records(recs, props):
+  records = []
+  props = props[1:]
+  for rec in recs:
+    values = tuple(getattr(rec, prop, None) for prop in props)
+    records.append((rec.user.link_id,) + values)
+  return records
+
 
 def to_csv(survey):
   """CSV exporter"""
 
   try:
-    writer.writerow(survey.survey_records.run().next().dynamic_properties())
+    first = survey.survey_records.run().next()
   except StopIteration:
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
+  header = get_csv_header(survey)
+  properties = ['user'] + survey.this_survey.ordered_properties()
+  recs = survey.survey_records.run()
+  recs = get_records(recs, properties)
   output = StringIO.StringIO()
   writer = csv.writer(output)
-  records = survey.survey_records.run()
-  values = [record.get_values() for record in records]
-  writer.writerows(values)
-  return output.getvalue(), survey.link_id
+  writer.writerow(properties)
+  writer.writerows(recs)
+  return header + output.getvalue(), survey.link_id
 
 
 view = View()
@@ -318,3 +357,4 @@ list = decorators.view(view.list)
 public = decorators.view(view.public)
 export = decorators.view(view.export)
 pick = decorators.view(view.pick)
+activate = decorators.view(view.activate)
