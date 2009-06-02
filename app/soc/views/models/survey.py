@@ -25,6 +25,7 @@ import csv
 import re
 import StringIO
 from django import forms
+from django import http
 
 from soc.cache import home
 from soc.logic import cleaning
@@ -62,6 +63,7 @@ class View(base.View):
     rights['delete'] = ['checkIsSurveyWritable']
     rights['list'] = ['checkDocumentList']
     rights['pick'] = ['checkDocumentPick']
+    rights['grade'] = ['checkIsSurveyGradable']
 
     new_params = {}
     new_params['logic'] = survey_logic
@@ -69,6 +71,12 @@ class View(base.View):
 
     new_params['name'] = "Survey"
     new_params['pickable'] = True
+
+    new_params['extra_django_patterns'] = [
+        (r'^%(url_name)s/(?P<access_type>activate)/%(scope)s$',
+         'soc.views.models.%(module_name)s.activate',
+         'Create a new %(name)s'),
+        ]
 
     new_params['export_content_type'] = 'text/text'
     new_params['export_extension'] = '.csv'
@@ -255,6 +263,10 @@ class View(base.View):
     """
 
     self._entity = entity
+
+    if 'activate' in request.GET and int(request.GET['activate']):
+      self._entity.has_grades = True
+      self._entity.put()
     form.fields['survey_content'] = forms.fields.CharField(
         widget=surveys.EditSurvey(survey_content=entity.this_survey),
         required=False)
@@ -283,6 +295,10 @@ class View(base.View):
                  entity.short_name, 'show')
       submenus.append(submenu)
     return submenus
+
+  def activate(self, request, **kwargs):
+    path = request.path.replace('/activate/', '/edit/')
+    return http.HttpResponseRedirect(path + '?activate=1')
 
 
 FIELDS = 'author modified_by'
@@ -341,3 +357,4 @@ list = decorators.view(view.list)
 public = decorators.view(view.public)
 export = decorators.view(view.export)
 pick = decorators.view(view.pick)
+activate = decorators.view(view.activate)

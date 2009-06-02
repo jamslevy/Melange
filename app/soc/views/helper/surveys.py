@@ -30,6 +30,7 @@ from google.appengine.ext.db import djangoforms
 from soc.logic import dicts
 from soc.logic.lists import Lists
 from soc.logic.models.user import logic as user_logic
+from soc.logic.models.mentor import logic as mentor_logic
 from soc.logic.models.survey import results_logic
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyContent, SurveyRecord
@@ -125,9 +126,29 @@ class EditSurvey(widgets.Widget):
   """Edit Survey, or Create Survey if not this_survey arg given.
   """
 
+  CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
+  <th><label>Choose Project:</label></th>
+  <td>
+    <select disabled="TRUE" id="id_survey__NA__selection__project"
+      name="survey__1__selection__see">
+        <option>Survey Taker's Projects For This Program</option></select>
+   </td></tr>
+   """
+
+  CHOOSE_A_GRADE_FIELD = """<tr class="role-specific">
+  <th><label>Assign Grade:</label></th>
+  <td>
+    <select disabled=TRUE id="id_survey__NA__selection__grade"
+     name="survey__1__selection__see">
+      <option>Pass/Fail</option>
+    </select></td></tr>
+    """
+
   WIDGET_HTML = """
-  <div class="survey_admin" id="survey_widget"><table> %(survey)s </table> %(options_html)s </div>
+  <div class="survey_admin" id="survey_widget"><table>
+   %s %s %%(survey)s </table> %%(options_html)s </div>
   """
+
   QUESTION_TYPES = {"short_answer": "Short Answer", "selection": "Selection",
                     "long_answer": "Long Answer",
                     "pick_multi": "Pick Multiple"}
@@ -161,7 +182,14 @@ class EditSurvey(widgets.Widget):
       options += self.BUTTON_TEMPLATE % {'type_id': type_id,
                                          'type_name': type_name}
     options_html = self.OPTIONS_HTML % {'options': options}
-    result = self.WIDGET_HTML % {'survey': str(self.survey_form),
+    html = self.WIDGET_HTML
+    CHOOSE_A_PROJECT_FIELD = self.CHOOSE_A_PROJECT_FIELD
+    grades = False
+    if self.survey_content:
+      grades = self.survey_content.survey_parent.get().has_grades
+    CHOOSE_A_GRADE_FIELD = self.CHOOSE_A_GRADE_FIELD if grades else ''
+    html = html % (CHOOSE_A_PROJECT_FIELD, CHOOSE_A_GRADE_FIELD)
+    result = html % {'survey': str(self.survey_form),
                                  'options_html':options_html}
     return result
 
@@ -225,9 +253,12 @@ class TakeSurvey(widgets.Widget):
       project_pairs.append((project.key()), (project.title) )
     # add select field containing list of projects 
     self.survey.fields.insert(0, 'project', forms.fields.ChoiceField(
-    choices=tuple( project_pairs ), widget=forms.Select() )) 
- 
-    if self.this_user == "mentor":
+    choices=tuple( project_pairs ), widget=forms.Select() ))
+
+    filter = {'user': user_logic.logic.getForCurrentAccount(),
+        'status': 'active'}
+    mentor_entity = mentor_logic.logic.getForFields(filter, unique=True)
+    if mentor_entity:
       # if this is a mentor, add a field 
       # determining if student passes or fails
       # Activate grades handler should determine whether new status
@@ -287,6 +318,7 @@ class SurveyResults(widgets.Widget):
                               order=order)
 
     params['name'] = "Survey Results"
+
     content = {
       'idx': idx,
       'data': data,
@@ -312,6 +344,7 @@ class SurveyResults(widgets.Widget):
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
+    context['grades'] = this_survey.has_grades
 
     markup = loader.render_to_string('soc/survey/results.html',
                                      dictionary=context).strip('\n')

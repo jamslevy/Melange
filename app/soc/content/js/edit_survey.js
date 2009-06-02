@@ -232,35 +232,6 @@ taking_access_field.change(function(){
  addRoleFields(role_type);
 	});
 
- 
-var addRoleFields = function(role_type){
-   // these should ideally be generated with django forms
-// TODO: apply info tooltips
-var CHOOSE_A_PROJECT_FIELD = '<tr class="role-specific"><th><label>Choose Project:</label></th><td> <select disabled=TRUE id="id_survey__NA__selection__project" name="survey__1__selection__see"><option>Survey Taker\'s Projects For This Program</option></select> </td></tr>';
-var CHOOSE_A_GRADE_FIELD =  '<tr class="role-specific"><th><label>Assign Grade:</label></th><td> <select disabled=TRUE id="id_survey__NA__selection__grade" name="survey__1__selection__see"><option>Pass/Fail</option></select> </td></tr>';
-
-  // flush existing role-specific fields
-  var role_specific_fields = survey.find('tr.role-specific');
-  role_specific_fields.remove();
-  
-      switch(role_type){
-      case "mentor":  
-        survey.prepend(CHOOSE_A_GRADE_FIELD);
-        survey.prepend(CHOOSE_A_PROJECT_FIELD);
-        break;
-
-      case "student": 
-        survey.prepend(CHOOSE_A_PROJECT_FIELD);
-        break;
-
-   };
-
-};
-
-// run on page load
-addRoleFields( taking_access_field.val() );
-
-
 }).trigger('init');
 
 
