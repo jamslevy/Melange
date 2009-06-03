@@ -119,7 +119,7 @@ class View(base.View):
     if not entity:
       return
 
-    context['news_feed'] = news_feed.getFeed(entity) 
+    #context['news_feed'] = news_feed.getFeed(entity) 
     try:
       home_doc = entity.home
     except db.Error:
