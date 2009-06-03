@@ -1,11 +1,27 @@
 <br/><br/><br/>
-Recent Updates:
+
+<div id="news_feed"><div class="news_feed">
+<h2><a class="">Recent Updates:</a></h2>
+
 {% for item in feed_items %}
-
-{{ item.name}}
-
-{{ item.update_type }}
-
-{{ item.relative_time }}
-
+<div class="entry">
+<div class="title">
+<a class="" >{{ item.name}} was {{ item.update_type }}</a>
+</div>
+<div class="time">{{ item.relative_time }}</div>
+<div class="snippet">message</div>
+</div>
 {% endfor %}
+
+</div></div>
+
+
+
+
+
+
+
+
+
+
+
