@@ -86,12 +86,14 @@ class View(base.View):
         'link_id', 'scope_path', 'name', 'short_name', 'title',
         'content', 'prefix','read_access','write_access']
 
+    
+    new_params['create_template'] = 'soc/survey/edit.html'
     new_params['edit_template'] = 'soc/survey/edit.html'
 
     # which one of these are leftovers from Document?
-    new_params['no_create_raw'] = True
-    new_params['no_create_with_scope'] = True
-    new_params['no_create_with_key_fields'] = True
+    new_params['no_create_raw'] = False
+    new_params['no_create_with_scope'] = False
+    new_params['no_create_with_key_fields'] = False
     new_params['no_list_raw'] = True
     new_params['sans_link_id_create'] = True
     new_params['sans_link_id_list'] = True
