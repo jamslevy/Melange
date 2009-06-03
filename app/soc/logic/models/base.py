@@ -34,7 +34,7 @@ from django.utils.translation import ugettext
 from soc.cache import sidebar
 from soc.logic import dicts
 from soc.views import out_of_band
-
+from soc.logic.models.news_feed import logic as newsfeed_logic
 
 class Error(Exception):
   """Base class for all exceptions raised by this module.
@@ -595,6 +595,7 @@ class Logic(object):
     if not entity:
       raise NoEntityError
 
+    newsfeed_logic.addToFeed(entity, "created")
     sidebar.flush()
 
   def _onUpdate(self, entity):
@@ -605,6 +606,7 @@ class Logic(object):
 
     if not entity:
       raise NoEntityError
+    newsfeed_logic.addToFeed(entity, "updated")
 
   def _onDelete(self, entity):
     """Called when an entity has been deleted.
@@ -614,3 +616,4 @@ class Logic(object):
 
     if not entity:
       raise NoEntityError
+    newsfeed_logic.addToFeed(entity, "deleted")
