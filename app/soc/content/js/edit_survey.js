@@ -220,6 +220,8 @@ if (delete_this) {
 });
 
 
+}).trigger('init');
+
 
 /* GSOC ROLE-SPECIFIC FIELD PLUGIN
  * Choice between student/mentor renders required GSOC specific fields
@@ -261,7 +263,7 @@ var CHOOSE_A_GRADE_FIELD =  '<tr class="role-specific"><th><label>Assign Grade:<
 addRoleFields( taking_access_field.val() );
 
 
-}).trigger('init');
+
 
 
 
