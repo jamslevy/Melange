@@ -220,6 +220,8 @@ if (delete_this) {
 });
 
 
+}).trigger('init');
+
 
 /* GSOC ROLE-SPECIFIC FIELD PLUGIN
  * Choice between student/mentor renders required GSOC specific fields
@@ -232,7 +234,7 @@ taking_access_field.change(function(){
  addRoleFields(role_type);
 	});
 
-}).trigger('init');
+
 
 
 

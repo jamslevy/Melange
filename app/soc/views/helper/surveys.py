@@ -317,7 +317,7 @@ class SurveyResults(widgets.Widget):
     data = logic.getForFields(filter=filter, limit=limit, offset=offset,
                               order=order)
 
-    params['name'] = "Survey Results"
+    params['name'] = "Survey"
 
     content = {
       'idx': idx,
