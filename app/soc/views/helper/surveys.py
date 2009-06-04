@@ -345,6 +345,9 @@ class SurveyResults(widgets.Widget):
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
     context['grades'] = this_survey.has_grades
+    path = (this_survey.entity_type().lower(), this_survey.prefix,
+            this_survey.scope_path, this_survey.link_id)
+    context['grade_action'] = "/%s/grade/%s/%s/%s" % path
 
     markup = loader.render_to_string('soc/survey/results.html',
                                      dictionary=context).strip('\n')

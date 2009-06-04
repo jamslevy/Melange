@@ -141,7 +141,7 @@ class Survey(soc.models.work.Work):
       ' cannot be taken.')
 
   has_grades = db.BooleanProperty(
-      verbose_name=ugettext('Sets whether this survey is gradable by mentors'))
+      verbose_name=ugettext('Gradable by mentors'))
 
   # this property should be named 'survey_content'
   this_survey = db.ReferenceProperty(SurveyContent,

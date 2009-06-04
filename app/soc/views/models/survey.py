@@ -33,6 +33,7 @@ from soc.logic import dicts
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
 import soc.models.survey
+import soc.models.user
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import redirects
@@ -75,6 +76,9 @@ class View(base.View):
     new_params['extra_django_patterns'] = [
         (r'^%(url_name)s/(?P<access_type>activate)/%(scope)s$',
          'soc.views.models.%(module_name)s.activate',
+         'Create a new %(name)s'),
+         (r'^%(url_name)s/(?P<access_type>grade)/%(scope)s$',
+         'soc.views.models.%(module_name)s.grade',
          'Create a new %(name)s'),
         ]
 
@@ -249,6 +253,8 @@ class View(base.View):
         survey_fields[field_name] = value
     this_survey = survey_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
+    if "has_grades" in request.POST and request.POST["has_grades"] == "on":
+      this_survey.has_grades = True
     if entity:
       entity.this_survey = this_survey
     else:
@@ -300,6 +306,27 @@ class View(base.View):
     path = request.path.replace('/activate/', '/edit/')
     return http.HttpResponseRedirect(path + '?activate=1')
 
+  def grade(self, request, **kwargs):
+    #XXX Needs ACL checks
+    prefix = 'id_survey__'
+    suffix = '__selection__grade'
+    link_id = request.path.split('/')[-1].split('?')[0]
+    #XXX There has to be better way to do this than this gql :-)
+    this_survey = soc.models.survey.Survey.gql(
+        "WHERE link_id = :1", link_id).get()
+    for user, grade in request.POST.items():
+      if user.startswith(prefix):
+        user = user.replace(prefix, '').replace(suffix, '')
+      else:
+        continue
+      user = soc.models.user.User.gql("WHERE link_id = :1", user).get()
+      survey_record = soc.models.survey.SurveyRecord.gql(
+          "WHERE user = :1 AND this_survey = :2", user, this_survey ).get()
+      if survey_record:
+        survey_record.grade = grade
+        survey_record.put()
+    #XXX Ditto for this redirect
+    return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
 
 FIELDS = 'author modified_by'
 PLAIN = 'is_featured content created modified'
@@ -358,3 +385,4 @@ public = decorators.view(view.public)
 export = decorators.view(view.export)
 pick = decorators.view(view.pick)
 activate = decorators.view(view.activate)
+grade = decorators.view(view.grade)
