@@ -26,14 +26,17 @@ from django.template import loader
 
 class NewsFeed():
   
+  def __init__(self, entity):
+    self.entity = entity
+  
   @news_feed.cache
-  def getFeed(self, entity): 
+  def getFeed(self): 
     from soc.logic.models.news_feed import logic as newsfeed_logic
-    feed_items = newsfeed_logic.retrieveFeed(entity)
+    feed_items = newsfeed_logic.retrieveFeed(self.entity)
     context = {'feed_items': feed_items }
     return loader.render_to_string('soc/news_feed/news_feed.html',
                                      dictionary=context)
     
     
     
-news_feed = NewsFeed()
+

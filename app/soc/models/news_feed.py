@@ -29,18 +29,30 @@ class FeedItem(base.ModelWithFieldAttributes):
   """
 
   # refers to the entity this feed item is about 
-  entity = db.ReferenceProperty(soc.models.linkable.Linkable,
-  required=False, collection_name='sent_feed_items')
-  
+  sender_key = db.StringProperty(required=False)
+
   # refers to scope of feed where this item will appear 
+  receiver_key = db.StringProperty(required=False)
+
   #scope = db.ReferenceProperty(soc.models.linkable.Linkable,
   #required=True, collection_name='receieved_feed_items')
-  scope_path = db.StringProperty(required=False)
-  
+  #entity = db.ReferenceProperty(soc.models.linkable.Linkable,
+  #required=False, collection_name='sent_feed_items')
+
   update_type = db.StringProperty(required=False)
+  
+  # a message or markup that go along with the feed item
+  payload = db.TextProperty(required=False)
 
   #: date when the feed item was created
   created = db.DateTimeProperty(auto_now_add=True)
   #: date when the feed item was created (is it ever modified?) 
   modified = db.DateTimeProperty(auto_now=True)  
   # story, payload?
+  
+  def sender(self):
+    return db.get(self.sender_key)
+
+  def receiver(self):
+    return db.get(self.receiver_key)
+    

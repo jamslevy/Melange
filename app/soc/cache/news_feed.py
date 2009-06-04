@@ -31,15 +31,16 @@ from soc.logic import accounts
 import soc.cache.base
 
 
-def key(entity):
+def key(func):
   """Returns the memcache key for the news_feed.
   """
 
+  entity = func.entity
   return 'news_feed_for_%s_%s' % (entity.kind(), entity.key().id_or_name())
 
 
-def get(self, *args, **kwargs):
-  """Retrieves the news_feed for the specified user from the memcache.
+def get(entity, *args, **kwargs):
+  """Retrieves the news_feed for the specified entity from the memcache.
   """
 
   # only cache the page for non-logged-in users
@@ -48,8 +49,8 @@ def get(self, *args, **kwargs):
   if accounts.getCurrentAccount(normalize=False):
     return (None, None)
 
-  entity = self._logic.getFromKeyFields(kwargs)
 
+  logging.debug("CACHED ENTITY:" % entity) 
   # if we can't retrieve the entity, leave it to the actual method
   if not entity:
     return (None, None)
@@ -80,7 +81,7 @@ def put(result, memcache_key, *args, **kwargs):
 
 
 def flush(entity):
-  """Removes the news_feed for the current user from the memcache.
+  """Removes the news_feed for the entity from the memcache.
 
   Also calls soc.cache.rights.flush for the specified user.
 

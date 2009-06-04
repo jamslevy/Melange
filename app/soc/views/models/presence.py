@@ -35,7 +35,7 @@ from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import widgets
 from soc.views.models import base
-from soc.views.helper.news_feed import news_feed
+from soc.views.helper.news_feed import NewsFeed
 import soc.models.presence
 import soc.logic.models.presence
 import soc.logic.dicts
@@ -119,7 +119,8 @@ class View(base.View):
     if not entity:
       return
 
-    context['news_feed'] = news_feed.getFeed(entity) 
+    news_feed = NewsFeed(entity)
+    context['news_feed'] = news_feed.getFeed() 
     try:
       home_doc = entity.home
     except db.Error:

@@ -49,7 +49,7 @@ from soc.views.helper import lists
 from soc.views.helper import redirects
 from soc.views.helper import widgets
 from soc.views.models import group
-
+from soc.views.helper.news_feed import NewsFeed
 import soc.models.organization
 import soc.logic.models.organization
 
@@ -531,6 +531,9 @@ class View(group.View):
     """See base.View._public().
     """
 
+    news_feed = NewsFeed(entity)
+    context['news_feed'] = news_feed.getFeed() 
+    
     from soc.views.models import student_project as student_project_view
 
     program_entity = entity.scope

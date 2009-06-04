@@ -35,19 +35,28 @@ class Logic():
     """
 
   # this should be a background task
-  def addToFeed(self, entity, update_type):
+  def addToFeed(self, sender, receivers, update_type, payload=None):
     """Sends out a message if there is only one unread notification.
     """
+
     # debugging
     import logging
-    logging.info(entity)
-    logging.info(update_type)
-    new_feed_item = soc.models.newsfeed.FeedItem( 
-    entity=entity,      # .should this just be key or key_name?
-    update_type = update_type,
-    scope_path = entity.scope_path)
-    db.put(new_feed_item)  
-    logging.info('just saved feed item %s' % new_feed_item.__dict__ ) 
+    save_items = []
+    for receiver in receivers:
+      
+      logging.info('saving feed item for sender %s and receiver %s' % 
+      (sender.key().name(), receiver.key().name() ) )
+      new_feed_item = soc.models.news_feed.FeedItem( 
+      sender_key= str(sender.key()),      # .should this just be key or key_name?
+      receiver_key = str(receiver.key()),
+      update_type = update_type )
+      if payload: new_feed_item.payload = payload
+      save_items.append(new_feed_item)
+    
+    logging.info('saved %d feed items for sender %s' % ( 
+    len(save_items), sender.key().name() ) ) 
+    db.put(save_items)  
+    
     
 
   def retrieveFeed(self, entity, count=10):
@@ -57,9 +66,10 @@ class Logic():
     # let's start from scratch.
     
     # use django time translation 
-    return [{'name': "Entity Name", 
-            'update_type': "deleted",
-            "relative_time": "three minutes ago" }]
+    
+    feed_items = soc.models.news_feed.FeedItem.all().filter(
+    "receiver_key =", str(entity.key())).fetch(1000)
+    return feed_items[:count]
     
     
         

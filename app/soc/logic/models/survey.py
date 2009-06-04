@@ -28,7 +28,7 @@ from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
 from soc.models.survey import SurveyContent, Survey, SurveyRecord
 from soc.models.work import Work
-
+from soc.logic.models.news_feed import logic as newsfeed_logic
 
 class Logic(work.Logic):
   """Logic methods for the Survey model.
@@ -120,6 +120,25 @@ class Logic(work.Logic):
     if (name == 'is_featured') and (entity.is_featured != value):
       sidebar.flush()
     return True
+
+
+  def _onCreate(self, entity):
+
+    receivers = [self.getProgram(entity)]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+
+  def _onUpdate(self, entity):
+
+    receivers = [self.getProgram(entity)]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+
+  def _onDelete(self, entity):
+
+    receivers = [self.getProgram(entity)]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
+
 
 
 logic = Logic()

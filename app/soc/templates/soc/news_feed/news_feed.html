@@ -6,10 +6,11 @@
 {% for item in feed_items %}
 <div class="entry">
 <div class="title">
-<a class="" >{{ item.name}} was {{ item.update_type }}</a>
+<a href="{{ item.sender.redirect }}" >{{ item.sender.title }}</a> was {{ item.update_type }}
 </div>
-<div class="time">{{ item.relative_time }}</div>
-<div class="snippet">message</div>
+<div class="time">{{ item.created|timesince }} ago</div>
+
+{# additional information <div class="snippet"></div> #}
 </div>
 {% endfor %}
 
