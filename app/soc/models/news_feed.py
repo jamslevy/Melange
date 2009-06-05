@@ -23,6 +23,7 @@ __authors__ = [
 from google.appengine.ext import db
 from soc.models import base
 import soc.models.linkable 
+import soc.models.user
 
 class FeedItem(base.ModelWithFieldAttributes):
   """ An item referencing an entity and its scope. 
@@ -31,7 +32,13 @@ class FeedItem(base.ModelWithFieldAttributes):
   # refers to the entity this feed item is about 
   sender_key = db.StringProperty(required=False)
   # refers to scope of feed where this item will appear 
-  receiver_key = db.StringProperty(required=False)
+  receiver_key = db.StringProperty(required=False),
+  
+  user = db.ReferenceProperty(reference_class=soc.models.user.User,
+                                collection_name = "feed_items",
+                                required=False),
+                                
+  update_type = db.StringProperty(required=False)
 
   #scope = db.ReferenceProperty(soc.models.linkable.Linkable,
   #required=True, collection_name='receieved_feed_items')

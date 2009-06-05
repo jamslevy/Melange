@@ -34,7 +34,7 @@ from django.utils.translation import ugettext
 from soc.cache import sidebar
 from soc.logic import dicts
 from soc.views import out_of_band
-from soc.logic.models.news_feed import logic as newsfeed_logic
+
 
 class Error(Exception):
   """Base class for all exceptions raised by this module.

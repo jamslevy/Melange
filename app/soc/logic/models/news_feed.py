@@ -25,6 +25,7 @@ __authors__ = [
 from google.appengine.ext import db
 import soc.models.news_feed
 import soc.models.linkable 
+from soc.logic.models.user import logic as user_logic
 
 class Logic():
   """Logic methods for the Newsfeed.
@@ -41,10 +42,12 @@ class Logic():
     """
 
     save_items = []
+    user = user_logic.getForCurrentAccount()
     for receiver in receivers:
       new_feed_item = soc.models.news_feed.FeedItem( 
       sender_key= str(sender.key()),      # .should this just be key or key_name?
       receiver_key = str(receiver.key()),
+      user = user,
       update_type = update_type )
       if payload: new_feed_item.payload = payload
       save_items.append(new_feed_item)
