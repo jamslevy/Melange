@@ -30,7 +30,6 @@ class FeedItem(base.ModelWithFieldAttributes):
 
   # refers to the entity this feed item is about 
   sender_key = db.StringProperty(required=False)
-
   # refers to scope of feed where this item will appear 
   receiver_key = db.StringProperty(required=False)
 
