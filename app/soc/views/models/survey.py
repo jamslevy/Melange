@@ -176,6 +176,9 @@ class View(base.View):
     from soc.views.helper.surveys import TakeSurvey
     take_survey = TakeSurvey(user = user)
     context['survey_form'] = take_survey.render(this_survey.this_survey, survey_record)
+    if not context['survey_form']:
+      context["notice"] = "You Must Be a %s to Take This Survey" % this_survey.taking_access.capitalize()
+      
     return True
 
   def _editContext(self, request, context):
