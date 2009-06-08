@@ -110,6 +110,3 @@ def getDateTimeByName(entity, name):
     return getattr(entity, name)
   else:
     return None
-
-
-

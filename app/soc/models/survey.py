@@ -37,7 +37,7 @@ class SurveyContent(db.Expando):
      values are set by the survey creator as survey fields.
   """
 
-  schema = db.StringProperty() # hidden
+  schema = db.TextProperty() # hidden
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
 
@@ -96,7 +96,7 @@ class Survey(soc.models.work.Work):
 
   #: field storing the prefix of this document
   # Should this be removed from surveys?
-  prefix = db.StringProperty(default='program', required=True,
+  prefix = db.StringProperty(default='user', required=True,
       choices=['site', 'club', 'sponsor', 'program', 'org', 'user'],
       verbose_name=ugettext('Prefix'))
   prefix.help_text = ugettext(
@@ -141,7 +141,7 @@ class Survey(soc.models.work.Work):
       ' cannot be taken.')
 
   has_grades = db.BooleanProperty(
-      verbose_name=ugettext('Sets whether this survey is gradable by mentors'))
+      verbose_name=ugettext('Gradable by mentors'))
 
   # this property should be named 'survey_content'
   this_survey = db.ReferenceProperty(SurveyContent,

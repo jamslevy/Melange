@@ -595,7 +595,6 @@ class Logic(object):
     if not entity:
       raise NoEntityError
 
-    #newsfeed_logic.addToFeed(entity, "created")
     sidebar.flush()
 
   def _onUpdate(self, entity):
@@ -606,7 +605,6 @@ class Logic(object):
 
     if not entity:
       raise NoEntityError
-    #newsfeed_logic.addToFeed(entity, "updated")
 
   def _onDelete(self, entity):
     """Called when an entity has been deleted.
@@ -616,4 +614,3 @@ class Logic(object):
 
     if not entity:
       raise NoEntityError
-    #newsfeed_logic.addToFeed(entity, "deleted")
