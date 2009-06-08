@@ -33,6 +33,7 @@ from soc.logic import dicts
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
 import soc.models.survey
+import soc.models.user
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import redirects
@@ -76,6 +77,9 @@ class View(base.View):
         (r'^%(url_name)s/(?P<access_type>activate)/%(scope)s$',
          'soc.views.models.%(module_name)s.activate',
          'Create a new %(name)s'),
+         (r'^%(url_name)s/(?P<access_type>grade)/%(scope)s$',
+         'soc.views.models.%(module_name)s.grade',
+         'Create a new %(name)s'),
         ]
 
     new_params['export_content_type'] = 'text/text'
@@ -86,9 +90,8 @@ class View(base.View):
         'link_id', 'scope_path', 'name', 'short_name', 'title',
         'content', 'prefix','read_access','write_access']
 
-    
-    new_params['create_template'] = 'soc/survey/edit.html'
     new_params['edit_template'] = 'soc/survey/edit.html'
+    new_params['create_template'] = 'soc/survey/edit.html'
 
     # which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
@@ -177,8 +180,7 @@ class View(base.View):
     take_survey = TakeSurvey(user = user)
     context['survey_form'] = take_survey.render(this_survey.this_survey, survey_record)
     if not context['survey_form']:
-      context["notice"] = "You Must Be a %s to Take This Survey" % this_survey.taking_access.capitalize()
-      
+      context["notice"] = "You Must Be a %s to Take This Survey" % this_survey.taking_access.capitalize()    
     return True
 
   def _editContext(self, request, context):
@@ -228,8 +230,11 @@ class View(base.View):
           del schema[d]
         if d in survey_fields:
           del survey_fields[d]
-    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection', 'pick_multi')
-    for key, value in request.POST.items():
+    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection',
+                      'pick_multi', 'choice')
+    RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
+    POST = request.POST
+    for key, value in POST.items():
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
         # is needed
@@ -238,6 +243,7 @@ class View(base.View):
         index = prefix_match.group(0).replace('survey', '').replace('__','')
         index = int(index)
         field_name = prefix.sub('', key)
+        field = 'id_' + key
         for type in PROPERTY_TYPES:
           # should only match one
           if type + "__" in field_name:
@@ -245,15 +251,29 @@ class View(base.View):
             schema[field_name] = {}
             schema[field_name]["index"] = index
             schema[field_name]["type"] = type
+            render = ''
             if type == "selection":
-              value = str(value.split(','))
+              value = value.split(',')
+              #render = request.POST[field_name + '__render_single']
+              render = 'single_select'
             elif type == "pick_multi":
               # We may get many values for each key
-              value = request.POST.getlist(key)
-              value = [val.replace('id_' + key + '__','') for val in value]
+              value = POST.getlist(key)
+              value = [val.replace(field + '__', '') for val in value]
+              #render = request.POST[field_name + '__render_multi']
+              render = 'multi_checkbox'
+            elif type == "choice":
+              type = POST['type_for_' + key]
+              schema[field_name]["type"] = type
+              value = [POST[item] for item in POST if item.startswith(field)]
+              render = RENDER[request.POST['render_for_' + key]]
+            if render:
+              schema[field_name]["render"] = render
         survey_fields[field_name] = value
     this_survey = survey_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
+    if "has_grades" in request.POST and request.POST["has_grades"] == "on":
+      this_survey.has_grades = True
     if entity:
       entity.this_survey = this_survey
     else:
@@ -305,6 +325,27 @@ class View(base.View):
     path = request.path.replace('/activate/', '/edit/')
     return http.HttpResponseRedirect(path + '?activate=1')
 
+  def grade(self, request, **kwargs):
+    #XXX Needs ACL checks
+    prefix = 'id_survey__'
+    suffix = '__selection__grade'
+    link_id = request.path.split('/')[-1].split('?')[0]
+    #XXX There has to be better way to do this than this gql :-)
+    this_survey = soc.models.survey.Survey.gql(
+        "WHERE link_id = :1", link_id).get()
+    for user, grade in request.POST.items():
+      if user.startswith(prefix):
+        user = user.replace(prefix, '').replace(suffix, '')
+      else:
+        continue
+      user = soc.models.user.User.gql("WHERE link_id = :1", user).get()
+      survey_record = soc.models.survey.SurveyRecord.gql(
+          "WHERE user = :1 AND this_survey = :2", user, this_survey ).get()
+      if survey_record:
+        survey_record.grade = grade
+        survey_record.put()
+    #XXX Ditto for this redirect
+    return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
 
 FIELDS = 'author modified_by'
 PLAIN = 'is_featured content created modified'
@@ -363,3 +404,4 @@ public = decorators.view(view.public)
 export = decorators.view(view.export)
 pick = decorators.view(view.pick)
 activate = decorators.view(view.activate)
+grade = decorators.view(view.grade)
