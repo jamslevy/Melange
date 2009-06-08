@@ -1,0 +1,29 @@
+<br/><br/><br/>
+
+<div id="news_feed"><div class="news_feed">
+<h2><a class="">Recent Updates:</a></h2>
+
+{% for item in feed_items %}
+<div class="entry">
+<div class="title">
+	{# redirect attribute should be retrieved with views.helper.redirect #}
+<a href="{{ item.sender.redirect }}" >{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}
+</div>
+<div class="time">{{ item.created|timesince }} ago</div>
+
+{# additional information <div class="snippet"></div> #}
+</div>
+{% endfor %}
+
+</div></div>
+
+
+
+
+
+
+
+
+
+
+
