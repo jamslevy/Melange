@@ -91,6 +91,7 @@ class View(base.View):
         'content', 'prefix','read_access','write_access']
 
     new_params['edit_template'] = 'soc/survey/edit.html'
+    new_params['create_template'] = 'soc/survey/edit.html'
 
     # which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
@@ -178,6 +179,8 @@ class View(base.View):
     from soc.views.helper.surveys import TakeSurvey
     take_survey = TakeSurvey(user = user)
     context['survey_form'] = take_survey.render(this_survey.this_survey, survey_record)
+    if not context['survey_form']:
+      context["notice"] = "You Must Be a %s to Take This Survey" % this_survey.taking_access.capitalize()    
     return True
 
   def _editContext(self, request, context):
