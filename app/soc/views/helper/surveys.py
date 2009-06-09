@@ -35,6 +35,10 @@ from soc.logic.models.survey import results_logic
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyContent, SurveyRecord
 
+WIDGETS = {'multi_checkbox': forms.CheckboxSelectMultiple,
+           'single_select': forms.Select}
+
+
 class SurveyForm(djangoforms.ModelForm):
   def __init__(self, *args, **kwargs):
     """ This class is used to produce survey forms for several
@@ -92,8 +96,8 @@ class SurveyForm(djangoforms.ModelForm):
             options.remove(value)
         for option in options:
           these_choices.append((option, option))
-        self.survey_fields[property] = forms.ChoiceField(choices=tuple(these_choices),
-                                              widget=forms.Select())
+        self.survey_fields[property] = PickOneField(choices=tuple(these_choices),
+            widget=WIDGETS[schema[property['render']]())
       if schema[property]["type"] == "pick_multi":
         if self.survey_record and isinstance(value, basestring):
           # Pass as 'initial' so MultipleChoiceField can render checked boxes
@@ -101,10 +105,9 @@ class SurveyForm(djangoforms.ModelForm):
         else:
           value = None
         these_choices = [(v,v) for v in getattr(self.survey_content, property)]
-        self.survey_fields[property] = forms.MultipleChoiceField(
+        self.survey_fields[property] = PickManyField(
             choices=tuple(these_choices),
-            widget=forms.CheckboxSelectMultiple(), initial=value)
-
+            widget=WIDGETS[schema[property['render']](), initial=value)
     return self.insert_fields()
 
   def insert_fields(self):
