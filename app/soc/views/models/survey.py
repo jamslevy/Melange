@@ -213,6 +213,7 @@ class View(base.View):
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
+    choice_types = ('selection', 'pick_multi')
     if not entity:
       fields['author'] = user
     else:
@@ -221,7 +222,8 @@ class View(base.View):
         _survey = entity.this_survey
         schema = _survey.get_schema()
         for prop in _survey.dynamic_properties():
-          survey_fields[prop] = getattr(_survey, prop)
+          if prop in schema and schema[prop]['type'] not in choice_types:
+            survey_fields[prop] = getattr(_survey, prop)
     deleted = request.POST.get('__deleted__', '')
     if deleted:
       deleted = deleted.split(',')
@@ -235,7 +237,16 @@ class View(base.View):
     RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
     POST = request.POST
     for key, value in POST.items():
-      if key.startswith('survey__'):
+      if key.startswith('id_'):
+        name, number = key[3:].replace('__field', '').rsplit('_', 1)
+        if name in schema and schema[name]['type'] in choice_types:
+          if name in survey_fields:
+            if value not in survey_fields[name]:
+              survey_fields[name][int(number)] = value
+          else:
+            survey_fields[name] = {int(number): value}
+
+      elif key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
         # is needed
         prefix = re.compile('survey__([0-9]{1,3})__')
@@ -270,6 +281,29 @@ class View(base.View):
             if render:
               schema[field_name]["render"] = render
         survey_fields[field_name] = value
+    for key in schema:
+      ordered = False
+      if schema[key]['type'] in choice_types and key in survey_fields:
+        type_for = 'type_for_' + key
+        if type_for in POST:
+          schema[key]['type'] = POST[type_for]
+        render_for = 'render_for_' + key
+        if render_for in POST:
+          schema[key]['render'] = RENDER[POST[render_for]]
+        order = 'order_for_' + key
+        if order in POST and isinstance(survey_fields[key], dict):
+          order = POST[order]
+          order = order.replace('id-li-%s[]=' % key, '')
+          order = order.split('&')
+          if len(order) == len(survey_fields[key]) and order[0]:
+            order = [int(number) for number in order]
+            if set(order) == set(survey_fields[key]):
+              survey_fields[key] = [survey_fields[key][i] for i in order]
+              ordered = True
+          if not ordered:
+            # We don't have a good ordering to use
+            ordered = sorted(survey_fields[key].items())
+            survey_fields[key] = [value for index, value in ordered]
     this_survey = survey_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
     if "has_grades" in request.POST and request.POST["has_grades"] == "on":

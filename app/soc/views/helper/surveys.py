@@ -37,9 +37,6 @@ from soc.logic.models.survey import results_logic
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyContent, SurveyRecord
 
-WIDGETS = {'multi_checkbox': forms.CheckboxSelectMultiple,
-           'single_select': forms.Select}
-
 
 class SurveyForm(djangoforms.ModelForm):
   def __init__(self, *args, **kwargs):
@@ -99,7 +96,7 @@ class SurveyForm(djangoforms.ModelForm):
         for option in options:
           these_choices.append((option, option))
         self.survey_fields[property] = PickOneField(choices=tuple(these_choices),
-            widget=WIDGETS[schema[property['render']]())
+            widget=WIDGETS[schema[property]['render']]())
       if schema[property]["type"] == "pick_multi":
         if self.survey_record and isinstance(value, basestring):
           # Pass as 'initial' so MultipleChoiceField can render checked boxes
@@ -109,7 +106,8 @@ class SurveyForm(djangoforms.ModelForm):
         these_choices = [(v,v) for v in getattr(self.survey_content, property)]
         self.survey_fields[property] = PickManyField(
             choices=tuple(these_choices),
-            widget=WIDGETS[schema[property['render']](), initial=value)
+            widget=WIDGETS[schema[property]['render']](), initial=value)
+
     return self.insert_fields()
 
   def insert_fields(self):
@@ -166,7 +164,7 @@ class SurveyEditForm(SurveyForm):
             options.remove(value)
         for option in options:
           these_choices.append((option, option))
-        self.survey_fields[property] = PickOneField(choices=tuple(these_choices),
+        self.survey_fields[property.replace('-_-', ' ')] = PickOneField(choices=tuple(these_choices),
             widget=UniversalChoiceEditor(kind, render))
       if schema[property]["type"] == "pick_multi":
         kind = schema[property]["type"]
@@ -178,12 +176,18 @@ class SurveyEditForm(SurveyForm):
         else:
           value = None
         these_choices = [(v,v) for v in getattr(self.survey_content, property)]
-        self.survey_fields[property] = PickManyField(
+        self.survey_fields[property.replace('-_-', ' ')] = PickManyField(
             choices=tuple(these_choices),
             widget=UniversalChoiceEditor(kind, render), initial=value)
 
     return self.insert_fields()
 
+  def insert_fields(self):
+    survey_order = self.survey_content.get_survey_order()
+    # first, insert dynamic survey fields 
+    for position, property in survey_order.items():
+      self.fields.insert(position, property.replace('-_-', ' '), self.survey_fields[property.replace('-_-', ' ')])
+    return self.fields
 
 class UniversalChoiceEditor(widgets.Widget):
   def __init__(self, kind, render, attrs=None, choices=()):
@@ -197,8 +201,10 @@ class UniversalChoiceEditor(widgets.Widget):
 
   def render(self, name, value, attrs=None, choices=()):
     if value is None: value = ''
+    name = name.replace('-_-', ' ')
+    safe_name = name.replace(' ', '-_-')
     final_attrs = self.build_attrs(attrs, name=name)
-    names = (name,) * 3
+    names = (safe_name,) * 3
     kind =  ('selected="selected"' * (self.kind == 'selection'),
              'selected="selected"' * (self.kind == 'pick_multi'))
     kind = names + kind
@@ -220,14 +226,18 @@ class UniversalChoiceEditor(widgets.Widget):
     </select>
     ''' % render)
 
-    output.append('<ol id="%s" class="sortable">' % name)
-    str_value = forms.util.smart_unicode(value) # Normalize to string.
     kind = 'type="hidden" id="%s" name="%s"'
+    input_ = '<input %s value="%s"/>' % (kind % (('order_for_' + safe_name,) * 2), '')
+    output.append(input_)
+    output.append('<ol id="%s" class="sortable">' % safe_name)
+    str_value = forms.util.smart_unicode(value) # Normalize to string.
+
+
     for i, (option_value, option_label) in enumerate(chain(self.choices, choices)):
       option_value = escape(forms.util.smart_unicode(option_value))
-      output.append(u'<li id="id_li_%s_%s" class="ui-state-default sortable_li">' % (name, i))
+      output.append(u'<li id="id-li-%s_%s" class="ui-state-default sortable_li">' % (safe_name, i))
       output.append('<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>')
-      id_ = 'id_%s_%s' % (name, i)
+      id_ = 'id_%s_%s' % (safe_name, i)
       value = (id_, id_ + '__field', option_value)
       span = '<span id="%s" class="editable_option" name="%s">%s</span>'
       input_ = '<input %s value="%s"/>' % (kind % ((id_ + '__field',) * 2), option_value)
@@ -237,7 +247,7 @@ class UniversalChoiceEditor(widgets.Widget):
       <button name="create-option-button" id="create-option-button__%s"
       class="ui-button ui-state-default ui-corner-all" value="%s"
       onClick="return false;">Create new option</button>'''
-    is_multi = button % (name, name)
+    is_multi = button % (safe_name, name)
     output.append(u'''</ol>
     %s
     </fieldset>''' % is_multi)
