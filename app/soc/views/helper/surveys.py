@@ -438,7 +438,7 @@ class TakeSurvey(widgets.Widget):
     
     This method should be migrated to a access module"""
     from soc.logic.models.survey import logic as survey_logic
-    this_program = survey_logic.getProgram(self.this_survey)
+    this_program = self.this_survey.scope 
     # Get role linking survey taker to program
 
 

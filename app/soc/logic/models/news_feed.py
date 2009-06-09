@@ -21,7 +21,7 @@ __authors__ = [
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
-
+import logging
 from google.appengine.ext import db
 import soc.models.news_feed
 import soc.models.linkable 
@@ -44,6 +44,9 @@ class Logic():
     save_items = []
     user = user_logic.getForCurrentAccount()
     for receiver in receivers:
+      if not receiver: 
+         logging.warning('empty receiver sent for newsfeed item')
+         continue
       new_feed_item = soc.models.news_feed.FeedItem( 
       sender_key= str(sender.key()),      # .should this just be key or key_name?
       receiver_key = str(receiver.key()),

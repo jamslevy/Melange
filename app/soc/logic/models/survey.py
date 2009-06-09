@@ -78,14 +78,6 @@ class Logic(work.Logic):
     return survey_record
 
 
-  def getProgram(self, survey):
-    """ get program for a survey
-    """
-    import soc.models.program
-    return soc.models.program.Program.get_by_key_name(survey.scope_path)
-    
-
-
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
     """
@@ -122,24 +114,40 @@ class Logic(work.Logic):
     return True
 
 
-  def _onCreate(self, entity):
+  def getScope(self, entity):
+    # instead of check, we should use a script to update all
+    # old documents...
+    import soc.models.program
+    import soc.models.organization
+    import soc.models.user
+    import soc.models.site
+    # anything else? 
+    # use prefix to generate dict key
+    scope_types = {"program": soc.models.program.Program,
+    "org": soc.models.organization.Organization,
+    "user": soc.models.user.User,
+    "site": soc.models.site.Site}
+    scope_type = scope_types.get(entity.prefix)
+    if not scope_type: raise AttributeError
+    entity.scope = scope_type.get_by_key_name(entity.scope_path)
+    entity.put()
+    return entity.scope 
 
-    receivers = [self.getProgram(entity)]
+  def _onCreate(self, entity):
+    self.getScope(entity)
+    receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "created")
 
 
   def _onUpdate(self, entity):
-
-    receivers = [self.getProgram(entity)]
+    receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "updated")
 
 
   def _onDelete(self, entity):
-
-    receivers = [self.getProgram(entity)]
+    receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "deleted")
-
-
+    
 
 logic = Logic()
 

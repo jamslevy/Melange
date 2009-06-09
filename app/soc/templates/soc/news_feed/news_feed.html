@@ -6,8 +6,7 @@
 {% for item in feed_items %}
 <div class="entry">
 <div class="title">
-	{# redirect attribute should be retrieved with views.helper.redirect #}
-<a href="{{ item.sender.redirect }}" >{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}
+<a href="/{{ item.sender.kind.lower }}/show/{{ item.sender.key.name }}" >{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}
 </div>
 <div class="time">{{ item.created|timesince }} ago</div>
 
