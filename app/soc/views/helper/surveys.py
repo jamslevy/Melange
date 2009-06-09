@@ -24,6 +24,8 @@ __authors__ = [
 from django import forms
 from django.forms import widgets
 from django.template import loader
+from django.utils.html import escape
+from itertools import chain
 
 from google.appengine.ext.db import djangoforms
 
@@ -89,7 +91,7 @@ class SurveyForm(djangoforms.ModelForm):
       if schema[property]["type"] == "selection":
         these_choices = []
         # add all properties, but select chosen one
-        options = eval(getattr(self.survey_content, property))
+        options = getattr(self.survey_content, property)
         if self.survey_record and hasattr(self.survey_record, property):
           these_choices.append((value, value))
           if value in options:
@@ -122,7 +124,168 @@ class SurveyForm(djangoforms.ModelForm):
     exclude = ['schema']
 
 
+class SurveyEditForm(SurveyForm):
+  def __init__(self, *args, **kwargs):
+    """Survey form for creating or updating existing surveys.
 
+    Using dynamic properties of the this_survey model (if passed
+    as an arg) the survey form is dynamically formed.
+    """
+
+    super(SurveyEditForm, self).__init__(*args, **kwargs)
+
+  def get_fields(self):
+    if not self.survey_content: return
+    kwargs = self.kwargs
+    self.survey_fields = {}
+    schema = self.survey_content.get_schema()
+    for property in self.survey_content.dynamic_properties():
+      if self.survey_record and hasattr(self.survey_record, property):
+        # use previously entered value
+        value = getattr(self.survey_record, property)
+      else: # use prompts set by survey creator
+        value = getattr(self.survey_content, property)
+      if property not in schema: continue
+      # correct answers? Necessary for grading
+      if schema[property]["type"] == "long_answer":
+        self.survey_fields[property] = forms.fields.CharField(
+                                    widget=widgets.Textarea(),initial=value)
+                                    #custom rows
+      if schema[property]["type"] == "short_answer":
+        self.survey_fields[property] = forms.fields.CharField(
+                                    max_length=40,initial=value)
+      if schema[property]["type"] == "selection":
+        kind = schema[property]["type"]
+        render = schema[property]["render"]
+        these_choices = []
+        # add all properties, but select chosen one
+        options = getattr(self.survey_content, property)
+        if self.survey_record and hasattr(self.survey_record, property):
+          these_choices.append((value, value))
+          if value in options:
+            options.remove(value)
+        for option in options:
+          these_choices.append((option, option))
+        self.survey_fields[property] = PickOneField(choices=tuple(these_choices),
+            widget=UniversalChoiceEditor(kind, render))
+      if schema[property]["type"] == "pick_multi":
+        kind = schema[property]["type"]
+        render = schema[property]["render"]
+        if self.survey_record and isinstance(value, basestring):
+          #XXX Need to allow checking checkboxes by default
+          # Pass as 'initial' so MultipleChoiceField can render checked boxes
+          value = value.split(',')
+        else:
+          value = None
+        these_choices = [(v,v) for v in getattr(self.survey_content, property)]
+        self.survey_fields[property] = PickManyField(
+            choices=tuple(these_choices),
+            widget=UniversalChoiceEditor(kind, render), initial=value)
+
+    return self.insert_fields()
+
+
+class UniversalChoiceEditor(widgets.Widget):
+  def __init__(self, kind, render, attrs=None, choices=()):
+    self.attrs = attrs or {}
+    # choices can be any iterable, but we may need to render this widget
+    # multiple times. Thus, collapse it into a list so it can be consumed
+    # more than once.
+    self.choices = list(choices)
+    self.kind = kind
+    self.render_as = render
+
+  def render(self, name, value, attrs=None, choices=()):
+    if value is None: value = ''
+    final_attrs = self.build_attrs(attrs, name=name)
+    names = (name,) * 3
+    kind =  ('selected="selected"' * (self.kind == 'selection'),
+             'selected="selected"' * (self.kind == 'pick_multi'))
+    kind = names + kind
+    output = [u'<fieldset>']
+    output.append('''<label for="type_for_%s">Question Type</label>
+    <select id="type_for_%s" name="type_for_%s">
+    <option value="selection" %s>selection</option>
+    <option value="pick_multi" %s>pick_multi</option>
+    </select>
+    ''' %  kind)
+    render = ('selected="selected"' * (self.render_as == 'single_select'),
+              'selected="selected"' * (self.render_as == 'multi_checkbox'))
+    render = names + render
+
+    output.append('''<label for="render_for_%s">Render as</label>
+    <select id="render_for_%s" name="render_for_%s">
+    <option value="select" %s>select</option>
+    <option value="checkboxes" %s>checkboxes</option>
+    </select>
+    ''' % render)
+
+    output.append('<ol id="%s" class="sortable">' % name)
+    str_value = forms.util.smart_unicode(value) # Normalize to string.
+    kind = 'type="hidden" id="%s" name="%s"'
+    for i, (option_value, option_label) in enumerate(chain(self.choices, choices)):
+      option_value = escape(forms.util.smart_unicode(option_value))
+      output.append(u'<li id="id_li_%s_%s" class="ui-state-default sortable_li">' % (name, i))
+      output.append('<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>')
+      id_ = 'id_%s_%s' % (name, i)
+      value = (id_, id_ + '__field', option_value)
+      span = '<span id="%s" class="editable_option" name="%s">%s</span>'
+      input_ = '<input %s value="%s"/>' % (kind % ((id_ + '__field',) * 2), option_value)
+      output.append(span % value)
+      output.append(input_ + '</li>')
+    button = '''
+      <button name="create-option-button" id="create-option-button__%s"
+      class="ui-button ui-state-default ui-corner-all" value="%s"
+      onClick="return false;">Create new option</button>'''
+    is_multi = button % (name, name)
+    output.append(u'''</ol>
+    %s
+    </fieldset>''' % is_multi)
+    return u'\n'.join(output)
+
+class PickOneField(forms.ChoiceField):
+  
+  def __init__(self, *args, **kwargs):
+    super(PickOneField, self).__init__(*args, **kwargs)
+
+
+class PickManyField(forms.MultipleChoiceField):
+  
+  def __init__(self, *args, **kwargs):
+    super(PickManyField, self).__init__(*args, **kwargs)
+
+
+class PickOneSelect(forms.Select):
+  
+  def __init__(self, *args, **kwargs):
+    super(PickOneSelect, self).__init__(*args, **kwargs)
+
+
+class PickManyCheckbox(forms.CheckboxSelectMultiple):
+  
+  def __init__(self, *args, **kwargs):
+    super(PickManyCheckbox, self).__init__(*args, **kwargs)
+
+  def render(self, name, value, attrs=None, choices=()):
+    if value is None: value = []
+    has_id = attrs and attrs.has_key('id')
+    final_attrs = self.build_attrs(attrs, name=name)
+    output = [u'<fieldset id="%s_fieldset">\n  <ul>' % name]
+    str_values = set([smart_unicode(v) for v in value]) # Normalize to strings.
+    for i, (option_value, option_label) in enumerate(chain(self.choices, choices)):
+      # If an ID attribute was given, add a numeric index as a suffix,
+      # so that the checkboxes don't all have the same ID attribute.
+      if has_id:
+        final_attrs = dict(final_attrs, id='%s_%s' % (attrs['id'], i))
+      cb = widgets.CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
+      option_value = forms.util.smart_unicode(option_value)
+      rendered_cb = cb.render(name, option_value)
+      output.append(u'    <li><label>%s %s</label></li>' % (rendered_cb, escape(forms.util.smart_unicode(option_label))))
+    output.append(u'  </ul>\n</fieldset>')
+    return u'\n'.join(output)
+
+WIDGETS = {'multi_checkbox': PickManyCheckbox,
+           'single_select': PickOneSelect}
 
 
 class EditSurvey(widgets.Widget):
@@ -152,11 +315,11 @@ class EditSurvey(widgets.Widget):
    %s %s %%(survey)s </table> %%(options_html)s </div>
   """
 
-  QUESTION_TYPES = {"short_answer": "Short Answer", "selection": "Selection",
-                    "long_answer": "Long Answer",
-                    "pick_multi": "Pick Multiple"}
+  QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
+                    "long_answer": "Long Answer"}
+
   BUTTON_TEMPLATE = """
-  <button id="%(type_id)s" onClick="return false;">Add %(type_name)s Question</button>
+  <button id="%(type_id)s" class="AddQuestion" onClick="return false;">Add %(type_name)s Question</button>
   """
   OPTIONS_HTML = """
   <div id="survey_options"> %(options)s </div>
@@ -176,7 +339,7 @@ class EditSurvey(widgets.Widget):
     """ Renders the survey editor widget to HTML
     """
 
-    self.survey_form = SurveyForm(survey_content=self.survey_content, 
+    self.survey_form = SurveyEditForm(survey_content=self.survey_content, 
     this_user=self.this_user, survey_record=None)
     self.survey_form.get_fields()
     if len(self.survey_form.fields) == 0: self.survey_form = self.SURVEY_TEMPLATE
@@ -320,7 +483,7 @@ class SurveyResults(widgets.Widget):
     data = logic.getForFields(filter=filter, limit=limit, offset=offset,
                               order=order)
 
-    params['name'] = "Survey"
+    params['name'] = "Survey Results"
 
     content = {
       'idx': idx,

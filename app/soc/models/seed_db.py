@@ -614,17 +614,21 @@ def seed_survey(request, i):
   if not gsoc2009:
     raise Error('Run seed_db first')
   link_id = 'survey_%d' % i
-  fields = {'SelectionQ': "[u'SelectionQ Option 2', u'SelectionQ Option 1']",
+  fields = {'SelectionQ': [u'SelectionQ Option 2 for %s' % link_id,
+                           u'SelectionQ Option 1 for %s'  % link_id
+                           ],
             'PickMultipleQ': ['PickMultipleQ Checkbox 1 for %s' % link_id,
                               'PickMultipleQ Checkbox 2 for %s' % link_id,
                               ],
             'LongQ': 'LongQ Custom Prompt for %s' % link_id,
             'ShortQ': 'ShortQ Custom Prompt for %s' % link_id,
             }
-  schema = {u'PickMultipleQ': {'index': 5, 'type': 'pick_multi'},
+  schema = {u'PickMultipleQ': {'index': 5, 'type': 'pick_multi',
+                               'render': 'multi_checkbox'},
             u'LongQ': {'index': 2, 'type': 'long_answer'},
             u'ShortQ': {'index': 3, 'type': 'short_answer'},
-            u'SelectionQ': {'index': 4, 'type': 'selection'}
+            u'SelectionQ': {'index': 4, 'type': 'selection',
+                            'render': 'single_select'}
             }
   properties = {
       'key_name': 'program/google/gsoc2009/%s' % link_id,

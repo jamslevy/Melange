@@ -90,14 +90,13 @@ class View(base.View):
         'link_id', 'scope_path', 'name', 'short_name', 'title',
         'content', 'prefix','read_access','write_access']
 
-    
-    new_params['create_template'] = 'soc/survey/edit.html'
     new_params['edit_template'] = 'soc/survey/edit.html'
+    new_params['create_template'] = 'soc/survey/edit.html'
 
     # which one of these are leftovers from Document?
-    new_params['no_create_raw'] = False
-    new_params['no_create_with_scope'] = False
-    new_params['no_create_with_key_fields'] = False
+    new_params['no_create_raw'] = True
+    new_params['no_create_with_scope'] = True
+    new_params['no_create_with_key_fields'] = True
     new_params['no_list_raw'] = True
     new_params['sans_link_id_create'] = True
     new_params['sans_link_id_list'] = True
@@ -180,6 +179,8 @@ class View(base.View):
     from soc.views.helper.surveys import TakeSurvey
     take_survey = TakeSurvey(user = user)
     context['survey_form'] = take_survey.render(this_survey.this_survey, survey_record)
+    if not context['survey_form']:
+      context["notice"] = "You Must Be a %s to Take This Survey" % this_survey.taking_access.capitalize()    
     return True
 
   def _editContext(self, request, context):
@@ -229,8 +230,11 @@ class View(base.View):
           del schema[d]
         if d in survey_fields:
           del survey_fields[d]
-    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection', 'pick_multi')
-    for key, value in request.POST.items():
+    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection',
+                      'pick_multi', 'choice')
+    RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
+    POST = request.POST
+    for key, value in POST.items():
       if key.startswith('survey__'):
         # This is super ugly but unless data is serialized the regex
         # is needed
@@ -239,6 +243,7 @@ class View(base.View):
         index = prefix_match.group(0).replace('survey', '').replace('__','')
         index = int(index)
         field_name = prefix.sub('', key)
+        field = 'id_' + key
         for type in PROPERTY_TYPES:
           # should only match one
           if type + "__" in field_name:
@@ -246,12 +251,24 @@ class View(base.View):
             schema[field_name] = {}
             schema[field_name]["index"] = index
             schema[field_name]["type"] = type
+            render = ''
             if type == "selection":
-              value = str(value.split(','))
+              value = value.split(',')
+              #render = request.POST[field_name + '__render_single']
+              render = 'single_select'
             elif type == "pick_multi":
               # We may get many values for each key
-              value = request.POST.getlist(key)
-              value = [val.replace('id_' + key + '__','') for val in value]
+              value = POST.getlist(key)
+              value = [val.replace(field + '__', '') for val in value]
+              #render = request.POST[field_name + '__render_multi']
+              render = 'multi_checkbox'
+            elif type == "choice":
+              type = POST['type_for_' + key]
+              schema[field_name]["type"] = type
+              value = [POST[item] for item in POST if item.startswith(field)]
+              render = RENDER[request.POST['render_for_' + key]]
+            if render:
+              schema[field_name]["render"] = render
         survey_fields[field_name] = value
     this_survey = survey_logic.create_survey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))

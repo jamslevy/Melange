@@ -37,7 +37,7 @@ class SurveyContent(db.Expando):
      values are set by the survey creator as survey fields.
   """
 
-  schema = db.StringProperty() # hidden
+  schema = db.TextProperty() # hidden
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
 

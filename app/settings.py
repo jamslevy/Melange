@@ -97,7 +97,6 @@ ROOT_URLCONF = 'urls'
 ROOT_PATH = os.path.dirname(__file__)
 TEMPLATE_DIRS = (
     # TODO(proto): customize the template search directories
-    os.path.join(ROOT_PATH, 'ghop', 'templates'),
     os.path.join(ROOT_PATH, 'gsoc', 'templates'),
     os.path.join(ROOT_PATH, 'soc', 'templates'),
     os.path.join(ROOT_PATH, 'shell', 'templates'),
@@ -111,5 +110,5 @@ INSTALLED_APPS = (
 #    'django.contrib.sites',
 )
 
-MODULE_FMT = 'soc.modules.%s'
-MODULES = []
+MODULE_FMT = 'soc.modules.%s.callback'
+MODULES = ['ghop']
