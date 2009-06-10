@@ -47,11 +47,31 @@ class Logic():
       if not receiver: 
          logging.warning('empty receiver sent for newsfeed item')
          continue
+         
+         
+      # custom url names
+      # value should correlate to params['url_name'] in view
+      # Regex sub() method could also be used to add the underscores.
+      custom_url_names = { 
+      'studentproject': 'student_project',
+      'prioritygroup': 'priority_group',
+      'studentproposal':'student_proposal', 
+      'groupapp':'group_app', 
+      'orgapp':'org_app', 
+      'clubmember':'club_member', 
+      }
+      
+      
+      url_name = custom_url_names.get(sender.kind().lower())
+      if not url_name: url_name = sender.kind().lower()
+      
       new_feed_item = soc.models.news_feed.FeedItem( 
       sender_key= str(sender.key()),      # .should this just be key or key_name?
       receiver_key = str(receiver.key()),
       user = user,
-      update_type = update_type )
+      update_type = update_type,
+      link = "/%s/show/%s" % (url_name, sender.key().name() ) 
+      )
       if payload: new_feed_item.payload = payload
       save_items.append(new_feed_item)
     db.put(save_items)  

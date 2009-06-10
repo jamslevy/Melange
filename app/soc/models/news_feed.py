@@ -45,7 +45,10 @@ class FeedItem(base.ModelWithFieldAttributes):
   #entity = db.ReferenceProperty(soc.models.linkable.Linkable,
   #required=False, collection_name='sent_feed_items')
 
-  update_type = db.StringProperty(required=False)
+  update_type = db.StringProperty(required=True)
+  # link to sender page
+  link = db.StringProperty(required=True)
+  
   
   # a message or markup that go along with the feed item
   payload = db.TextProperty(required=False)
