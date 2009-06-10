@@ -35,7 +35,7 @@ from soc.views.helper import responses
 from soc.views.helper import widgets
 from soc.views.models import document as document_view
 from soc.views.models import presence_with_tos
-
+from soc.views.helper.news_feed import NewsFeed
 import soc.models.site
 import soc.logic.models.site
 import soc.logic.dicts
@@ -187,7 +187,13 @@ class View(presence_with_tos.View):
 
     return self.edit(request, "edit", page_name, seed=key_values, **key_values)
 
+  def _public(self, request, entity, context):
+    """See base.View._public().
+    """
 
+    news_feed = NewsFeed(entity)
+    context['news_feed'] = news_feed.getFeed() 
+    
 view = View()
 
 admin = decorators.view(view.admin)
