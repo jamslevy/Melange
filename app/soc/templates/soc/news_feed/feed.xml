@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{{ item.receiever.title }} Newsfeed</title>
+  <link rel="self" type="application/atom+xml" href="{# source #}"/>
+  <updated>{{ feed_items.0.created }}</updated>
+  <id>{# source #}</id>
+
+  {% for item in feed_items %}
+  <entry>
+    <title>{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}</title>
+    <id>{{item.key }}</id>
+    <updated>{{ item.created }}</updated>
+    <content type="html">
+    
+    <div class="title"> 
+    <a href="/{{ item.sender.kind.lower }}/show/{{ item.sender.key.name }}" >{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}
+    </div>
+    
+    <div class="time">{{ item.created|timesince }} ago</div>
+
+    {# additional information <div class="snippet"></div> #}
+
+    </content>
+  </entry>
+  {% endfor %}
+  
+</feed>
+
+
+
+
