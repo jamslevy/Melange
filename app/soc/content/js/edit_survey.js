@@ -303,7 +303,9 @@ $(function () {
 
 $(function () {
   function onSubmitEditable(content) {
-    $(this);
+    var id_ = $(this).parent().attr('id').replace('-li-', '_');
+    id_ = id_ + '__field';
+    $('#' + id_).val(content.current);
   }
   $('.editable_option').editable({
     editBy: 'dblclick',
@@ -392,8 +394,10 @@ $(function () {
         $("#new_question_button_id").val('');
         var field_template =  $("<tr><th><label>" + del_el + "</label></th><td>  </td></tr>");
         var field_name = $("#new_question_name").val();
+        var question_content = $("#new_question_content").val();
         if (field_name !== '') {
           $("#new_question_name").val('');
+          $("#new_question_content").val('');
           var new_field = false;
           var type = button_id + "__";
           var field_count = survey_table.find('tr').length;
@@ -421,9 +425,9 @@ $(function () {
             field_count = survey_table.find('tr').length;
             new_field_count = field_count + 1 + '__';
             var formatted_name = (SURVEY_PREFIX + new_field_count + type +
-                                  field_name.replace(/\s/g, '-_-'));
+                                  field_name);
             if (button_id === 'choice')  {
-              var name = formatted_name;
+              var name = (field_name);
               new_field = $('<fieldset>\n  <label for="type_for_' + name +
               '">Question Type</label>' +
               '\n  <select id="type_for_' + name + '" name="type_for_' + name + '">' +
@@ -436,27 +440,40 @@ $(function () {
               '\n  </select>' +
               '\n  <input type="hidden" id="order_for_' + name +
               '\n  " name="order_for_' + name + '" value=""/>' +
+              '\n  <input type="hidden" id="index_for_' + name +
+              '\n  " name="index_for_' + name + '" value="' +
+              (field_count + 1) + '"/>' +
               '\n  <ol id="' + name + '" class="sortable"></ol>' +
-              '\n  <input type="hidden" name="' + name + '" id="id_' + name + '"/>' +
+              '\n  <input type="hidden" name="NEW_' + name + '" id="NEW_' + name + 
+              '" value="' + question_content + '"/>' +
               '\n  <button name="create-option-button" id="create-option-button__' + name +
               '" class="ui-button ui-state-default ui-corner-all" value="' + name +
               '" onClick="return false;">Create new option</button>\n</fieldset>');
+            $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
+            field_template.find('label').attr('for', 'NEW_' + name)
+            .append(question_content + ":").end().find('td').append(new_field);
+            survey_table.append(field_template).trigger('init');
+
             }
             else {
               new_field = $(new_field);
               // maybe the name should be serialized in a more common format
               $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
+              field_template.find('label').attr('for', 'id_' + formatted_name)
+              .append(question_content + ":").end().find('td').append(new_field);
+              survey_table.append(field_template).trigger('init');
+
             }
-            field_template.find('label').attr('for', 'id_' + formatted_name)
-            .append(field_name + ":").end().find('td').append(new_field);
-            survey_table.append(field_template).trigger('init');
           }
         }
+        $("#new_question_name").val('');
+        $("#new_question_content").val('');
         $(this).dialog('close');
       },
       Cancel: function () {
         $('#new_question_name').val('');
         $("#new_question_button_id").val('');
+        $("#new_question_content").val('');
         $(this).dialog('close');
       }
     }

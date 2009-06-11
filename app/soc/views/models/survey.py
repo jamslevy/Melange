@@ -213,7 +213,7 @@ class View(base.View):
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
-    choice_types = ('selection', 'pick_multi')
+    choice_types = ('selection', 'pick_multi', 'choice')
     if not entity:
       fields['author'] = user
     else:
@@ -239,6 +239,10 @@ class View(base.View):
     for key, value in POST.items():
       if key.startswith('id_'):
         name, number = key[3:].replace('__field', '').rsplit('_', 1)
+        if name not in schema:
+          if 'NEW_' + name in POST:
+            schema[name] = {'type': 'choice'}
+            schema[name]['index'] = int(POST['index_for_' + name])
         if name in schema and schema[name]['type'] in choice_types:
           if name in survey_fields:
             if value not in survey_fields[name]:
@@ -273,13 +277,6 @@ class View(base.View):
               value = [val.replace(field + '__', '') for val in value]
               #render = request.POST[field_name + '__render_multi']
               render = 'multi_checkbox'
-            elif type == "choice":
-              type = POST['type_for_' + key]
-              schema[field_name]["type"] = type
-              value = [POST[item] for item in POST if item.startswith(field)]
-              render = RENDER[request.POST['render_for_' + key]]
-            if render:
-              schema[field_name]["render"] = render
         survey_fields[field_name] = value
     for key in schema:
       ordered = False
@@ -290,6 +287,9 @@ class View(base.View):
         render_for = 'render_for_' + key
         if render_for in POST:
           schema[key]['render'] = RENDER[POST[render_for]]
+        question_for = 'NEW_' + key
+        if question_for in POST:
+          schema[key]["question"] = POST[question_for]
         order = 'order_for_' + key
         if order in POST and isinstance(survey_fields[key], dict):
           order = POST[order]

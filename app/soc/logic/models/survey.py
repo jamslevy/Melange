@@ -58,7 +58,7 @@ class Logic(work.Logic):
     db.put(this_survey)
     return this_survey
 
-  def update_survey_record(self, user, survey_entity, survey_record, survey_fields):
+  def update_survey_record(self, user, survey_entity, survey_record, fields):
     """ Create a new survey record, or get an existing one.
     """
 
@@ -66,12 +66,12 @@ class Logic(work.Logic):
       for prop in survey_record.dynamic_properties():
         delattr(survey_record, prop)
     if not survey_record:
-      survey_record = SurveyRecord(user = user, this_survey = survey_entity)
+      survey_record = SurveyRecord(user=user, this_survey=survey_entity)
     schema = survey_entity.this_survey.get_schema()
-    for name, value in survey_fields.items():
+    for name, value in fields.items():
       pick_multi = name in schema and schema[name]['type'] == 'pick_multi'
-      if pick_multi and hasattr(survey_fields, 'getlist'):
-        setattr(survey_record, name, ','.join(survey_fields.getlist(name)))
+      if pick_multi and hasattr(fields, 'getlist'): # it's a multidict
+        setattr(survey_record, name, ','.join(fields.getlist(name)))
       else:
         setattr(survey_record, name, value)
     db.put(survey_record)
@@ -83,8 +83,6 @@ class Logic(work.Logic):
     """
     import soc.models.program
     return soc.models.program.Program.get_by_key_name(survey.scope_path)
-    
-
 
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
