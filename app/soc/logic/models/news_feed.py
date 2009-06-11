@@ -27,6 +27,20 @@ import soc.models.news_feed
 import soc.models.linkable 
 from soc.logic.models.user import logic as user_logic
 
+
+# custom url names
+# value should correlate to params['url_name'] in view
+# Regex sub() method could also be used to add the underscores.
+CUSTOM_URL_NAMES = { 
+'studentproject': 'student_project',
+'prioritygroup': 'priority_group',
+'studentproposal':'student_proposal', 
+'groupapp':'group_app', 
+'orgapp':'org_app', 
+'clubmember':'club_member', 
+}
+      
+      
 class Logic():
   """Logic methods for the Newsfeed.
   """
@@ -48,21 +62,10 @@ class Logic():
          logging.warning('empty receiver sent for newsfeed item')
          continue
          
-         
-      # custom url names
-      # value should correlate to params['url_name'] in view
-      # Regex sub() method could also be used to add the underscores.
-      custom_url_names = { 
-      'studentproject': 'student_project',
-      'prioritygroup': 'priority_group',
-      'studentproposal':'student_proposal', 
-      'groupapp':'group_app', 
-      'orgapp':'org_app', 
-      'clubmember':'club_member', 
-      }
+        
       
       
-      url_name = custom_url_names.get(sender.kind().lower())
+      url_name = CUSTOM_URL_NAMES.get(sender.kind().lower())
       if not url_name: url_name = sender.kind().lower()
       
       new_feed_item = soc.models.news_feed.FeedItem( 

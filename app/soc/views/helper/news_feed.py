@@ -33,10 +33,22 @@ class NewsFeed():
   def getFeed(self): 
     from soc.logic.models.news_feed import logic as newsfeed_logic
     feed_items = newsfeed_logic.retrieveFeed(self.entity)
-    context = {'feed_items': feed_items }
+    feed_url = self.getFeedUrl()
+    context = {'feed_items': feed_items, 'feed_url': feed_url }
     return loader.render_to_string('soc/news_feed/news_feed.html',
                                      dictionary=context)
     
     
     
 
+  def getFeedUrl(self): 
+    # should this be in redirects module? 
+    #return self.entity.sc
+    
+    # get the url name
+    from soc.logic.models.news_feed import CUSTOM_URL_NAMES
+    url_name = CUSTOM_URL_NAMES.get(self.entity.kind().lower())
+    if not url_name: url_name = self.entity.kind().lower()
+    # return formatted link
+    return "/%s/subscribe/%s" % (url_name, self.entity.key().name() )
+    

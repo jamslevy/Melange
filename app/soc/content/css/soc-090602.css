@@ -724,6 +724,11 @@ color:#666666;
 .news_feed {
   border: 10px solid #e5ecf9;
   border-top: 1px solid #3366cc;
+  float:left;
+}
+
+.news_feed .inner{
+padding:0 20px;
 }
 
 .news_feed h2 {
@@ -759,3 +764,6 @@ color:#666666;
   background-color: white;
 }
 
+a#feed_icon img{
+margin:-1px 0;
+}

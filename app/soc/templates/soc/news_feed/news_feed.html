@@ -1,8 +1,13 @@
 <br/><br/><br/>
 
-<div id="news_feed"><div class="news_feed">
-<h2><a class="">Recent Updates:</a></h2>
+<div class="news_feed">
 
+<h2>
+<a id="feed_icon" href="{{ feed_url }}"><img src="/soc/content/images/feed.gif"/></a>
+<a class="">Recent Updates:</a>
+</h2>
+
+<div class="inner">
 {% for item in feed_items %}
 <div class="entry">
 <div class="title"> {# this could also be item.link and be added when the link is created using redirect view helper #}
@@ -13,10 +18,15 @@
 {# additional information <div class="snippet"></div> #}
 </div>
 {% endfor %}
+</div>
 
-</div></div>
 
+</div>
 
+{% block scripts %} 
+ <link rel="alternate" type="application/rss+xml" title="RSS" href="{{ feed_url }}"/>
+{{ block.super }} 
+{% endblock %}
 
 
 
