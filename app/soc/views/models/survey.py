@@ -29,6 +29,8 @@ import StringIO
 from django import forms
 from django import http
 
+from google.appengine.ext import db
+
 from soc.cache import home
 from soc.logic import cleaning
 from soc.logic import dicts
@@ -250,7 +252,12 @@ class View(base.View):
       this_survey.has_grades = True
     if entity:
       entity.this_survey = this_survey
+      entity.scope = survey_logic.getProgram(entity)
+      db.put(entity)
     else:
+      scope = survey_logic.getProgram(fields['scope_path'])
+      # XXX Doesn't work :(
+      fields['scope'] = scope
       fields['this_survey'] = this_survey
 
     fields['modified_by'] = user

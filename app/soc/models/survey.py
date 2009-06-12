@@ -101,7 +101,7 @@ class Survey(soc.models.work.Work):
 
   #: field storing the prefix of this document
   # Should this be removed from surveys?
-  prefix = db.StringProperty(default='user', required=True,
+  prefix = db.StringProperty(default='program', required=True,
       choices=['site', 'club', 'sponsor', 'program', 'org', 'user'],
       verbose_name=ugettext('Prefix'))
   prefix.help_text = ugettext(

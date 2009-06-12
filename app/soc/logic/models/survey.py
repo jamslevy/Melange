@@ -26,6 +26,7 @@ from google.appengine.ext import db
 from soc.cache import sidebar
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
+from soc.models.program import Program
 from soc.models.survey import SurveyContent, Survey, SurveyRecord
 from soc.models.work import Work
 
@@ -81,8 +82,16 @@ class Logic(work.Logic):
   def getProgram(self, survey):
     """ get program for a survey
     """
-    import soc.models.program
-    return soc.models.program.Program.get_by_key_name(survey.scope_path)
+
+    get_by_key_name = Program.get_by_key_name
+    if isinstance(survey, basestring):
+      path = survey
+    else:
+      path = survey.scope_path
+    program = get_by_key_name(path)
+    if not program:
+      program = get_by_key_name(path.replace(survey.prefix + '/', ''))
+    return program
 
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
