@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,7 +49,7 @@ $(function () {
 
   // Bind submit
 /*
-*  Restore survey content html from editPost 
+*  Restore survey content html from editPost
 *  if POST fails
 */
 
@@ -112,20 +112,6 @@ $(function () {
         $(this).preserveDefaultText(DEFAULT_LONG_ANSWER_TEXT);
       }
       $(this).growfield();
-    });
-
-    widget.find(":button").click(function () {
-      if ($(this).val() === DEFAULT_OPTION_TEXT) {
-        var fieldset = $(this).parents('fieldset');
-        var option_value = prompt("Name the new checkbox");
-        if ((option_value === null) || (option_value.length < 1)) {
-          return false;
-        }
-        fieldset.append("<br /><input type='checkbox' checked='checked' value='" +
-                        fieldset.attr('id') + "__" + option_value + "' name='" +
-                        fieldset.attr('name') + "' >"  + option_value + "</input>"
-        ).end();
-      }
     });
 
     widget.find('a.delete img').click(function () {
@@ -235,16 +221,17 @@ $(function () {
     survey.find('tr.role-specific').remove();
 
     /*
-    * Save survey content html from editPost 
+    * Save survey content html from editPost
     * if POST fails
     */
+    /*
     // save field vals
     widget.find('textarea,input').each(function () {
       $(this).attr('val', $(this).val());
     });
 
     $(this).find("#id_survey_html").attr('value', widget.html());
-
+*/
     // don't save default value
     widget.find('input').each(function () {
       if ($(this).val() === DEFAULT_SHORT_ANSWER_TEXT) {
@@ -377,9 +364,6 @@ $(function () {
 });
 
 
-
-
-
 $(function () {
 //  Dialog for adding new question to survey
   $("#new_question_dialog").dialog({
@@ -422,6 +406,9 @@ $(function () {
           }
 
           if (new_field) {
+            var question_for = ('\n  <input type="hidden" name="NEW_' + field_name +
+                                '" id="NEW_' + field_name + '" value="' +
+                                question_content + '"/>')
             field_count = survey_table.find('tr').length;
             new_field_count = field_count + 1 + '__';
             var formatted_name = (SURVEY_PREFIX + new_field_count + type +
@@ -444,8 +431,7 @@ $(function () {
               '\n  " name="index_for_' + name + '" value="' +
               (field_count + 1) + '"/>' +
               '\n  <ol id="' + name + '" class="sortable"></ol>' +
-              '\n  <input type="hidden" name="NEW_' + name + '" id="NEW_' + name + 
-              '" value="' + question_content + '"/>' +
+              question_for +
               '\n  <button name="create-option-button" id="create-option-button__' + name +
               '" class="ui-button ui-state-default ui-corner-all" value="' + name +
               '" onClick="return false;">Create new option</button>\n</fieldset>');
@@ -460,7 +446,8 @@ $(function () {
               // maybe the name should be serialized in a more common format
               $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
               field_template.find('label').attr('for', 'id_' + formatted_name)
-              .append(question_content + ":").end().find('td').append(new_field);
+              .append(question_content + ":").end().find('td').append(new_field)
+              .append($(question_for));
               survey_table.append(field_template).trigger('init');
 
             }

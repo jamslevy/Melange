@@ -147,11 +147,7 @@ class SurveyEditForm(SurveyForm):
     self.survey_fields = {}
     schema = self.survey_content.get_schema()
     for property in self.survey_content.dynamic_properties():
-      if self.survey_record and hasattr(self.survey_record, property):
-        # use previously entered value
-        value = getattr(self.survey_record, property)
-      else: # use prompts set by survey creator
-        value = getattr(self.survey_content, property)
+      value = getattr(self.survey_content, property)
       if property not in schema: continue
       # correct answers? Necessary for grading
       if 'question' in schema[property]:
@@ -313,7 +309,7 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
     has_id = attrs and attrs.has_key('id')
     final_attrs = self.build_attrs(attrs, name=name)
     output = [u'<fieldset id="%s_fieldset">\n  <ul>' % name]
-    str_values = set([smart_unicode(v) for v in value]) # Normalize to strings.
+    str_values = set([forms.util.smart_unicode(v) for v in value]) # Normalize to strings.
     chained_choices = enumerate(chain(self.choices, choices))
     for i, (option_value, option_label) in chained_choices:
       # If an ID attribute was given, add a numeric index as a suffix,
@@ -550,12 +546,12 @@ class SurveyResults(widgets.Widget):
 
     context['list'] = Lists(contents)
 
-    for list in context['list']._contents:
-      if len(list['data']) < 1:
+    for list_ in context['list']._contents:
+      if len(list_['data']) < 1:
         return "<p>No Survey Results Have Been Submitted</p>"
-      list['row'] = 'soc/survey/list/results_row.html'
-      list['heading'] = 'soc/survey/list/results_heading.html'
-      list['description'] = 'Survey Results:'
+      list_['row'] = 'soc/survey/list/results_row.html'
+      list_['heading'] = 'soc/survey/list/results_heading.html'
+      list_['description'] = 'Survey Results:'
     context['properties'] = this_survey.this_survey.ordered_properties()
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"

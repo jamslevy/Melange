@@ -53,7 +53,12 @@ class SurveyContent(db.Expando):
     for property in self.dynamic_properties():
       # map out the order of the survey fields
       try:
-        survey_order[schema[property]["index"]] = property
+        index = schema[property]["index"]
+        if index not in survey_order:
+          survey_order[index] = property
+        else:
+          # Handle duplicated indexes
+          survey_order[max(survey_order) + 1] = property
       except KeyError:
         pass
     return survey_order

@@ -22,6 +22,8 @@ __authors__ = [
   ]
 
 import csv
+import datetime
+
 import re
 import StringIO
 from django import forms
@@ -32,13 +34,19 @@ from soc.logic import cleaning
 from soc.logic import dicts
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
-import soc.models.survey
-import soc.models.user
+from soc.models.survey import SurveyRecord, Survey
+from soc.models.user import User
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import redirects
-from soc.views.helper import widgets, surveys
+from soc.views.helper import surveys
+from soc.views.helper import widgets
 from soc.views.models import base
+
+
+CHOICE_TYPES = set(('selection', 'pick_multi', 'choice'))
+TEXT_TYPES = set(('long_answer', 'short_answer'))
+PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
 
 
 class View(base.View):
@@ -113,6 +121,8 @@ class View(base.View):
                                                  required=False),
         # TODO: save survey content when the POST fails
         # Is there a better way to do this besides a hidden field?
+        # ajaksu: I think we should be adding questions/fields via AJAX,
+        # so saving the whole form wouldn't be necessary.
         'survey_html': forms.fields.CharField(widget=forms.HiddenInput,
                                               required=False),
         'scope_path': forms.fields.CharField(widget=forms.HiddenInput,
@@ -148,10 +158,10 @@ class View(base.View):
 
   def _public(self, request, entity, context):
     """
-    
-    For surveys, the "public" page is actually the access-protected 
-    survey-taking page. We should use a different method name just to 
-    make this clear. 
+
+    For surveys, the "public" page is actually the access-protected
+    survey-taking page. We should use a different method name just to
+    make this clear.
 
     Args:
       request: the django request object
@@ -159,28 +169,30 @@ class View(base.View):
       context: the context object
     """
 
-    # this won't work -- there's *always* a survey entity. We want to 
-    # check if there is a survey record from this user. 
+    # this won't work -- there's *always* a survey entity. We want to
+    # check if there is a survey record from this user.
     this_survey = entity
     user = user_logic.getForCurrentAccount()
-    
-    import datetime
+
     if this_survey.deadline and datetime.datetime.now() > this_survey.deadline:
       # Are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
       return True
-    survey_record = soc.models.survey.SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, this_survey ).get() 
+    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                     user, this_survey ).get()
     if len(request.POST) == 0: # not submitting completed survey record
       pass
     else: # submitting a completed survey record
       context['notice'] = "Survey Submission Saved"
-      survey_record = survey_logic.update_survey_record(user, this_survey, survey_record, request.POST)
-    from soc.views.helper.surveys import TakeSurvey
-    take_survey = TakeSurvey(user = user)
-    context['survey_form'] = take_survey.render(this_survey.this_survey, survey_record)
+      survey_record = survey_logic.update_survey_record(user, this_survey,
+                                                        survey_record,
+                                                        request.POST)
+    take_survey = surveys.TakeSurvey(user = user)
+    context['survey_form'] = take_survey.render(this_survey.this_survey,
+                                                survey_record)
     if not context['survey_form']:
-      context["notice"] = "You Must Be a %s to Take This Survey" % this_survey.taking_access.capitalize()    
+      access_tpl = "You Must Be a %s to Take This Survey"
+      context["notice"] = access_tpl % this_survey.taking_access.capitalize()
     return True
 
   def _editContext(self, request, context):
@@ -199,8 +211,8 @@ class View(base.View):
     results = surveys.SurveyResults()
 
     context['survey_records'] = results.render(self._entity, self._params,
-                                             filter={})
-                                             
+                                               filter={})
+
     super(View, self)._editContext(request, context)
 
   def _editPost(self, request, entity, fields):
@@ -213,7 +225,6 @@ class View(base.View):
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
-    choice_types = ('selection', 'pick_multi', 'choice')
     if not entity:
       fields['author'] = user
     else:
@@ -222,9 +233,31 @@ class View(base.View):
         _survey = entity.this_survey
         schema = _survey.get_schema()
         for prop in _survey.dynamic_properties():
-          if prop in schema and schema[prop]['type'] not in choice_types:
+          if prop in schema and schema[prop]['type'] not in CHOICE_TYPES:
+            # Choice questions are always regenerated from request, see
+            # self.get_request_questions()
             survey_fields[prop] = getattr(_survey, prop)
-    deleted = request.POST.get('__deleted__', '')
+    self.delete_questions(schema, survey_fields, request.POST)
+
+    self.get_request_questions(schema, survey_fields, request.POST)
+
+    self.get_schema_options(schema, survey_fields, request.POST)
+
+    this_survey = survey_logic.create_survey(survey_fields, schema,
+                      this_survey=getattr(entity,'this_survey', None))
+
+    if "has_grades" in request.POST and request.POST["has_grades"] == "on":
+      this_survey.has_grades = True
+    if entity:
+      entity.this_survey = this_survey
+    else:
+      fields['this_survey'] = this_survey
+
+    fields['modified_by'] = user
+    super(View, self)._editPost(request, entity, fields)
+
+  def delete_questions(self, schema, survey_fields, POST):
+    deleted = POST.get('__deleted__', '')
     if deleted:
       deleted = deleted.split(',')
       for d in deleted:
@@ -232,18 +265,22 @@ class View(base.View):
           del schema[d]
         if d in survey_fields:
           del survey_fields[d]
-    PROPERTY_TYPES = ('long_answer', 'short_answer', 'selection',
-                      'pick_multi', 'choice')
-    RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
-    POST = request.POST
+
+  def get_request_questions(self, schema, survey_fields, POST):
+    # Get fields from request
     for key, value in POST.items():
       if key.startswith('id_'):
+        # Choice question fields, they are always generated from POST contents,
+        # as their 'content' is editable and they're reorderable.
+        # Also get its field index for handling reordering.
         name, number = key[3:].replace('__field', '').rsplit('_', 1)
         if name not in schema:
           if 'NEW_' + name in POST:
+            # New Choice question, set generic type and get its index
             schema[name] = {'type': 'choice'}
             schema[name]['index'] = int(POST['index_for_' + name])
-        if name in schema and schema[name]['type'] in choice_types:
+        if name in schema and schema[name]['type'] in CHOICE_TYPES:
+          # Build an index:content dictionary
           if name in survey_fields:
             if value not in survey_fields[name]:
               survey_fields[name][int(number)] = value
@@ -251,6 +288,7 @@ class View(base.View):
             survey_fields[name] = {int(number): value}
 
       elif key.startswith('survey__'):
+        # New Text question
         # This is super ugly but unless data is serialized the regex
         # is needed
         prefix = re.compile('survey__([0-9]{1,3})__')
@@ -259,39 +297,31 @@ class View(base.View):
         index = int(index)
         field_name = prefix.sub('', key)
         field = 'id_' + key
-        for type in PROPERTY_TYPES:
+        for ptype in PROPERTY_TYPES:
           # should only match one
-          if type + "__" in field_name:
-            field_name = field_name.replace(type + "__", "")
+          if ptype + "__" in field_name:
+            field_name = field_name.replace(ptype + "__", "")
             schema[field_name] = {}
             schema[field_name]["index"] = index
-            schema[field_name]["type"] = type
-            render = ''
-            if type == "selection":
-              value = value.split(',')
-              #render = request.POST[field_name + '__render_single']
-              render = 'single_select'
-            elif type == "pick_multi":
-              # We may get many values for each key
-              value = POST.getlist(key)
-              value = [val.replace(field + '__', '') for val in value]
-              #render = request.POST[field_name + '__render_multi']
-              render = 'multi_checkbox'
+            schema[field_name]["type"] = ptype
         survey_fields[field_name] = value
+
+  def get_schema_options(self, schema, survey_fields, POST):
+    RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
     for key in schema:
-      ordered = False
-      if schema[key]['type'] in choice_types and key in survey_fields:
+      if schema[key]['type'] in CHOICE_TYPES and key in survey_fields:
+        # Handle reordering fields
+        ordered = False
         type_for = 'type_for_' + key
         if type_for in POST:
           schema[key]['type'] = POST[type_for]
         render_for = 'render_for_' + key
         if render_for in POST:
           schema[key]['render'] = RENDER[POST[render_for]]
-        question_for = 'NEW_' + key
-        if question_for in POST:
-          schema[key]["question"] = POST[question_for]
         order = 'order_for_' + key
         if order in POST and isinstance(survey_fields[key], dict):
+          # 'order_for_name' is jquery serialized from a sortable, so it's in
+          # a 'name[]=1&name[]=2&name[]=0' format ('id-li-' is set in our JS)
           order = POST[order]
           order = order.replace('id-li-%s[]=' % key, '')
           order = order.split('&')
@@ -304,17 +334,11 @@ class View(base.View):
             # We don't have a good ordering to use
             ordered = sorted(survey_fields[key].items())
             survey_fields[key] = [value for index, value in ordered]
-    this_survey = survey_logic.create_survey(survey_fields, schema,
-                      this_survey=getattr(entity,'this_survey', None))
-    if "has_grades" in request.POST and request.POST["has_grades"] == "on":
-      this_survey.has_grades = True
-    if entity:
-      entity.this_survey = this_survey
-    else:
-      fields['this_survey'] = this_survey
 
-    fields['modified_by'] = user
-    super(View, self)._editPost(request, entity, fields)
+      # Set 'question' entry (free text label for question) in schema
+      question_for = 'NEW_' + key
+      if question_for in POST:
+        schema[key]["question"] = POST[question_for]
 
   def _editGet(self, request, entity, form):
     """See base.View._editGet().
@@ -365,21 +389,21 @@ class View(base.View):
     suffix = '__selection__grade'
     link_id = request.path.split('/')[-1].split('?')[0]
     #XXX There has to be better way to do this than this gql :-)
-    this_survey = soc.models.survey.Survey.gql(
-        "WHERE link_id = :1", link_id).get()
+    this_survey = Survey.gql("WHERE link_id = :1", link_id).get()
     for user, grade in request.POST.items():
       if user.startswith(prefix):
         user = user.replace(prefix, '').replace(suffix, '')
       else:
         continue
-      user = soc.models.user.User.gql("WHERE link_id = :1", user).get()
-      survey_record = soc.models.survey.SurveyRecord.gql(
+      user = User.gql("WHERE link_id = :1", user).get()
+      survey_record = SurveyRecord.gql(
           "WHERE user = :1 AND this_survey = :2", user, this_survey ).get()
       if survey_record:
         survey_record.grade = grade
         survey_record.put()
     #XXX Ditto for this redirect
     return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
+
 
 FIELDS = 'author modified_by'
 PLAIN = 'is_featured content created modified'
