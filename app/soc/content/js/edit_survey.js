@@ -88,6 +88,17 @@ $(function () {
     });
   }
 
+
+  /*
+  * == Handle Enter key on dialogs ==
+  */
+  $('form input, form button, form select').keypress(function (e) {
+    if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
+    $(this).parents('.ui-dialog:first').find(":button:first").click();
+      return false;
+    }
+  });
+
 /*
 * == Initiation ==
 *
