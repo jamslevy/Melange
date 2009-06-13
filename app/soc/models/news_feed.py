@@ -63,5 +63,6 @@ class FeedItem(base.ModelWithFieldAttributes):
     return db.get(self.sender_key)
 
   def receiver(self):
+    print "BLAH"
     return db.get(self.receiver_key)
     

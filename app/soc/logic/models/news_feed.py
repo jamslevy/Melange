@@ -38,6 +38,7 @@ CUSTOM_URL_NAMES = {
 'groupapp':'group_app', 
 'orgapp':'org_app', 
 'clubmember':'club_member', 
+'organization': 'org'
 }
       
       

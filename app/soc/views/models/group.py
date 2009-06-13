@@ -489,3 +489,5 @@ class View(presence.View):
 
     return super(View, self)._public(request=request, entity=entity,
                                      context=context)
+
+

@@ -9,6 +9,9 @@
 
 <div class="inner">
 {% for item in feed_items %}
+{% if empty %}
+EMPTY
+{% endif %}
 <div class="entry">
 <div class="title"> {# this could also be item.link and be added when the link is created using redirect view helper #}
 <a href="{{ item.link }}" >{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}
