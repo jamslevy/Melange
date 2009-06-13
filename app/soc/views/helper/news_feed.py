@@ -24,12 +24,17 @@ __authors__ = [
 from soc.cache import news_feed
 
 class NewsFeed():
+  """
+  Render the NewsFeed module or XML of updates for a given entity
+  """ 
   
   def __init__(self, entity):
     self.entity = entity
   
   
   def getFeed(self): 
+    """gets HTML version of Newsfeed for entity
+    """ 
     from django.template import loader
     feed_items = self.retrieveFeed()
     feed_url = self.getFeedUrl()
@@ -38,7 +43,9 @@ class NewsFeed():
                                      dictionary=context)
     
 
-  def getFeedXML(self): 
+  def getFeedXML(self):
+    """gets XML version of Newsfeed for entity
+    """ 
     feed_items = self.retrieveFeed()
     feed_url = self.getFeedUrl()
     template = 'soc/news_feed/news_feed.xml'
@@ -51,7 +58,9 @@ class NewsFeed():
     from soc.logic.models.news_feed import logic as newsfeed_logic
     return newsfeed_logic.retrieveFeed(self.entity)
 
-  def getFeedUrl(self): 
+  def getFeedUrl(self):
+    """ retrieve the Feed URL for the entity
+    """ 
     # should this be in redirects module? 
     #return self.entity.sc
     
