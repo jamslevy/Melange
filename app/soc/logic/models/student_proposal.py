@@ -25,7 +25,7 @@ __authors__ = [
 from soc.logic.models import base
 from soc.logic.models import student as student_logic
 from soc.models import student_proposal
-
+from soc.logic.models.news_feed import logic as newsfeed_logic
 import soc.models.linkable
 import soc.models.student_proposal
 
@@ -185,4 +185,16 @@ class Logic(base.Logic):
     super(Logic, self).delete(entity)
 
 
+  def _onCreate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+  def _onUpdate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+  def _onDelete(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
+    
 logic = Logic()

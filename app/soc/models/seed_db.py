@@ -35,6 +35,9 @@ from django import http
 
 from soc.logic.models.ranker_root import logic as ranker_root_logic
 from soc.logic.models.survey import logic as survey_logic
+from soc.logic.models.news_feed import logic as news_feed_logic
+from soc.logic.models.document import logic as document_logic
+
 from soc.logic import accounts
 from soc.logic import dicts
 from soc.models import student_proposal
@@ -54,7 +57,7 @@ from soc.models.survey import Survey, SurveyContent, SurveyRecord
 from soc.models.sponsor import Sponsor
 from soc.models.timeline import Timeline
 from soc.models.user import User
-
+from soc.models.news_feed import FeedItem
 
 class Error(Exception):
   """Base class for all exceptions raised by this module.
@@ -237,6 +240,43 @@ class OrgApplicationSeeder(Seeder):
       org_application.put()
     else:
       entities.append(org_application)
+
+
+
+class FeedItemSeeder(Seeder):
+  """A Seeder for Melange FeedItem model.
+  
+  This is a simple implementation...
+  """
+  def type(self):
+    return FeedItem
+
+  def commonSeedArgs(self, request):
+    _, current_user = ensureUser()
+    gsoc2009 = Program.get_by_key_name('google/gsoc2009')
+
+    if not gsoc2009:
+      raise Error('Run seed_db first')
+
+    status = request.GET.get('status', 'pre-accepted')
+
+    return dict(current_user=current_user,
+                gsoc2009=gsoc2009,
+                status=status)
+
+  # pylint: disable-msg=W0221
+  def seed(self, i, entities=None, current_user=None, gsoc2009=None,
+           status=None):
+    properties = {}
+
+    news_feed_logic.addToFeed(sender, receivers, "created")
+    feed_item = FeedItem(**properties)
+    if entities is None:
+      feed_item.put()
+    else:
+      entities.append(feed_item)
+
+
 
 
 def seed(request, *args, **kwargs):
@@ -491,6 +531,7 @@ def seed(request, *args, **kwargs):
 
   home_document = Document(**document_properties)
   home_document.put()
+  document_logic._onCreate(home_document) 
 
 
   document_properties = {
@@ -508,6 +549,7 @@ def seed(request, *args, **kwargs):
 
   notes_document = Document(**document_properties)
   notes_document.put()
+  document_logic._onCreate(home_document) 
 
   site.home = home_document
   site.put()
@@ -958,6 +1000,7 @@ def seed_many(request, *args, **kwargs):
                                                    properties['_fields']
                                                    )
       entity.put()
+      if seed_type == 'survey': survey_logic._onCreate(entity) 
 
   if end < goal:
     info = {

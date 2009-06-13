@@ -29,7 +29,7 @@ from soc.logic.models import linkable as linkable_logic
 from soc.models.program import Program
 from soc.models.survey import SurveyContent, Survey, SurveyRecord
 from soc.models.work import Work
-
+from soc.logic.models.news_feed import logic as newsfeed_logic
 
 class Logic(work.Logic):
   """Logic methods for the Survey model.
@@ -79,19 +79,6 @@ class Logic(work.Logic):
     return survey_record
 
 
-  def getProgram(self, survey):
-    """ get program for a survey
-    """
-
-    get_by_key_name = Program.get_by_key_name
-    if isinstance(survey, basestring):
-      path = survey
-    else:
-      path = survey.scope_path
-    program = get_by_key_name(path)
-    if not program:
-      program = get_by_key_name(path.replace(survey.prefix + '/', ''))
-    return program
 
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
@@ -128,6 +115,41 @@ class Logic(work.Logic):
       sidebar.flush()
     return True
 
+
+  def getScope(self, entity):
+    """gets Scope for entity
+    """
+    import soc.models.program
+    import soc.models.organization
+    import soc.models.user
+    import soc.models.site
+    # anything else? 
+    # use prefix to generate dict key
+    scope_types = {"program": soc.models.program.Program,
+    "org": soc.models.organization.Organization,
+    "user": soc.models.user.User,
+    "site": soc.models.site.Site}
+    scope_type = scope_types.get(entity.prefix)
+    if not scope_type: raise AttributeError
+    entity.scope = scope_type.get_by_key_name(entity.scope_path)
+    entity.put()
+    return entity.scope 
+
+  def _onCreate(self, entity):
+    self.getScope(entity)
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+
+  def _onUpdate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+
+  def _onDelete(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
+    
 
 logic = Logic()
 

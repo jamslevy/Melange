@@ -39,7 +39,7 @@ from soc.views.models import presence
 from soc.views.models import document as document_view
 from soc.views.models.request import view as request_view
 from soc.views.sitemap import sidebar
-
+from soc.views.helper.news_feed import NewsFeed
 import soc.views.helper
 
 class View(presence.View):
@@ -478,3 +478,16 @@ class View(presence.View):
       params: a dict with params for this View.
     """
     return []
+
+
+  def _public(self, request, entity, context):
+    """See base.View._public().
+    """
+
+    news_feed = NewsFeed(entity)
+    context['news_feed'] = news_feed.getFeed() 
+
+    return super(View, self)._public(request=request, entity=entity,
+                                     context=context)
+
+

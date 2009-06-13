@@ -268,12 +268,9 @@ class View(base.View):
       this_survey.has_grades = True
     if entity:
       entity.this_survey = this_survey
-      entity.scope = survey_logic.getProgram(entity)
       db.put(entity)
     else:
-      scope = survey_logic.getProgram(fields['scope_path'])
-      # XXX Doesn't work :(
-      fields['scope'] = scope
+      fields['scope'] = this_survey.scope
       fields['this_survey'] = this_survey
 
     fields['modified_by'] = user
