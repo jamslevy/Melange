@@ -127,7 +127,7 @@ class Survey(soc.models.work.Work):
       choices=SURVEY_TAKING_ACCESS,
       verbose_name=ugettext('Survey Taking Access'))
   taking_access.help_text = ugettext(
-      'Indicates who can take this survey.')
+      'Indicates who can take this survey. Student/Mentor options are for Midterms and Finals.')
 
   #: field storing whether a link to the survey should be featured in
   #: the sidebar menu (and possibly elsewhere); FAQs, Terms of Service,

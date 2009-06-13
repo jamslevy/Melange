@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module contains homepage memcaching functions.
+"""Module contains news_feed memcaching functions.
 """
 
 __authors__ = [
-    '"Sverre Rabbelier" <sverre@rabbelier.nl>',
+  'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
 
@@ -31,25 +31,26 @@ from soc.logic import accounts
 import soc.cache.base
 
 
-def key(entity):
-  """Returns the memcache key for an entities homepage.
+def key(func):
+  """Returns the memcache key for the news_feed.
   """
 
-  return 'homepage_for_%s_%s' % (entity.kind(), entity.key().id_or_name())
+  entity = func.entity
+  return 'news_feed_for_%s_%s' % (entity.kind(), entity.key().id_or_name())
 
 
-def get(self, *args, **kwargs):
-  """Retrieves the homepage for the specified entity from the memcache.
+def get(entity, *args, **kwargs):
+  """Retrieves the news_feed for the specified entity from the memcache.
   """
 
   # only cache the page for non-logged-in users
-  # TODO: figure out how to cache everything but the sidebar
+  # TODO: figure out how to cache everything but the news_feed 
   # also, no need to normalize as we don't use it anyway
   if accounts.getCurrentAccount(normalize=False):
     return (None, None)
 
-  entity = self._logic.getFromKeyFields(kwargs)
 
+  logging.debug("CACHED ENTITY:" % entity) 
   # if we can't retrieve the entity, leave it to the actual method
   if not entity:
     return (None, None)
@@ -60,10 +61,10 @@ def get(self, *args, **kwargs):
   return memcache.get(memcache_key), memcache_key
 
 def put(result, memcache_key, *args, **kwargs):
-  """Sets the homepage for the specified entity in the memcache.
+  """Sets the news_feed  for the specified user in the memcache.
 
   Args:
-    result: the homepage to be cached
+    news_feed: the news_feed to be cached
   """
 
   # no sense in storing anything if we won't query it later on
@@ -71,7 +72,7 @@ def put(result, memcache_key, *args, **kwargs):
   if accounts.getCurrentAccount(normalize=False):
     return
 
-  # Store homepage for just ten minutes to force a refresh every so often
+  # Store news_feed for just ten minutes to force a refresh every so often
   retention = 10*60
 
   logging.info("Setting %s" % memcache_key)
@@ -80,7 +81,7 @@ def put(result, memcache_key, *args, **kwargs):
 
 
 def flush(entity):
-  """Removes the homepage for the current entity from the memcache.
+  """Removes the news_feed for the entity from the memcache.
 
   Also calls soc.cache.rights.flush for the specified user.
 

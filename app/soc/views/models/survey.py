@@ -271,7 +271,7 @@ class View(base.View):
       entity.scope = survey_logic.getProgram(entity)
       db.put(entity)
     else:
-      scope = survey_logic.getProgram(fields['scope_path'])
+      fields['scope'] = this_survey.scope
       # XXX Doesn't work :(
       fields['scope'] = scope
       fields['this_survey'] = this_survey
