@@ -32,13 +32,21 @@ limitations under the License.
 <div id="created">Last modified on {{ entity.modified }} by {{ entity.modified_by.name }}</div>
 
 {% if survey_form %}
+{% if not read_only %}
 <form method="post">
+{% endif %}
+
+{% if read_only %}
+<form method="get" onsubmit="javascript:return false">
+{% endif %}
 
 {{ survey_form|safe }}
 <table>
 <tbody>
 <tr> <td>
+{% if not read_only %}
 <input type="submit" value="Submit" style="font-weight: bold;"/>
+{% endif %}
 </td>
 </tr>
 </tbody>

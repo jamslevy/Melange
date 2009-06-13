@@ -176,25 +176,29 @@ class View(base.View):
     this_survey = entity
     user = user_logic.getForCurrentAccount()
 
+    read_only = context.get("read_only", False)
     if this_survey.deadline and datetime.datetime.now() > this_survey.deadline:
       # Are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
-      return True
+      read_only = True
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey ).get()
-    if len(request.POST) == 0: # not submitting completed survey record
+    if read_only or len(request.POST) == 0:
+      # not submitting completed survey record OR we're ignoring late submission
       pass
     else: # submitting a completed survey record
       context['notice'] = "Survey Submission Saved"
       survey_record = survey_logic.update_survey_record(user, this_survey,
                                                         survey_record,
                                                         request.POST)
-    take_survey = surveys.TakeSurvey(user = user)
+    take_survey = surveys.TakeSurvey(user=user)
     context['survey_form'] = take_survey.render(this_survey.this_survey,
-                                                survey_record)
+                                                survey_record,
+                                                read_only)
     if not context['survey_form']:
       access_tpl = "You Must Be a %s to Take This Survey"
       context["notice"] = access_tpl % this_survey.taking_access.capitalize()
+    context['read_only'] = read_only
     return True
 
   def _editContext(self, request, context):

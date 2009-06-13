@@ -21,6 +21,8 @@ __authors__ = [
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
+import datetime
+
 from django import forms
 from django.forms import widgets
 from django.template import loader
@@ -67,6 +69,11 @@ class SurveyForm(djangoforms.ModelForm):
 
   def get_fields(self):
     if not self.survey_content: return
+    deadline = self.survey_content.survey_parent.get().deadline
+    read_only =  deadline and (datetime.datetime.now() > deadline)
+    extra_attrs = {}
+    if read_only:
+      extra_attrs['disabled'] = 'disabled'
     kwargs = self.kwargs
     self.survey_fields = {}
     schema = self.survey_content.get_schema()
@@ -85,11 +92,13 @@ class SurveyForm(djangoforms.ModelForm):
       if schema[property]["type"] == "long_answer":
         self.survey_fields[property] = forms.fields.CharField(
                                     label=label,
-                                    widget=widgets.Textarea(), initial=value)
+                                    widget=widgets.Textarea(attrs=extra_attrs), initial=value,
+                                    )
                                     #custom rows
       if schema[property]["type"] == "short_answer":
         self.survey_fields[property] = forms.fields.CharField(
                                     label=label,
+                                    widget=widgets.TextInput(attrs=extra_attrs),
                                     max_length=40,initial=value)
       if schema[property]["type"] == "selection":
         these_choices = []
@@ -104,7 +113,7 @@ class SurveyForm(djangoforms.ModelForm):
         self.survey_fields[property] = PickOneField(
             label=label,
             choices=tuple(these_choices),
-            widget=WIDGETS[schema[property]['render']]())
+            widget=WIDGETS[schema[property]['render']](attrs=extra_attrs))
       if schema[property]["type"] == "pick_multi":
         if self.survey_record and isinstance(value, basestring):
           # Pass as 'initial' so MultipleChoiceField can render checked boxes
@@ -115,7 +124,8 @@ class SurveyForm(djangoforms.ModelForm):
         self.survey_fields[property] = PickManyField(
             label=label,
             choices=tuple(these_choices),
-            widget=WIDGETS[schema[property]['render']](), initial=value)
+            widget=WIDGETS[schema[property]['render']](attrs=extra_attrs), initial=value,
+            )
 
     return self.insert_fields()
 
@@ -415,16 +425,16 @@ class TakeSurvey(widgets.Widget):
   def __init__(self, **kwargs):
     self.this_user = kwargs.get('user', None)
 
-  def render(self, survey_content, survey_record):
+  def render(self, survey_content, survey_record, read_only=False):
     """Renders survey taking widget to HTML.
 
     Checks if user has already submitted form. If so, show existing form
     If we don't want students/mentors to edit the values they've already
     submitted for a survey, this behavior should be altered.
 
-    (A deadline can also be used as a conditional for updating values,
-    and we can just disable the submit button, and add a check on the
-    POST handler. )
+    A deadline can also be used as a conditional for updating values,
+    we have a special read_only UI and a check on the POST handler for this.
+    Passing read_only=True here allows one to fetch the read_only view.
     """
 
     self.survey_content = survey_content
@@ -434,16 +444,24 @@ class TakeSurvey(widgets.Widget):
     self.survey = SurveyForm(survey_content=survey_content,
     this_user=self.this_user, survey_record=survey_record)
     self.survey.get_fields()
+    if not read_only:
+      # Check deadline for read_only-ness
+      deadline = self.this_survey.deadline
+      read_only =  deadline and (datetime.datetime.now() > deadline)
     if self.this_survey.taking_access != "everyone":
       # the access check component should be refactored out
       role_fields = self.get_role_specific_fields()
       if not role_fields: return False
-    if survey_record:
-      help_text = "Edit and re-submit this survey."
-      status = "edit"
+    if not read_only:
+      if survey_record:
+        help_text = "Edit and re-submit this survey."
+        status = "edit"
+      else:
+        help_text = "Please complete this survey."
+        status = "create"
     else:
-      help_text = "Please complete this survey."
-      status = "create"
+      help_text = "Read-only view."
+      status = "view"
     result = self.WIDGET_HTML % dict(survey=str(self.survey), status=status,
                                      help_text=help_text)
     return result
