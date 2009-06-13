@@ -238,7 +238,6 @@ def constructParams(params):
   new_params['public_template'] = 'soc/%(module_name)s/public.html' % params
   new_params['export_template'] = 'soc/export.html'
   new_params['create_template'] = 'soc/models/edit.html'
-  new_params['create_template'] = 'soc/models/subscribe.xml'
   new_params['edit_template'] = 'soc/models/edit.html'
   new_params['admin_template'] = 'soc/models/admin.html'
   new_params['list_template'] = 'soc/models/list.html'
