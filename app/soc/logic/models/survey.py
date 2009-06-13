@@ -78,17 +78,6 @@ class Logic(work.Logic):
     db.put(survey_record)
     return survey_record
 
-
-    get_by_key_name = Program.get_by_key_name
-    if isinstance(survey, basestring):
-      path = survey
-    else:
-      path = survey.scope_path
-    program = get_by_key_name(path)
-    if not program:
-      program = get_by_key_name(path.replace(survey.prefix + '/', ''))
-    return program
-
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
     """
