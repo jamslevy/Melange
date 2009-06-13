@@ -353,6 +353,9 @@ class View(base.View):
     """
 
     self._entity = entity
+    if 'notify' in request.GET:
+      if request.GET['notify'] == 'students':
+        notify_students(entity)
 
     if 'activate' in request.GET and int(request.GET['activate']):
       self._entity.has_grades = True
@@ -456,6 +459,27 @@ def to_csv(survey):
   writer.writerow(properties)
   writer.writerows(recs)
   return header + output.getvalue(), survey.link_id
+
+def notify_students(survey):
+  from soc.models.student import Student
+  from soc.models.program import Program
+  from soc.logic.helper import notifications
+  notify = notifications.sendNotification
+  scope = Program.get_by_key_name(survey.scope_path)
+  students = Student.gql("WHERE scope = :1", scope).run()
+  have_answered = set([rec.user.key() for rec in survey.survey_records.run()])
+  creator = survey.author
+  path = (survey.entity_type().lower(), survey.prefix,
+          survey.scope_path, survey.link_id)
+  url = "/%s/show/%s/%s/%s" % path
+  props = dict(survey_url=url, survey_title=survey.title)
+  tpl = 'soc/survey/messages/new_survey.html'
+  subject = 'New Survey: "%s"' % survey.title
+  for student in students:
+    if student.user.key() not in have_answered:
+      notify(student.user, creator, props, subject, tpl)
+
+
 
 
 view = View()
