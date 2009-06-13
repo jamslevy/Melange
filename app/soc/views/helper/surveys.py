@@ -65,12 +65,17 @@ class SurveyForm(djangoforms.ModelForm):
     del self.kwargs['survey_content']
     del self.kwargs['this_user']
     del self.kwargs['survey_record']
+    self.read_only = self.kwargs.get('read_only', None)
+    if 'read_only' in self.kwargs:
+      del self.kwargs['read_only']
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
   def get_fields(self):
     if not self.survey_content: return
-    deadline = self.survey_content.survey_parent.get().deadline
-    read_only =  deadline and (datetime.datetime.now() > deadline)
+    read_only = self.read_only
+    if not read_only:
+      deadline = self.survey_content.survey_parent.get().deadline
+      read_only =  deadline and (datetime.datetime.now() > deadline)
     extra_attrs = {}
     if read_only:
       extra_attrs['disabled'] = 'disabled'
@@ -441,13 +446,13 @@ class TakeSurvey(widgets.Widget):
     self.this_survey = self.survey_content.survey_parent.get()
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      self.this_user, self.this_survey).get()
-    self.survey = SurveyForm(survey_content=survey_content,
-    this_user=self.this_user, survey_record=survey_record)
-    self.survey.get_fields()
     if not read_only:
       # Check deadline for read_only-ness
       deadline = self.this_survey.deadline
       read_only =  deadline and (datetime.datetime.now() > deadline)
+    self.survey = SurveyForm(survey_content=survey_content,
+    this_user=self.this_user, survey_record=survey_record, read_only=read_only)
+    self.survey.get_fields()
     if self.this_survey.taking_access != "everyone":
       # the access check component should be refactored out
       role_fields = self.get_role_specific_fields()

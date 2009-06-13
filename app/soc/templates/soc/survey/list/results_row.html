@@ -15,13 +15,15 @@ onclick="return false; document.location.href='{{ list.redirect }}'" name="name"
  {# <td><div class="created">{{ list.item.created }}</div></td> #}
   <td><div class="modified">{{ list.item.modified }}</div></td>
   {% if grades %}
-  <td><div class="grade">
-    <select id="id_survey__{{ list.item.user.link_id }}__selection__grade" name="id_survey__{{ list.item.user.link_id }}__selection__grade">
+  <td><a class="fetch_answers"
+  id="results_for_{{ list.item.user.link_id }}">Show answers</a>
+  <div class="grade">
+    <select id="id_survey__{{ list.item.user.link_id }}__selection__grade"
+    name="id_survey__{{ list.item.user.link_id }}__selection__grade">
       <option value='' {% ifequal list.item.grade '' %} selected="selected" {% endifequal %} >None</option>
       <option value='Pass' {% ifequal list.item.grade 'Pass' %} selected="selected" {% endifequal %} >Pass</option>
       <option value='Fail' {% ifequal list.item.grade 'Fail' %} selected="selected" {% endifequal %} >Fail</option>
-
-      </select>
+    </select>
   </div></td>
   {% endif %}
 </tr>

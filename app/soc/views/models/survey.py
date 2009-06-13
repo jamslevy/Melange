@@ -175,12 +175,24 @@ class View(base.View):
     # check if there is a survey record from this user.
     this_survey = entity
     user = user_logic.getForCurrentAccount()
-
-    read_only = context.get("read_only", False)
+    read_only = (context.get("read_only", False) or
+                 request.GET.get("read_only", False) or
+                 request.POST.get("read_only", False)
+                 )
     if this_survey.deadline and datetime.datetime.now() > this_survey.deadline:
       # Are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
       read_only = True
+
+    # Check if user can edit this survey
+    params = dict(prefix=this_survey.prefix, scope_path=this_survey.scope_path)
+    checker = access.rights_logic.Checker(this_survey.prefix)
+    roles = checker.getMembership(this_survey.write_access)
+    can_write = access.Checker.hasMembership(self._params['rights'], roles, params)
+    # If user can edit this survey and is requesting someone else's results,
+    # in a read-only request, we fetch them.
+    if can_write and read_only and 'user_results' in request.GET:
+      user = user_logic.getFromKeyNameOr404(request.GET['user_results'])
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey ).get()
     if read_only or len(request.POST) == 0:
