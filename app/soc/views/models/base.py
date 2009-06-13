@@ -758,7 +758,6 @@ class View(object):
     """
     
     entity = self._params.get('logic').getFromKeyFields(kwargs)
-    print ""
     from soc.views.helper import news_feed 
     feed = news_feed.NewsFeed(entity)
     template, context = feed.getFeedXML()
