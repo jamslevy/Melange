@@ -93,8 +93,8 @@ $(function () {
   * == Handle Enter key on dialogs ==
   */
   $('form input, form button, form select').keypress(function (e) {
-    if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
-    $(this).parents('.ui-dialog:first').find(":button:first").click();
+    if ((e.which && e.which === 13) || (e.keyCode && e.keyCode === 13)) {
+      $(this).parents('.ui-dialog:first').find(":button:first").click();
       return false;
     }
   });
@@ -103,16 +103,15 @@ $(function () {
   * == Display survey answers inline ==
   */
   $('a.fetch_answers').click(function () {
-  var user = this.id.replace('results_for_', '')
-  var path = window.location.pathname;
-  path = path.replace('/edit/', '/show/');
-  var query = '?read_only=true&user_results=' + user;
-  var scrollable = '<div style="overflow-y: auto;margin-bottom:100px"></div>'
-  $(scrollable).load(path + query + ' #survey_widget')
-  .dialog({
-    title: user,
-    height: 500,
-    width: 700
+    var user = this.id.replace('results_for_', '');
+    var path = window.location.pathname;
+    path = path.replace('/edit/', '/show/');
+    var query = '?read_only=true&user_results=' + user;
+    var scrollable = '<div style="overflow-y: auto;margin-bottom:100px"></div>';
+    $(scrollable).load(path + query + ' #survey_widget').dialog({
+      title: user,
+      height: 500,
+      width: 700
     });
   });
 /*
@@ -435,7 +434,7 @@ $(function () {
           if (new_field) {
             var question_for = ('\n  <input type="hidden" name="NEW_' + field_name +
                                 '" id="NEW_' + field_name + '" value="' +
-                                question_content + '"/>')
+                                question_content + '"/>');
             field_count = survey_table.find('tr').length;
             new_field_count = field_count + 1 + '__';
             var formatted_name = (SURVEY_PREFIX + new_field_count + type +
@@ -462,10 +461,10 @@ $(function () {
               '\n  <button name="create-option-button" id="create-option-button__' + name +
               '" class="ui-button ui-state-default ui-corner-all" value="' + name +
               '" onClick="return false;">Create new option</button>\n</fieldset>');
-            $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
-            field_template.find('label').attr('for', 'NEW_' + name)
-            .append(question_content + ":").end().find('td').append(new_field);
-            survey_table.append(field_template).trigger('init');
+              $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
+              field_template.find('label').attr('for', 'NEW_' + name)
+              .append(question_content + ":").end().find('td').append(new_field);
+              survey_table.append(field_template).trigger('init');
 
             }
             else {
