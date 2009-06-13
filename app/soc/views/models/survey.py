@@ -270,7 +270,7 @@ class View(base.View):
       entity.this_survey = this_survey
       db.put(entity)
     else:
-      fields['scope'] = this_survey.scope
+      fields['scope'] = survey_logic.getScope(this_survey)
       fields['this_survey'] = this_survey
 
     fields['modified_by'] = user
