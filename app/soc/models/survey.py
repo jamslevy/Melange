@@ -53,50 +53,55 @@ class SurveyContent(db.Expando):
     for property in self.dynamic_properties():
       # map out the order of the survey fields
       try:
-        survey_order[schema[property]["index"]] = property
+        index = schema[property]["index"]
+        if index not in survey_order:
+          survey_order[index] = property
+        else:
+          # Handle duplicated indexes
+          survey_order[max(survey_order) + 1] = property
       except KeyError:
         pass
     return survey_order
-    
+
   def ordered_properties(self):
     properties = []
     survey_order = self.get_survey_order().items()
     for position,key in survey_order:
       properties.insert(position, key)
-    return properties 
+    return properties
 
-      
+
 class Survey(soc.models.work.Work):
   """Model of a survey.
 
   This model describes meta-information and permissions.
 
   The actual questions of the survey are contained in the SurveyContent entity.
-  
+
   Right now, this model has several properties from Document and it is unclear
   if they are necessary.
-  
+
   The inherited scope property is used to reference to a program.
-  Would it be more clear if a 'program' property were used? 
+  Would it be more clear if a 'program' property were used?
   """
 
   URL_NAME = 'survey'
   # We should use euphemisms like "student" and "mentor" if possible
   SURVEY_ACCESS = ['admin', 'restricted', 'member', 'user']
-  
-  
+
+
   # These are gsoc specific, so eventually we can subclass this
   SURVEY_TAKING_ACCESS = ['student', 'mentor', 'everyone']
   GRADE_OPTIONS = {
   'midterm':['mid_term_passed', 'mid_term_failed'],
-   'final':['final_passed', 'final_failed'], 
+   'final':['final_passed', 'final_failed'],
    'N/A':[] }
   # there should be a gsoc-specific property determining
-  # whether the survey is for the midterm or the final 
+  # whether the survey is for the midterm or the final
 
   #: field storing the prefix of this document
   # Should this be removed from surveys?
-  prefix = db.StringProperty(default='user', required=True,
+  prefix = db.StringProperty(default='program', required=True,
       choices=['site', 'club', 'sponsor', 'program', 'org', 'user'],
       verbose_name=ugettext('Prefix'))
   prefix.help_text = ugettext(
@@ -123,7 +128,7 @@ class Survey(soc.models.work.Work):
       verbose_name=ugettext('Survey Taking Access'))
   taking_access.help_text = ugettext(
       'Indicates who can take this survey.')
-      
+
   #: field storing whether a link to the survey should be featured in
   #: the sidebar menu (and possibly elsewhere); FAQs, Terms of Service,
   #: and the like are examples of "featured" survey
@@ -175,13 +180,13 @@ class SurveyRecord(db.Expando):
     Right now it gets all dynamic values, but
     it could also be confined to the SurveyContent entity linked to
     the this_survey entity.
-    
+
     Deprecated Unordered Version
-    
+
     values = []
     for property in self.dynamic_properties():
       values.append(getattr(self, property))
-    return values    
+    return values
     """
 
 
