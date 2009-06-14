@@ -117,6 +117,7 @@ class Logic(work.Logic):
   def getScope(self, entity):
     """gets Scope for entity
     """
+    if getattr(entity, 'scope', None): return entity.scope
     import soc.models.program
     import soc.models.organization
     import soc.models.user
@@ -140,6 +141,7 @@ class Logic(work.Logic):
 
 
   def _onUpdate(self, entity):
+    self.getScope(entity) # for older entities
     receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "updated")
 
