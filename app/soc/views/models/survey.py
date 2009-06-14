@@ -271,8 +271,6 @@ class View(base.View):
       entity.scope = survey_logic.getProgram(entity)
       db.put(entity)
     else:
-      # XXX Doesn't work :(
-      fields['scope'] = scope
       fields['this_survey'] = this_survey
 
     fields['modified_by'] = user
