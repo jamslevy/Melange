@@ -751,6 +751,19 @@ class View(object):
 
     return response
 
+  def subscribe(self, request, page_name=None, params=None, **kwargs):
+    """
+    
+    Returns ATOM feed of recent updates 
+    """
+    
+    entity = self._params.get('logic').getFromKeyFields(kwargs)
+    from soc.views.helper import news_feed 
+    feed = news_feed.NewsFeed(entity)
+    template, context = feed.getFeedXML()
+    response = responses.respond(request, template, context)
+    return response
+
   def csv(self, request, data, filename, params, key_order=None):
     """Returns data as a csv file.
 
