@@ -371,7 +371,7 @@ def get_role_specific_fields(survey, user):
   # check for this program - is this student or a mentor?
   # I'm assuming for now this is a student --
   # this should all be refactored as access
-  field_count = len(survey.fields.items())
+  field_count = len(survey.this_survey.get_schema().items())
   these_projects = get_projects(survey, user)
   if not these_projects:
     # failed access check...no relevant project found
@@ -397,6 +397,17 @@ def get_role_specific_fields(survey, user):
     survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
+def debug(user, this_program, taking_access):
+  # create student and mentor entities to test survey
+  from soc.models.student_project import StudentProject
+  this_project = StudentProject()
+  if taking_access == 'mentor':
+    from soc.models.mentor import Mentor
+    survey_taker = Mentor()
+  if taking_access == 'student':
+    from soc.models.mentor import Mentor
+    survey_taker = Mentor()  
+    
 def get_projects(this_survey, user):
   """
   This is a quick attempt to get a working access check,
@@ -412,20 +423,21 @@ def get_projects(this_survey, user):
   # these queries aren't yet properly working
 
   if this_survey.taking_access == 'mentor':
+    #debug(user, this_program, 'mentor')
     import soc.models.mentor
     this_mentor = soc.models.mentor.Mentor.all(
     ).filter("user=", user # should filter on user key
-    ).filter("_program=", this_program.key()
+    ).filter("program=", this_program
     ).get()
     if not this_mentor: return False
     these_projects = soc.models.student_project.StudentProject.filter(
     "mentor=", this_mentor).filter("program=", this_program).fetch(1000)
 
   if this_survey.taking_access == 'student':
+    #debug(user, this_program, 'student')
     import soc.models.student
     this_student = soc.models.student.Student.all(
     ).filter("user=", user # should filter on user key
-    ).filter("_program=", this_program.key()
     ).get()
     if not this_student: return False
     these_projects = soc.models.student_project.StudentProject.filter(
