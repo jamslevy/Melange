@@ -119,8 +119,8 @@ class View(base.View):
         ]
 
     new_params['create_extra_dynaproperties'] = {
-        'survey_content': forms.fields.CharField(widget=surveys.EditSurvey(),
-                                                 required=False),
+        #'survey_content': forms.fields.CharField(widget=surveys.EditSurvey(),
+                                                 #required=False),
         # TODO: save survey content when the POST fails
         # Is there a better way to do this besides a hidden field?
         # ajaksu: I think we should be adding questions/fields via AJAX,
@@ -169,6 +169,16 @@ class View(base.View):
       request: the django request object
       entity: the entity to make public
       context: the context object
+
+    Renders survey taking widget to HTML.
+
+    Checks if user has already submitted form. If so, show existing form
+    If we don't want students/mentors to edit the values they've already
+    submitted for a survey, this behavior should be altered.
+
+    A deadline can also be used as a conditional for updating values,
+    we have a special read_only UI and a check on the POST handler for this.
+    Passing read_only=True here allows one to fetch the read_only view.
     """
 
     # this won't work -- there's *always* a survey entity. We want to
@@ -188,7 +198,8 @@ class View(base.View):
     params = dict(prefix=this_survey.prefix, scope_path=this_survey.scope_path)
     checker = access.rights_logic.Checker(this_survey.prefix)
     roles = checker.getMembership(this_survey.write_access)
-    can_write = access.Checker.hasMembership(self._params['rights'], roles, params)
+    rights = self._params['rights']
+    can_write = access.Checker.hasMembership(rights, roles, params)
     # If user can edit this survey and is requesting someone else's results,
     # in a read-only request, we fetch them.
     if can_write and read_only and 'user_results' in request.GET:
@@ -203,10 +214,33 @@ class View(base.View):
       survey_record = survey_logic.update_survey_record(user, this_survey,
                                                         survey_record,
                                                         request.POST)
-    take_survey = surveys.TakeSurvey(user=user)
-    context['survey_form'] = take_survey.render(this_survey.this_survey,
-                                                survey_record,
-                                                read_only)
+
+    survey_content = this_survey.this_survey
+    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                     user, this_survey).get()
+    survey_form = surveys.SurveyForm(survey_content=survey_content,
+                                     this_user=user,
+                                     survey_record=survey_record,
+                                     read_only=read_only)
+    survey_form.get_fields()
+    if this_survey.taking_access != "everyone":
+      ## the access check component should be refactored out
+      role_fields = surveys.get_role_specific_fields(this_survey, user)
+      if not role_fields: return False
+    if not read_only:
+      if survey_record:
+        help_text = "Edit and re-submit this survey."
+        status = "edit"
+      else:
+        help_text = "Please complete this survey."
+        status = "create"
+    else:
+      help_text = "Read-only view."
+      status = "view"
+    survey_data = dict(survey_form=survey_form, status=status,
+                                     help_text=help_text)
+    for key in survey_data:
+      context[key] = survey_data[key]
     if not context['survey_form']:
       access_tpl = "You Must Be a %s to Take This Survey"
       context["notice"] = access_tpl % this_survey.taking_access.capitalize()
@@ -359,26 +393,44 @@ class View(base.View):
       if question_for in POST:
         schema[key]["question"] = POST[question_for]
 
-  def _editGet(self, request, entity, form):
-    """See base.View._editGet().
-    This is only for editing existing surveys
+  def editGet(self, request, entity, context, params=None):
+    """Processes GET requests for the specified entity.
     """
 
-    self._entity = entity
-    if 'notify' in request.GET:
-      if request.GET['notify'] == 'students':
-        notify_students(entity)
+    QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
+                      "long_answer": "Long Answer"}
 
-    if 'activate' in request.GET and int(request.GET['activate']):
-      self._entity.has_grades = True
-      self._entity.put()
-    form.fields['survey_content'] = forms.fields.CharField(
-        widget=surveys.EditSurvey(survey_content=entity.this_survey),
-        required=False)
-    form.fields['created_by'].initial = entity.author.name
-    form.fields['last_modified_by'].initial = entity.modified_by.name
-    form.fields['doc_key_name'].initial = entity.key().id_or_name()
-    super(View, self)._editGet(request, entity, form)
+    CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
+    <th><label>Choose Project:</label></th>
+    <td>
+      <select disabled="TRUE" id="id_survey__NA__selection__project"
+        name="survey__1__selection__see">
+          <option>Survey Taker's Projects For This Program</option></select>
+     </td></tr>
+     """
+
+    CHOOSE_A_GRADE_FIELD = """<tr class="role-specific">
+    <th><label>Assign Grade:</label></th>
+    <td>
+      <select disabled=TRUE id="id_survey__NA__selection__grade"
+       name="survey__1__selection__see">
+        <option>Pass/Fail</option>
+      </select></td></tr>
+    """
+    survey_content = entity.this_survey
+    this_user = user_logic.getForCurrentAccount()
+    survey_form = surveys.SurveyEditForm(survey_content=survey_content,
+    this_user = this_user, survey_record=None)
+    survey_form.get_fields()
+    grades = False
+    if survey_content:
+      grades = survey_content.survey_parent.get().has_grades
+    local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
+                  grades=grades, survey_h=entity.this_survey)
+    context.update(local)
+
+    params['edit_form'] = HelperForm(params['edit_form'])
+    return super(View, self).editGet(request, entity, context, params=params)
 
   def getMenusForScope(self, entity, params):
     """
@@ -427,6 +479,21 @@ class View(base.View):
     return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
 
 
+class HelperForm(object):
+  """Thin wrapper for adding values to params['edit_form'].fields.
+  """
+
+  def __init__(self, form=None):
+    self.form = form
+
+  def __call__(self, instance=None):
+    form = self.form(instance=instance)
+    form.fields['created_by'].initial = instance.author.name
+    form.fields['last_modified_by'].initial = instance.modified_by.name
+    form.fields['doc_key_name'].initial = instance.key().id_or_name()
+    return form
+
+
 FIELDS = 'author modified_by'
 PLAIN = 'is_featured content created modified'
 
@@ -450,7 +517,8 @@ def get_records(recs, props):
   props = props[1:]
   for rec in recs:
     values = tuple(getattr(rec, prop, None) for prop in props)
-    records.append((rec.user.link_id,) + values)
+    leading = (rec.user.link_id,)
+    records.append(leading + values)
   return records
 
 
@@ -463,7 +531,8 @@ def to_csv(survey):
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
   header = get_csv_header(survey)
-  properties = ['user'] + survey.this_survey.ordered_properties()
+  leading = ['user', 'created', 'modified']
+  properties = leading + survey.this_survey.ordered_properties()
   recs = survey.survey_records.run()
   recs = get_records(recs, properties)
   output = StringIO.StringIO()

@@ -267,7 +267,7 @@ table#queues td {
 }
 
 .tooltip-body h3 {
-  margin: 0; 
+  margin: 0;
   font-size: 1.1em;
 }
 
@@ -396,13 +396,13 @@ table#queues td {
   width: 55%;
   left: 0px;
   float: left;
-} 
+}
 
 #extras_right {
   width: 43%;
   right: 0px;
   float: right;
-} 
+}
 
 /* Organization home gmap */
 #org_home_map {
@@ -658,7 +658,7 @@ margin:30px 0 20px;
 }
 
 div #survey_widget.survey_admin {
-margin-left:-100px;
+/*margin-left:-100px;*/
 }
 
 div #survey_widget th, div #survey_widget td {
@@ -718,7 +718,9 @@ color:#666666;
 }
 .ui-dialog .ui-state-highlight, .ui-dialog .ui-state-error { padding: .3em;  }
 
-
+.pick_multi input {
+  display: inline;
+}
 
 /* NEWS FEED FEEDS */
 .news_feed {

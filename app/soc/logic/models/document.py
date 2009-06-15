@@ -26,7 +26,7 @@ from soc.cache import sidebar
 from soc.cache import home
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
-from soc.logic.models.news_feed import logic as newsfeed_logic
+
 import soc.models.document
 import soc.models.work
 
@@ -84,40 +84,4 @@ class Logic(work.Logic):
     return True
 
 
-  def getScope(self, entity):
-    # instead of check, we should use a script to update all
-    # old documents...
-    if getattr(entity, 'scope', None): return entity.scope
-    import soc.models.program
-    import soc.models.organization
-    import soc.models.user
-    import soc.models.site
-    # anything else? 
-    # use prefix to generate dict key
-    scope_types = {"program": soc.models.program.Program,
-    "org": soc.models.organization.Organization,
-    "user": soc.models.user.User,
-    "site": soc.models.site.Site}
-    scope_type = scope_types.get(entity.prefix)
-    if not scope_type: raise AttributeError
-    entity.scope = scope_type.get_by_key_name(entity.scope_path)
-    entity.put()
-    return entity.scope 
-
-  def _onCreate(self, entity):
-    self.getScope(entity)
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "created")
-
-
-  def _onUpdate(self, entity):
-    self.getScope(entity) # for older entities
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "updated")
-
-
-  def _onDelete(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "deleted")
-    
 logic = Logic()

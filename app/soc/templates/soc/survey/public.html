@@ -32,6 +32,9 @@ limitations under the License.
 <div id="created">Last modified on {{ entity.modified }} by {{ entity.modified_by.name }}</div>
 
 {% if survey_form %}
+
+{% load forms_helpers %}
+
 {% if not read_only %}
 <form method="post">
 {% endif %}
@@ -39,8 +42,16 @@ limitations under the License.
 {% if read_only %}
 <form method="get" onsubmit="javascript:return false">
 {% endif %}
+{{ help_text }}
+<div class="{{ status }}" id="survey_widget">
+<table>
+{% block form_table %}
 
-{{ survey_form|safe }}
+{% as_table survey_form %}
+
+{% endblock %}
+</table>
+ </div>
 <table>
 <tbody>
 <tr> <td>

@@ -78,8 +78,6 @@ class Logic(work.Logic):
     db.put(survey_record)
     return survey_record
 
-
-
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
     """

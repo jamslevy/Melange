@@ -12,11 +12,13 @@ onclick="return false; document.location.href='{{ list.redirect }}'" name="name"
   <td><div class="{{ value }}"> {{ value }}</div></td>
   {% endfor %}
   <td><div class="author">{{ list.item.user.link_id }}</div></td>
- {# <td><div class="created">{{ list.item.created }}</div></td> #}
-  <td><div class="modified">{{ list.item.modified }}</div></td>
-  {% if grades %}
+  <td><div class="created">{{ list.item.created|date:"Y-m-d H:i" }}</div></td>
+  <td><div class="modified">{{ list.item.modified|date:"Y-m-d H:i" }}</div></td>
   <td><a class="fetch_answers"
-  id="results_for_{{ list.item.user.link_id }}">Show answers</a>
+  id="results_for_{{ list.item.user.link_id }}">View</a>
+  </td>
+  {% if grades %}
+  <td>
   <div class="grade">
     <select id="id_survey__{{ list.item.user.link_id }}__selection__grade"
     name="id_survey__{{ list.item.user.link_id }}__selection__grade">

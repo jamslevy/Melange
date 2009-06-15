@@ -41,11 +41,26 @@ Please use this form to edit the {{ entity_type }}.
 {% endif %}
 
 <form id="EditForm" method="POST">
-  <table>
+<table>
 {% block form_table %}
 {% as_table form %}
 {% endblock %}
-  </table>
+</table>
+<div class="survey_admin" id="survey_widget">
+    <table>
+{% block survey_content %}z
+{% as_table survey_form %}
+{% endblock %}
+
+    </table>
+    <div id="survey_options">
+    {% for type_id, type_name in question_types.items %}
+      <button id="{{ type_id }}" class="AddQuestion" onClick="return false;">
+         Add {{ type_name }} Question
+      </button>
+    {% endfor %}
+    </div>
+  </div>
   <table>
   <tr>
    <td colspan="4">&nbsp;</td>
@@ -54,11 +69,11 @@ Please use this form to edit the {{ entity_type }}.
 {% block submit_buttons %}
 {% block save_button %}
 {% if entity %}
-   <td> 
+   <td>
     <input style="font-weight: bold" type="submit" value="Save Changes"/></span>
    </td>
 {% else %}
-       <td> 
+       <td>
     <input style="font-weight: bold" type="submit" value="Submit"/></span>
    </td>
 {% endif %}
