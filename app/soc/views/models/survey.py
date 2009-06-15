@@ -49,7 +49,8 @@ from soc.views.models import base
 CHOICE_TYPES = set(('selection', 'pick_multi', 'choice'))
 TEXT_TYPES = set(('long_answer', 'short_answer'))
 PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
-
+QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
+                      "long_answer": "Long Answer"}
 
 class View(base.View):
   """View methods for the Survey model.
@@ -393,12 +394,13 @@ class View(base.View):
       if question_for in POST:
         schema[key]["question"] = POST[question_for]
 
+  def createGet(self, request, context, params, seed):
+    context['question_types'] = QUESTION_TYPES
+    return super(View, self).createGet(request, context, params, seed)
+
   def editGet(self, request, entity, context, params=None):
     """Processes GET requests for the specified entity.
     """
-
-    QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
-                      "long_answer": "Long Answer"}
 
     CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
     <th><label>Choose Project:</label></th>
