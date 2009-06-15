@@ -96,12 +96,17 @@ class SurveyForm(djangoforms.ModelForm):
         label = property
       if schema[property]["type"] == "long_answer":
         self.survey_fields[property] = forms.fields.CharField(
+                                    help_text = 'Testing Tooltip!',
+                                    required=False,
                                     label=label,
-                                    widget=widgets.Textarea(attrs=extra_attrs), initial=value,
+                                    widget=widgets.Textarea(attrs=extra_attrs),
+                                    initial=value,
                                     )
                                     #custom rows
       if schema[property]["type"] == "short_answer":
         self.survey_fields[property] = forms.fields.CharField(
+                                    help_text = 'Testing Tooltip Again!',
+                                    required=False,
                                     label=label,
                                     widget=widgets.TextInput(attrs=extra_attrs),
                                     max_length=40,initial=value)
@@ -116,6 +121,8 @@ class SurveyForm(djangoforms.ModelForm):
         for option in options:
           these_choices.append((option, option))
         self.survey_fields[property] = PickOneField(
+            help_text = 'Testing Tooltip for Selects!',
+            required=False,
             label=label,
             choices=tuple(these_choices),
             widget=WIDGETS[schema[property]['render']](attrs=extra_attrs))
@@ -127,9 +134,12 @@ class SurveyForm(djangoforms.ModelForm):
           value = None
         these_choices = [(v,v) for v in getattr(self.survey_content, property)]
         self.survey_fields[property] = PickManyField(
+            help_text = 'Testing Tooltip for Checkboxes!',
+            required=False,
             label=label,
             choices=tuple(these_choices),
-            widget=WIDGETS[schema[property]['render']](attrs=extra_attrs), initial=value,
+            widget=WIDGETS[schema[property]['render']](attrs=extra_attrs),
+            initial=value,
             )
 
     return self.insert_fields()
@@ -171,11 +181,13 @@ class SurveyEditForm(SurveyForm):
         label = property
       if schema[property]["type"] == "long_answer":
         self.survey_fields[property] = forms.fields.CharField(
+                                    required=False,
                                     label=label,
                                     widget=widgets.Textarea(), initial=value)
                                     #custom rows
       if schema[property]["type"] == "short_answer":
         self.survey_fields[property] = forms.fields.CharField(
+                                    required=False,
                                     label=label,
                                     max_length=40, initial=value)
       if schema[property]["type"] == "selection":
@@ -191,6 +203,7 @@ class SurveyEditForm(SurveyForm):
         for option in options:
           these_choices.append((option, option))
         self.survey_fields[property] = PickOneField(
+            required=False,
             label=label,
             choices=tuple(these_choices),
             widget=UniversalChoiceEditor(kind, render))
@@ -205,6 +218,7 @@ class SurveyEditForm(SurveyForm):
           value = None
         these_choices = [(v,v) for v in getattr(self.survey_content, property)]
         self.survey_fields[property] = PickManyField(
+            required=False,
             label=label,
             choices=tuple(these_choices),
             widget=UniversalChoiceEditor(kind, render), initial=value)
@@ -323,8 +337,9 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
     if value is None: value = []
     has_id = attrs and attrs.has_key('id')
     final_attrs = self.build_attrs(attrs, name=name)
-    output = [u'<fieldset id="%s_fieldset">\n  <ul>' % name]
-    str_values = set([forms.util.smart_unicode(v) for v in value]) # Normalize to strings.
+    output = [u'<fieldset id="id_%s">\n  <ul class="pick_multi">' % name]
+    # Normalize to strings.
+    str_values = set([forms.util.smart_unicode(v) for v in value])
     chained_choices = enumerate(chain(self.choices, choices))
     for i, (option_value, option_label) in chained_choices:
       # If an ID attribute was given, add a numeric index as a suffix,
@@ -340,205 +355,87 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
     output.append(u'  </ul>\n</fieldset>')
     return u'\n'.join(output)
 
+  def id_for_label(self, id_):
+    # See the comment for RadioSelect.id_for_label()
+    if id_:
+      id_ += '_fieldset'
+    return id_
+  id_for_label = classmethod(id_for_label)
+
 WIDGETS = {'multi_checkbox': PickManyCheckbox,
            'single_select': PickOneSelect}
 
 
-class EditSurvey(widgets.Widget):
-  """Edit Survey, or Create Survey if not this_survey arg given.
+def get_role_specific_fields(survey, user):
+  # these survey fields are only present when taking the survey
+  # check for this program - is this student or a mentor?
+  # I'm assuming for now this is a student --
+  # this should all be refactored as access
+  field_count = len(survey.fields.items())
+  these_projects = get_projects(survey, user)
+  if not these_projects:
+    # failed access check...no relevant project found
+    return False
+  project_pairs = []
+  #insert a select field with options for each project
+  for project in these_projects:
+    project_pairs.append((project.key()), (project.title))
+  # add select field containing list of projects
+  survey.fields.insert(0, 'project', forms.fields.ChoiceField(
+  choices=tuple(project_pairs), widget=forms.Select()))
+
+  filter = {'user': user_logic.logic.getForCurrentAccount(),
+            'status': 'active'}
+  mentor_entity = mentor_logic.logic.getForFields(filter, unique=True)
+  if mentor_entity:
+    # if this is a mentor, add a field
+    # determining if student passes or fails
+    # Activate grades handler should determine whether new status
+    # is midterm_passed, final_passed, etc.
+    grade_field = forms.fields.ChoiceField(choices=('pass','fail'),
+                                           widget=forms.Select())
+    survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
+
+
+def get_projects(this_survey, user):
   """
+  This is a quick attempt to get a working access check,
+  and get a list of projects while we're at it.
 
-  CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
-  <th><label>Choose Project:</label></th>
-  <td>
-    <select disabled="TRUE" id="id_survey__NA__selection__project"
-      name="survey__1__selection__see">
-        <option>Survey Taker's Projects For This Program</option></select>
-   </td></tr>
-   """
-
-  CHOOSE_A_GRADE_FIELD = """<tr class="role-specific">
-  <th><label>Assign Grade:</label></th>
-  <td>
-    <select disabled=TRUE id="id_survey__NA__selection__grade"
-     name="survey__1__selection__see">
-      <option>Pass/Fail</option>
-    </select></td></tr>
-    """
-
-  WIDGET_HTML = """
-  <div class="survey_admin" id="survey_widget"><table>
-   %s %s %%(survey)s </table> %%(options_html)s </div>
-  """
-
-  QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
-                    "long_answer": "Long Answer"}
-
-  BUTTON_TEMPLATE = """
-  <button id="%(type_id)s" class="AddQuestion" onClick="return false;">
-    Add %(type_name)s Question
-  </button>
-  """
-  OPTIONS_HTML = """
-  <div id="survey_options"> %(options)s </div>
-  """
-  SURVEY_TEMPLATE = """
-  <tbody></tbody>
-  """
-
-  def __init__(self, *args, **kwargs):
-    """Defines the name, key_name and model for this entity."""
-    self.survey_content = kwargs.get('survey_content', None)
-    self.this_user = user_logic.getForCurrentAccount()
-    if 'survey_content' in kwargs: del kwargs['survey_content']
-    super(EditSurvey, self).__init__(*args, **kwargs)
-
-  def render(self, name, value, attrs=None):
-    """ Renders the survey editor widget to HTML
-    """
-
-    self.survey_form = SurveyEditForm(survey_content=self.survey_content,
-    this_user=self.this_user, survey_record=None)
-    self.survey_form.get_fields()
-    if len(self.survey_form.fields) == 0:
-      self.survey_form = self.SURVEY_TEMPLATE
-    options = ""
-    for type_id, type_name in self.QUESTION_TYPES.items():
-      options += self.BUTTON_TEMPLATE % {'type_id': type_id,
-                                         'type_name': type_name}
-    options_html = self.OPTIONS_HTML % {'options': options}
-    html = self.WIDGET_HTML
-    CHOOSE_A_PROJECT_FIELD = self.CHOOSE_A_PROJECT_FIELD
-    grades = False
-    if self.survey_content:
-      grades = self.survey_content.survey_parent.get().has_grades
-    CHOOSE_A_GRADE_FIELD = self.CHOOSE_A_GRADE_FIELD if grades else ''
-    html = html % (CHOOSE_A_PROJECT_FIELD, CHOOSE_A_GRADE_FIELD)
-    result = html % {'survey': str(self.survey_form),
-                                 'options_html':options_html}
-    return result
+  This method should be migrated to a access module"""
+  from soc.logic.models.survey import logic as survey_logic
+  this_program = this_survey.scope
+  # Get role linking survey taker to program
 
 
-class TakeSurvey(widgets.Widget):
-  """Take Survey, or Update Survey.
-  """
+  # check that the survey_taker has a project with taking_access role type
+  # these queries aren't yet properly working
 
-  WIDGET_HTML = """ %(help_text)s <div class="%(status)s" id="survey_widget">
-  <table> %(survey)s </table> </div>
-  """
+  if this_survey.taking_access == 'mentor':
+    import soc.models.mentor
+    this_mentor = soc.models.mentor.Mentor.all(
+    ).filter("user=", user # should filter on user key
+    ).filter("_program=", this_program.key()
+    ).get()
+    if not this_mentor: return False
+    these_projects = soc.models.student_project.StudentProject.filter(
+    "mentor=", this_mentor).filter("program=", this_program).fetch(1000)
 
-  def __init__(self, **kwargs):
-    self.this_user = kwargs.get('user', None)
-
-  def render(self, survey_content, survey_record, read_only=False):
-    """Renders survey taking widget to HTML.
-
-    Checks if user has already submitted form. If so, show existing form
-    If we don't want students/mentors to edit the values they've already
-    submitted for a survey, this behavior should be altered.
-
-    A deadline can also be used as a conditional for updating values,
-    we have a special read_only UI and a check on the POST handler for this.
-    Passing read_only=True here allows one to fetch the read_only view.
-    """
-
-    self.survey_content = survey_content
-    self.this_survey = self.survey_content.survey_parent.get()
-    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     self.this_user, self.this_survey).get()
-    if not read_only:
-      # Check deadline for read_only-ness
-      deadline = self.this_survey.deadline
-      read_only =  deadline and (datetime.datetime.now() > deadline)
-    self.survey = SurveyForm(survey_content=survey_content,
-    this_user=self.this_user, survey_record=survey_record, read_only=read_only)
-    self.survey.get_fields()
-    if self.this_survey.taking_access != "everyone":
-      # the access check component should be refactored out
-      role_fields = self.get_role_specific_fields()
-      if not role_fields: return False
-    if not read_only:
-      if survey_record:
-        help_text = "Edit and re-submit this survey."
-        status = "edit"
-      else:
-        help_text = "Please complete this survey."
-        status = "create"
-    else:
-      help_text = "Read-only view."
-      status = "view"
-    result = self.WIDGET_HTML % dict(survey=str(self.survey), status=status,
-                                     help_text=help_text)
-    return result
-
-  def get_role_specific_fields(self):
-    # these survey fields are only present when taking the survey
-    # check for this program - is this student or a mentor?
-    # I'm assuming for now this is a student --
-    # this should all be refactored as access
-    field_count = len( self.survey.fields.items() )
-    these_projects = self.get_projects()
-    if not these_projects:
-      # failed access check...no relevant project found
-      return False
-    project_pairs = []
-    #insert a select field with options for each project
-    for project in these_projects:
-      project_pairs.append((project.key()), (project.title) )
-    # add select field containing list of projects
-    self.survey.fields.insert(0, 'project', forms.fields.ChoiceField(
-    choices=tuple( project_pairs ), widget=forms.Select() ))
-
-    filter = {'user': user_logic.logic.getForCurrentAccount(),
-        'status': 'active'}
-    mentor_entity = mentor_logic.logic.getForFields(filter, unique=True)
-    if mentor_entity:
-      # if this is a mentor, add a field
-      # determining if student passes or fails
-      # Activate grades handler should determine whether new status
-      # is midterm_passed, final_passed, etc.
-      grade_field = forms.fields.ChoiceField(choices=('pass','fail'),
-                                             widget=forms.Select())
-      self.survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
+  if this_survey.taking_access == 'student':
+    import soc.models.student
+    this_student = soc.models.student.Student.all(
+    ).filter("user=", user # should filter on user key
+    ).filter("_program=", this_program.key()
+    ).get()
+    if not this_student: return False
+    these_projects = soc.models.student_project.StudentProject.filter(
+    "student=", this_student).filter("program=", this_program).fetch(1000)
 
 
-  def get_projects(self):
-    """
-    This is a quick attempt to get a working access check,
-    and get a list of projects while we're at it.
-
-    This method should be migrated to a access module"""
-    from soc.logic.models.survey import logic as survey_logic
-    this_program = self.this_survey.scope 
-    # Get role linking survey taker to program
-
-
-    # check that the survey_taker has a project with taking_access role type
-    # these queries aren't yet properly working
-
-    if self.this_survey.taking_access == 'mentor':
-      import soc.models.mentor
-      this_mentor = soc.models.mentor.Mentor.all(
-      ).filter("user=", self.this_user # should filter on user key
-      ).filter("_program=",this_program.key()
-      ).get()
-      if not this_mentor: return False
-      these_projects = soc.models.student_project.StudentProject.filter(
-      "mentor=", this_mentor).filter("program=",this_program).fetch(1000)
-
-    if self.this_survey.taking_access == 'student':
-      import soc.models.student
-      this_student = soc.models.student.Student.all(
-      ).filter("user=", self.this_user # should filter on user key
-      ).filter("_program=",this_program.key()
-      ).get()
-      if not this_student: return False
-      these_projects = soc.models.student_project.StudentProject.filter(
-      "student=", this_student).filter("program=",this_program).fetch(1000)
-
-
-    if len(these_projects) == 0: return False
-    else: return these_projects
+  if len(these_projects) == 0:
+    return False
+  else:
+    return these_projects
 
 
 class SurveyResults(widgets.Widget):

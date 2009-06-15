@@ -47,6 +47,11 @@ $(function () {
 
   }
 
+  else {
+    widget.find('textarea').each(function () {
+      $(this).attr('overflow', 'auto').growfield();
+    });
+  }
   /*
   * == Survey Submission Handler ==
   *
