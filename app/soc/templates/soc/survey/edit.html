@@ -17,13 +17,13 @@ limitations under the License.
 
 {% block scripts %}
 {{ block.super }}
-<script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
 <script type="text/javascript" src="/soc/content/js/default-text.js"></script>
 <script type="text/javascript" src="/soc/content/js/ui.draggable.js"></script>
 <script type="text/javascript" src="/soc/content/js/ui.sortable.js"></script>
 <script type="text/javascript" src="/soc/content/js/ui.dialog.js"></script>
 <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-trunk.js"></script>
 <script type="text/javascript" src="/soc/content/js/jquery.editable-1.3.3.js"></script>
+<script type="text/javascript" src="/soc/content/js/edit_survey.js"></script>
 
 {% endblock %}
 
@@ -50,7 +50,11 @@ Please use this form to edit the {{ entity_type }}.
 <div class="survey_admin" id="survey_widget">
     <table>
 {% block survey_content %}
+{% if survey_form %}
 {% as_table survey_form %}
+{% else %}
+<tbody></tbody>
+{% endif %}
 {% endblock %}
 
     </table>
