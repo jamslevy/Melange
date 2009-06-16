@@ -78,6 +78,44 @@ class Logic(work.Logic):
     db.put(survey_record)
     return survey_record
 
+
+  def get_projects(self, this_survey, user):
+    """
+    Get projects linking user to a program.
+    Serves as access handler (since no projects == no access)
+    And retrieves projects to choose from (if mentors have >1 projects)
+    
+    """
+    this_program = this_survey.scope
+    if this_survey.taking_access == 'mentor':
+      these_projects = self.getMentorProjects(user, this_program)
+    if this_survey.taking_access == 'student':
+      these_projects = self.getStudentProjects(user, this_program)
+    if len(these_projects) == 0: return False
+    return these_projects
+
+
+  def getStudentProjects(self, user, program):
+      import soc.models.student
+      this_student = soc.models.student.Student.all(
+      ).filter("user=", user # should filter on user key
+      ).get()
+      if not this_student: return []
+      projects = soc.models.student_project.StudentProject.filter(
+      "student=", this_student).filter("program=", program).fetch(1000)
+      return projects
+      
+  def getMentorProjects(self,user, program):
+      import soc.models.mentor
+      this_mentor = soc.models.mentor.Mentor.all(
+      ).filter("user=", user # should filter on user key
+      ).filter("program=", program
+      ).get()
+      if not this_mentor: return []
+      projects = soc.models.student_project.StudentProject.filter(
+      "mentor=", this_mentor).filter("program=", program).fetch(1000)
+      return projects
+        
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
     """

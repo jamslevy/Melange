@@ -36,6 +36,7 @@ from soc.logic.lists import Lists
 from soc.logic.models.user import logic as user_logic
 from soc.logic.models.mentor import logic as mentor_logic
 from soc.logic.models.survey import results_logic
+from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyContent, SurveyRecord
 
@@ -371,8 +372,8 @@ def get_role_specific_fields(survey, user):
   # check for this program - is this student or a mentor?
   # I'm assuming for now this is a student --
   # this should all be refactored as access
-  field_count = len(survey.fields.items())
-  these_projects = get_projects(survey, user)
+  field_count = len(survey.this_survey.get_schema().items())
+  these_projects = survey_logic.get_projects(survey, user)
   if not these_projects:
     # failed access check...no relevant project found
     return False
@@ -397,45 +398,18 @@ def get_role_specific_fields(survey, user):
     survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
-def get_projects(this_survey, user):
-  """
-  This is a quick attempt to get a working access check,
-  and get a list of projects while we're at it.
+def debug(user, this_program, taking_access):
+  # create student and mentor entities to test survey
+  from soc.models.student_project import StudentProject
+  this_project = StudentProject()
+  if taking_access == 'mentor':
+    from soc.models.mentor import Mentor
+    survey_taker = Mentor()
+  if taking_access == 'student':
+    from soc.models.mentor import Mentor
+    survey_taker = Mentor()  
+    
 
-  This method should be migrated to a access module"""
-  from soc.logic.models.survey import logic as survey_logic
-  this_program = this_survey.scope
-  # Get role linking survey taker to program
-
-
-  # check that the survey_taker has a project with taking_access role type
-  # these queries aren't yet properly working
-
-  if this_survey.taking_access == 'mentor':
-    import soc.models.mentor
-    this_mentor = soc.models.mentor.Mentor.all(
-    ).filter("user=", user # should filter on user key
-    ).filter("_program=", this_program.key()
-    ).get()
-    if not this_mentor: return False
-    these_projects = soc.models.student_project.StudentProject.filter(
-    "mentor=", this_mentor).filter("program=", this_program).fetch(1000)
-
-  if this_survey.taking_access == 'student':
-    import soc.models.student
-    this_student = soc.models.student.Student.all(
-    ).filter("user=", user # should filter on user key
-    ).filter("_program=", this_program.key()
-    ).get()
-    if not this_student: return False
-    these_projects = soc.models.student_project.StudentProject.filter(
-    "student=", this_student).filter("program=", this_program).fetch(1000)
-
-
-  if len(these_projects) == 0:
-    return False
-  else:
-    return these_projects
 
 
 class SurveyResults(widgets.Widget):
