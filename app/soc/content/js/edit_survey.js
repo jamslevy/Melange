@@ -369,13 +369,14 @@ $(function () {
         var name = $('#new_item_name').val();
         var i = ul.find('li').length;
         var id_ = 'id_' + ul_id + '_' + i;
-        ul.append('<li id="id-li-' + ul_id + '_' + i +
+        var option_html = $('<li id="id-li-' + ul_id + '_' + i +
             '" class="ui-state-default sortable_li">' +
             '<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>' +
             '<span id="' + id_ + '" class="editable_option" name="' + id_ +
             '__field">' + name + '</span>' + '<input type="hidden" id="' +
             id_ + '__field" name="' + id_ + '__field" value="' + name +
-            '" >' + '</li>');
+            '" >' + '</li>')
+        ul.append(option_html.sortable().prepend(del_li.join(option_html.attr('id'))));  
         $('#new_item_name').val('');
         $('#new_item_field_ul_id').val('');
         $(this).dialog('close');
