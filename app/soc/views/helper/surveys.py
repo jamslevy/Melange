@@ -105,6 +105,7 @@ class SurveyForm(djangoforms.ModelForm):
                                     )
                                     #custom rows
       if schema[property]["type"] == "short_answer":
+        extra_attrs['class'] = "text_question"
         self.survey_fields[property] = forms.fields.CharField(
                                     help_text = 'Testing Tooltip Again!',
                                     required=False,

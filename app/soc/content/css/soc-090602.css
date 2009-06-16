@@ -671,7 +671,7 @@ div #survey_widget textarea {
   width:300px;
 }
 
-div #survey_widget input {
+div #survey_widget input .text_question {
 width:320px;
 }
 
