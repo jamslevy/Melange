@@ -647,14 +647,13 @@ span.edited {
 
 
 div #survey_widget {
-/*  margin: 30px; */
-/*margin:30px 0 20px;*/
-        -moz-border-radius: 5px;
-        -webkit-border-radius: 5px;
-  background-color: #FFFEEB;
-  border: 5px solid #F7CA75;
-  padding: 15px;
-  width:600px;
+margin: 20px;
+-moz-border-radius: 5px;
+-webkit-border-radius: 5px;
+background-color: #FFFEEB;
+border: 5px solid #F7CA75;
+padding: 15px;
+width:600px;
 }
 
 div #survey_widget.survey_admin {
@@ -676,9 +675,9 @@ div #survey_widget input {
 width:320px;
 }
 
-/*div #survey_widget select {
-width:325px;
-}*/
+div #survey_widget  td.formfieldlabel {
+font-size:medium;
+}
 
 /* options */
 

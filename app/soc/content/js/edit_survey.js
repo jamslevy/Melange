@@ -70,7 +70,7 @@ $(function () {
 
   function renderHTML() {
     // render existing survey forms
-    $('th > label').prepend(del_el).end();
+    widget.find('td > label').prepend(del_el).end();
 
     $('ol').find('li').each(function () {
       $(this).prepend(del_li.join($(this).attr('id'))).end();
@@ -250,14 +250,14 @@ $(function () {
     * Save survey content html from editPost
     * if POST fails
     */
-    /*
+
     // save field vals
     widget.find('textarea,input').each(function () {
       $(this).attr('val', $(this).val());
     });
 
     $(this).find("#id_survey_html").attr('value', widget.html());
-*/
+
     // don't save default value
     widget.find('input').each(function () {
       if ($(this).val() === DEFAULT_SHORT_ANSWER_TEXT) {
