@@ -233,6 +233,10 @@ class View(base.View):
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey).get()
     if not survey_record and read_only:
+      is_same_user = user.key() == user_logic.getForCurrentAccount().key()
+      if not can_write or not is_same_user:
+        # If user who can edit looks at her own taking page, show the default
+        # form as readonly. Otherwise, below, show nothing.
         context["notice"] = "There are no records for this survey and user."
         return False
 
