@@ -190,7 +190,9 @@ class View(base.View):
                  request.GET.get("read_only", False) or
                  request.POST.get("read_only", False)
                  )
-    if this_survey.deadline and datetime.datetime.now() > this_survey.deadline:
+    now = datetime.datetime.now()
+    # Check deadline, see check for opening below
+    if this_survey.deadline and now > this_survey.deadline:
       # Are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
       read_only = True
@@ -205,9 +207,20 @@ class View(base.View):
     # in a read-only request, we fetch them.
     if can_write and read_only and 'user_results' in request.GET:
       user = user_logic.getFromKeyNameOr404(request.GET['user_results'])
+
+    # Check if we're past the opening date
+    not_ready = False
+    if this_survey.opening and now < this_survey.opening:
+      not_ready = True
+      if not can_write:
+        context["notice"] = "There is no such survey available."
+        return False
+      else:
+        context["notice"] = "This survey is not open for taking yet."
+
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey ).get()
-    if read_only or len(request.POST) == 0:
+    if read_only or len(request.POST) == 0 or not_ready:
       # not submitting completed survey record OR we're ignoring late submission
       pass
     else: # submitting a completed survey record
@@ -219,6 +232,10 @@ class View(base.View):
     survey_content = this_survey.this_survey
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey).get()
+    if not survey_record and read_only:
+        context["notice"] = "There are no records for this survey and user."
+        return False
+
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user,
                                      survey_record=survey_record,
@@ -448,7 +465,13 @@ class View(base.View):
     entities = self._logic.getForFields(filter)
     submenus = []
     # add a link to all featured documents
+    now = datetime.datetime.now()
     for entity in entities:
+      # Omit if either before opening or after deadline
+      if entity.opening and entity.opening > now:
+        continue
+      if entity.deadline and entity.deadline < now:
+        continue
       #TODO only if a document is readable it might be added
       submenu = (redirects.getPublicRedirect(entity, self._params),
                  entity.short_name, 'show')

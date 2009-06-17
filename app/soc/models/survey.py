@@ -138,6 +138,13 @@ class Survey(soc.models.work.Work):
       'Field used to indicate if a Work should be featured, for example,'
       ' in the sidebar menu.')
 
+  # date at which the survey becomes available for taking
+  opening = db.DateTimeProperty(required=False)
+  opening.help_text = ugettext(
+      'Indicates a date before which this survey'
+      ' cannot be taken or displayed.')
+
+
   # deadline for taking survey
   # default should be one week ahead
   deadline = db.DateTimeProperty(required=False)

@@ -408,8 +408,8 @@ def debug(user, this_program, taking_access):
     survey_taker = Mentor()
   if taking_access == 'student':
     from soc.models.mentor import Mentor
-    survey_taker = Mentor()  
-    
+    survey_taker = Mentor()
+
 
 
 
