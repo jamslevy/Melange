@@ -364,21 +364,22 @@ $(function () {
     modal: true,
     buttons: {
       'Add option': function () {
-        var ul_id =  $('#new_item_field_ul_id').val();
-        var ul = $('#' + ul_id);
+        var ol_id =  $('#new_item_field_ul_id').val();
+        var ol = $('#' + ol_id);
         var name = $('#new_item_name').val();
-        var i = ul.find('li').length;
-        var id_ = 'id_' + ul_id + '_' + i;
-        var option_html = $('<li id="id-li-' + ul_id + '_' + i +
-            '" class="ui-state-default sortable_li">' +
+        var i = ol.find('li').length;
+        var id_ = 'id_' + ol_id + '_' + i;
+        var option_html = $('<li id="id-li-' + ol_id + '_' + i +
+            '" class="ui-state-defaolt sortable_li">' +
             '<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>' +
             '<span id="' + id_ + '" class="editable_option" name="' + id_ +
             '__field">' + name + '</span>' + '<input type="hidden" id="' +
             id_ + '__field" name="' + id_ + '__field" value="' + name +
             '" >' + '</li>')
-        ul.append(option_html.sortable().prepend(del_li.join(option_html.attr('id'))));  
+        ol.append(option_html.prepend(del_li.join(option_html.attr('id')))); 
+        ol.sortable().disableSelection(); 
         $('#new_item_name').val('');
-        $('#new_item_field_ul_id').val('');
+        $('#new_item_field_ol_id').val('');
         $(this).dialog('close');
       },
       Cancel: function () {
