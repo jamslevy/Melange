@@ -713,9 +713,11 @@ span.formfieldlabel {
 .sortable_li {border: solid 1px !important; padding:5px !important;}
 #dialog {font-size: 62.5%;}
 #dialog    label, input { display:block; }
+#dialog p{ text-align:center; padding-left: 0;}
 #dialog    input.text { margin-bottom:12px; width:95%; padding: .4em; }
 #dialog fieldset { padding:0; border:0; margin-top:25px; }
 #dialog    h1 { font-size: 1.2em; margin: .6em 0; }
+
 
 .ui-button {outline: 0; margin:0; padding: .4em 1em .5em;
             text-decoration:none; cursor:pointer; position: relative;
