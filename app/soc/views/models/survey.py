@@ -203,6 +203,7 @@ class View(base.View):
     roles = checker.getMembership(this_survey.write_access)
     rights = self._params['rights']
     can_write = access.Checker.hasMembership(rights, roles, params)
+
     # If user can edit this survey and is requesting someone else's results,
     # in a read-only request, we fetch them.
     if can_write and read_only and 'user_results' in request.GET:
