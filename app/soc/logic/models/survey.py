@@ -66,7 +66,7 @@ class Logic(work.Logic):
     if survey_record:
       for prop in survey_record.dynamic_properties():
         delattr(survey_record, prop)
-    if not survey_record:
+    else:
       survey_record = SurveyRecord(user=user, this_survey=survey_entity)
     schema = survey_entity.this_survey.get_schema()
     for name, value in fields.items():
@@ -84,7 +84,7 @@ class Logic(work.Logic):
     Get projects linking user to a program.
     Serves as access handler (since no projects == no access)
     And retrieves projects to choose from (if mentors have >1 projects)
-    
+
     """
     this_program = this_survey.scope
     from settings import DEBUG as debug 
@@ -130,7 +130,7 @@ class Logic(work.Logic):
       projects = soc.models.student_project.StudentProject.filter(
       "student=", this_student).filter("program=", program).fetch(1000)
       return projects
-      
+
   def getMentorProjects(self,user, program):
       import soc.models.mentor
       this_mentor = soc.models.mentor.Mentor.all(
@@ -141,7 +141,7 @@ class Logic(work.Logic):
       projects = soc.models.student_project.StudentProject.filter(
       "mentor=", this_mentor).filter("program=", program).fetch(1000)
       return projects
-        
+
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
     """
@@ -186,7 +186,7 @@ class Logic(work.Logic):
     import soc.models.organization
     import soc.models.user
     import soc.models.site
-    # anything else? 
+    # anything else?
     # use prefix to generate dict key
     scope_types = {"program": soc.models.program.Program,
     "org": soc.models.organization.Organization,
@@ -196,7 +196,7 @@ class Logic(work.Logic):
     if not scope_type: raise AttributeError
     entity.scope = scope_type.get_by_key_name(entity.scope_path)
     entity.put()
-    return entity.scope 
+    return entity.scope
 
   def _onCreate(self, entity):
     self.getScope(entity)
@@ -213,7 +213,7 @@ class Logic(work.Logic):
   def _onDelete(self, entity):
     receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "deleted")
-    
+
 
 logic = Logic()
 

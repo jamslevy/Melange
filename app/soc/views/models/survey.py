@@ -18,6 +18,7 @@
 """
 
 __authors__ = [
+  'Daniel Diniz',
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
@@ -49,8 +50,29 @@ from soc.views.models import base
 CHOICE_TYPES = set(('selection', 'pick_multi', 'choice'))
 TEXT_TYPES = set(('long_answer', 'short_answer'))
 PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
-QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
-                      "long_answer": "Long Answer"}
+QUESTION_TYPES = {"short_answer": ("Short Answer",
+                                   "Less than 40 characters. "
+                                   "Rendered as a text input. "
+                                   "It's possible to add a free form question"
+                                   " (Content) and a in-input propmt/example"
+                                   " text."),
+                  "choice": ("Selection",
+                             "Can be set as a single choice (selection) or "
+                             "multiple choice (pick_multi) question. "
+                             "Rendered as a select (single choice) or a group "
+                             "of checkboxes (multiple choice). "
+                            "It's possible to add a free form question"
+                            " (Content) and as many free form options as "
+                            "wanted. Each option can be edited (double-click), "
+                            "deleted (click on (-) button) or reordered (drag "
+                            "and drop)."),
+                  "long_answer": ("Long Answer",
+                                  "Unlimited length, auto-growing field. "
+                                  "Rendered as a textarea. "
+                                   "It's possible to add a free form question"
+                                   " (Content) and a in-input propmt/example"
+                                   " text.")
+                  }
 
 class View(base.View):
   """View methods for the Survey model.
@@ -160,7 +182,7 @@ class View(base.View):
                                   params=params, filter=kwargs)
 
   def _public(self, request, entity, context):
-    """
+    """Survey taking and result display handler.
 
     For surveys, the "public" page is actually the access-protected
     survey-taking page. We should use a different method name just to
@@ -186,53 +208,32 @@ class View(base.View):
     # check if there is a survey record from this user.
     this_survey = entity
     user = user_logic.getForCurrentAccount()
-    read_only = (context.get("read_only", False) or
-                 request.GET.get("read_only", False) or
-                 request.POST.get("read_only", False)
-                 )
-    now = datetime.datetime.now()
-    # Check deadline, see check for opening below
-    if this_survey.deadline and now > this_survey.deadline:
-      # Are we already passed the deadline?
-      context["notice"] = "The Deadline For This Survey Has Passed"
-      read_only = True
 
-    # Check if user can edit this survey
-    params = dict(prefix=this_survey.prefix, scope_path=this_survey.scope_path)
-    checker = access.rights_logic.Checker(this_survey.prefix)
-    roles = checker.getMembership(this_survey.write_access)
-    rights = self._params['rights']
-    can_write = access.Checker.hasMembership(rights, roles, params)
+    status = self.get_status(request, context, user, this_survey)
+    read_only, can_write, not_ready = status
+
     # If user can edit this survey and is requesting someone else's results,
     # in a read-only request, we fetch them.
     if can_write and read_only and 'user_results' in request.GET:
       user = user_logic.getFromKeyNameOr404(request.GET['user_results'])
 
-    # Check if we're past the opening date
-    not_ready = False
-    if this_survey.opening and now < this_survey.opening:
-      not_ready = True
-      if not can_write:
-        context["notice"] = "There is no such survey available."
-        return False
-      else:
-        context["notice"] = "This survey is not open for taking yet."
-
-    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, this_survey ).get()
     if read_only or len(request.POST) == 0 or not_ready:
       # not submitting completed survey record OR we're ignoring late submission
       pass
-    else: # submitting a completed survey record
+    else:
+      # submitting a completed survey record
+      survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
+                                       user, this_survey ).get()
       context['notice'] = "Survey Submission Saved"
       survey_record = survey_logic.updateSurveyRecord(user, this_survey,
                                                         survey_record,
                                                         request.POST)
-
     survey_content = this_survey.this_survey
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey).get()
+
     if not survey_record and read_only:
+      # No recorded answers, we're either past deadline or want to see answers
       is_same_user = user.key() == user_logic.getForCurrentAccount().key()
       if not can_write or not is_same_user:
         # If user who can edit looks at her own taking page, show the default
@@ -249,6 +250,56 @@ class View(base.View):
       ## the access check component should be refactored out
       role_fields = surveys.getRoleSpecificFields(this_survey, user)
       if not role_fields: survey_form = False
+
+    # Set help and status text
+    self.set_help_status(context, read_only, survey_record, survey_form)
+
+    if not context['survey_form']:
+      access_tpl = "You Must Be a %s to Take This Survey"
+      context["notice"] = access_tpl % this_survey.taking_access.capitalize()
+
+    context['read_only'] = read_only
+    return True
+
+  def get_status(self, request, context, user, this_survey):
+    """Determine if we're past deadline or before opening, check user rights.
+    """
+
+    read_only = (context.get("read_only", False) or
+                 request.GET.get("read_only", False) or
+                 request.POST.get("read_only", False)
+                 )
+    now = datetime.datetime.now()
+
+    # Check deadline, see check for opening below
+    if this_survey.deadline and now > this_survey.deadline:
+      # Are we already passed the deadline?
+      context["notice"] = "The Deadline For This Survey Has Passed"
+      read_only = True
+
+    # Check if user can edit this survey
+    params = dict(prefix=this_survey.prefix, scope_path=this_survey.scope_path)
+    checker = access.rights_logic.Checker(this_survey.prefix)
+    roles = checker.getMembership(this_survey.write_access)
+    rights = self._params['rights']
+    can_write = access.Checker.hasMembership(rights, roles, params)
+
+    # Check if we're past the opening date
+    not_ready = False
+    if this_survey.opening and now < this_survey.opening:
+      not_ready = True
+      if not can_write:
+        context["notice"] = "There is no such survey available."
+        return False
+      else:
+        context["notice"] = "This survey is not open for taking yet."
+
+    return read_only, can_write, not_ready
+
+  def set_help_status(self, context, read_only, survey_record, survey_form):
+    """Set help_text and status for template use.
+    """
+
     if not read_only:
       if survey_record:
         help_text = "Edit and re-submit this survey."
@@ -261,13 +312,7 @@ class View(base.View):
       status = "view"
     survey_data = dict(survey_form=survey_form, status=status,
                                      help_text=help_text)
-    for key in survey_data:
-      context[key] = survey_data[key]
-    if not context['survey_form']:
-      access_tpl = "You Must Be a %s to Take This Survey"
-      context["notice"] = access_tpl % this_survey.taking_access.capitalize()
-    context['read_only'] = read_only
-    return True
+    context.update(survey_data)
 
   def _editContext(self, request, context):
     """Performs any required processing on the context for edit pages.
@@ -299,39 +344,63 @@ class View(base.View):
     user = user_logic.getForCurrentAccount()
     schema = {}
     survey_fields = {}
+
     if not entity:
+      # New Survey
       fields['author'] = user
     else:
       fields['author'] = entity.author
-      if hasattr(entity, 'this_survey'):
-        _survey = entity.this_survey
-        schema = _survey.get_schema()
-        for prop in _survey.dynamic_properties():
-          if prop in schema and schema[prop]['type'] not in CHOICE_TYPES:
-            # Choice questions are always regenerated from request, see
-            # self.get_request_questions()
-            survey_fields[prop] = getattr(_survey, prop)
+      schema = self.load_survey_content(schema, survey_fields, entity)
+
+    # Remove deleted properties from the model
     self.delete_questions(schema, survey_fields, request.POST)
 
+    # Add new text questions and re-build choice questions
     self.get_request_questions(schema, survey_fields, request.POST)
 
+    # Get schema options for choice questions
     self.get_schema_options(schema, survey_fields, request.POST)
 
-    this_survey = survey_logic.createSurvey(survey_fields, schema,
-                      this_survey=getattr(entity,'this_survey', None))
+    this_survey = getattr(entity,'this_survey', None)
+    # Create or update a SurveyContent for this Survey
+    survey_content = survey_logic.createSurvey(survey_fields, schema,
+                                                this_survey=this_survey)
 
+    # Enable grading
     if "has_grades" in request.POST and request.POST["has_grades"] == "on":
       this_survey.has_grades = True
     if entity:
-      entity.this_survey = this_survey
+      entity.this_survey = survey_content
       db.put(entity)
     else:
-      fields['this_survey'] = this_survey
+      fields['this_survey'] = survey_content
 
     fields['modified_by'] = user
     super(View, self)._editPost(request, entity, fields)
 
+  def load_survey_content(self, schema, survey_fields, entity):
+    """Populate the schema dict and get text survey questions.
+    """
+
+    if hasattr(entity, 'this_survey'):
+      # There is a SurveyContent already
+      survey_content = entity.this_survey
+      schema = survey_content.get_schema()
+      for question_name in survey_content.dynamic_properties():
+        # Get the current questions from the SurveyContent
+        if question_name not in schema:
+          continue
+        if schema[question_name]['type'] not in CHOICE_TYPES:
+          # Choice questions are always regenerated from request, see
+          # self.get_request_questions()
+          question = getattr(survey_content, question_name)
+          survey_fields[question_name] = question
+    return schema
+
   def delete_questions(self, schema, survey_fields, POST):
+    """Process the list of questions to delete, from a hidden input.
+    """
+
     deleted = POST.get('__deleted__', '')
     if deleted:
       deleted = deleted.split(',')
@@ -342,7 +411,16 @@ class View(base.View):
           del survey_fields[d]
 
   def get_request_questions(self, schema, survey_fields, POST):
-    # Get fields from request
+    """Get fields from request.
+
+    We use two field/question naming and processing schemes:
+      - Choice questions consist of <input/>s with a common name, being rebuilt
+        anew on every edit POST so we can gather ordering, text changes,
+        deletions and additions.
+      - Text questions only have special survey__* names on creation, afterwards
+        they are loaded from the SurveyContent dynamic properties.
+    """
+
     for key, value in POST.items():
       if key.startswith('id_'):
         # Choice question fields, they are always generated from POST contents,
@@ -382,6 +460,9 @@ class View(base.View):
         survey_fields[field_name] = value
 
   def get_schema_options(self, schema, survey_fields, POST):
+    """Get question, type, rendering and option order for choice questions.
+    """
+
     RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
     for key in schema:
       if schema[key]['type'] in CHOICE_TYPES and key in survey_fields:
@@ -416,13 +497,23 @@ class View(base.View):
         schema[key]["question"] = POST[question_for]
 
   def createGet(self, request, context, params, seed):
+    """Pass the question types for the survey creation template.
+    """
+
+    # Avoid spurious results from showing on creation
+    if 'survey_records' in context:
+      del context['survey_records']
     context['question_types'] = QUESTION_TYPES
     return super(View, self).createGet(request, context, params, seed)
 
   def editGet(self, request, entity, context, params=None):
-    """Processes GET requests for the specified entity.
+    """Process GET requests for the specified entity.
+
+    Builds the SurveyEditForm that represents the Survey question contents.
     """
 
+    #XXX:ajaksu shoudn't CHOOSE_A_PROJECT_FIELD and CHOOSE_A_GRADE_FIELD
+    # go into a template? Then permission flags on context control display?
     CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
     <th><label>Choose Project:</label></th>
     <td>
@@ -431,7 +522,6 @@ class View(base.View):
           <option>Survey Taker's Projects For This Program</option></select>
      </td></tr>
      """
-
     CHOOSE_A_GRADE_FIELD = """<tr class="role-specific">
     <th><label>Assign Grade:</label></th>
     <td>
@@ -440,24 +530,25 @@ class View(base.View):
         <option>Pass/Fail</option>
       </select></td></tr>
     """
+
+    self._entity = entity
     survey_content = entity.this_survey
-    this_user = user_logic.getForCurrentAccount()
+    user = user_logic.getForCurrentAccount()
     survey_form = surveys.SurveyEditForm(survey_content=survey_content,
-    this_user = this_user, survey_record=None)
+                                         this_user=user, survey_record=None)
     survey_form.getFields()
     grades = False
     if survey_content:
       grades = survey_content.survey_parent.get().has_grades
     local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
-                  grades=grades, survey_h=entity.this_survey)
+                grades=grades, survey_h=entity.this_survey)
     context.update(local)
 
     params['edit_form'] = HelperForm(params['edit_form'])
     return super(View, self).editGet(request, entity, context, params=params)
 
   def getMenusForScope(self, entity, params):
-    """
-    From Document view - needed for surveys?
+    """List featured surveys iff after the opening date and before deadline.
     """
 
     filter = {
@@ -483,11 +574,20 @@ class View(base.View):
     return submenus
 
   def activate(self, request, **kwargs):
+    """This is a hack to support the 'Enable grades' button.
+    """
+
+    #XXX Should be removed, as the POST/checkbox way works better and
+    # we want to separate grading from non-grading surveys
     path = request.path.replace('/activate/', '/edit/')
     return http.HttpResponseRedirect(path + '?activate=1')
 
   def grade(self, request, **kwargs):
+    """Updates SurveyRecord's grades for a given Survey.
+    """
+
     #XXX Needs ACL checks
+    #TODO: Move to the survey results page
     prefix = 'id_survey__'
     suffix = '__selection__grade'
     link_id = request.path.split('/')[-1].split('?')[0]
@@ -513,9 +613,15 @@ class HelperForm(object):
   """
 
   def __init__(self, form=None):
+    """Store the edit_form.
+    """
+
     self.form = form
 
   def __call__(self, instance=None):
+    """Transparently instantiate and add initial values to the edit_form.
+    """
+
     form = self.form(instance=instance)
     form.fields['created_by'].initial = instance.author.name
     form.fields['last_modified_by'].initial = instance.modified_by.name
@@ -527,7 +633,10 @@ FIELDS = 'author modified_by'
 PLAIN = 'is_featured content created modified'
 
 
-def get_csv_header(sur):
+def _get_csv_header(sur):
+  """CSV header helper, needs support for comment lines in CSV.
+  """
+
   tpl = '# %s: %s\n'
   fields = ['# Melange Survey export for \n#  %s\n#\n' % sur.title]
   fields += [tpl % (k,v) for k,v in sur.toDict().items()]
@@ -541,7 +650,10 @@ def get_csv_header(sur):
   return ''.join(fields).replace('\n', '\r\n')
 
 
-def get_records(recs, props):
+def _get_records(recs, props):
+  """Fetch properties from SurveyRecords for CSV export.
+  """
+
   records = []
   props = props[1:]
   for rec in recs:
@@ -552,25 +664,30 @@ def get_records(recs, props):
 
 
 def to_csv(survey):
-  """CSV exporter"""
+  """CSV exporter.
+  """
 
   try:
     first = survey.survey_records.run().next()
   except StopIteration:
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
-  header = get_csv_header(survey)
+  header = _get_csv_header(survey)
   leading = ['user', 'created', 'modified']
   properties = leading + survey.this_survey.ordered_properties()
   recs = survey.survey_records.run()
-  recs = get_records(recs, properties)
+  recs = _get_records(recs, properties)
   output = StringIO.StringIO()
   writer = csv.writer(output)
   writer.writerow(properties)
   writer.writerows(recs)
   return header + output.getvalue(), survey.link_id
 
+
 def notify_students(survey):
+  """POC for notification, pending mentor-project linking.
+  """
+
   from soc.models.student import Student
   from soc.models.program import Program
   from soc.logic.helper import notifications

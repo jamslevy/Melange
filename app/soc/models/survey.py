@@ -14,12 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module contains the Survey Model.
+"""This module contains the Survey models.
+
+Survey describes meta-information and permissions.
+
+SurveyContent contains the fields (questions) and their metadata.
+
+SurveyRecord represents a single survey result.
+
 """
 
 __authors__ = [
+  'Daniel Diniz',
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
 ]
+
 
 from google.appengine.ext import db
 
@@ -31,13 +40,20 @@ import soc.models.user
 import soc.models.student_project
 
 class SurveyContent(db.Expando):
-  """Expando Class for Surveys
+  """Fields (questions) and schema representation of a Survey.
 
-     Each survey entity consists of properties where names and default
-     values are set by the survey creator as survey fields.
+  Each survey content entity consists of properties where names and default
+  values are set by the survey creator as survey fields.
+
+    schema: A dictionary (as text) storing, for each field:
+      - type
+      - index
+      - order (for choice questions)
+      - render (for choice questions)
+      - question (free form text question, used as label)
   """
 
-  schema = db.TextProperty() # hidden
+  schema = db.TextProperty()
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
 
@@ -48,6 +64,9 @@ class SurveyContent(db.Expando):
     return eval(self.schema)
 
   def get_survey_order(self):
+    """Make survey questions always appear in the same (creation) order.
+    """
+
     survey_order = {}
     schema = self.get_schema()
     for property in self.dynamic_properties():
@@ -64,6 +83,9 @@ class SurveyContent(db.Expando):
     return survey_order
 
   def ordered_properties(self):
+    """Helper for View.get_fields(), keep field order.
+    """
+
     properties = []
     survey_order = self.get_survey_order().items()
     for position,key in survey_order:
@@ -92,10 +114,9 @@ class Survey(soc.models.work.Work):
 
   # These are gsoc specific, so eventually we can subclass this
   SURVEY_TAKING_ACCESS = ['student', 'mentor', 'everyone']
-  GRADE_OPTIONS = {
-  'midterm':['mid_term_passed', 'mid_term_failed'],
-   'final':['final_passed', 'final_failed'],
-   'N/A':[] }
+  GRADE_OPTIONS = {'midterm':['mid_term_passed', 'mid_term_failed'],
+                   'final':['final_passed', 'final_failed'],
+                   'N/A':[] }
   # there should be a gsoc-specific property determining
   # whether the survey is for the midterm or the final
 
@@ -144,7 +165,6 @@ class Survey(soc.models.work.Work):
       'Indicates a date before which this survey'
       ' cannot be taken or displayed.')
 
-
   # deadline for taking survey
   # default should be one week ahead
   deadline = db.DateTimeProperty(required=False)
@@ -176,25 +196,11 @@ class SurveyRecord(db.Expando):
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
                               required=True, collection_name="taken_surveys",
                               verbose_name=ugettext('Created by'))
-  project = db.ReferenceProperty(soc.models.student_project.StudentProject, collection_name="survey_records")
+  project = db.ReferenceProperty(soc.models.student_project.StudentProject,
+                                 collection_name="survey_records")
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
   grade = db.StringProperty(required=False)
-
-  def get_values(self):
-    """Method to get dynamic property values for a survey record.
-
-    Right now it gets all dynamic values, but
-    it could also be confined to the SurveyContent entity linked to
-    the this_survey entity.
-
-    Deprecated Unordered Version
-
-    values = []
-    for property in self.dynamic_properties():
-      values.append(getattr(self, property))
-    return values
-    """
 
 
   def get_values(self):
