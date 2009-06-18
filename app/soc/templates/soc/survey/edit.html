@@ -59,10 +59,31 @@ Please use this form to edit the {{ entity_type }}.
 
     </table>
     <div id="survey_options">
-    {% for type_id, type_name in question_types.items %}
+    {% for type_id, type_info in question_types.items %}
       <button id="{{ type_id }}" class="AddQuestion" onClick="return false;">
-         Add {{ type_name }} Question
+         Add {{ type_info|first }} Question
       </button>
+  <script type="text/javascript">
+  $(document).ready( function() {
+    var tooltip = ("<div class='tooltip'><div class='tooltip-body'>" +
+    "<img src='/soc/content/images/purrInfo.png' alt='' /><h3>Info</h3>" +
+    "<p>Add a {{ type_info|first }} question:<br/> {{ type_info|last }}" +
+    "</p></div><div class='tooltip-bottom'></div></div>");
+    var tooltip_object=null;
+    $('#{{ type_id }}').hover(function() {
+      if (tooltip_object==null) {
+        tooltip_object = $(tooltip).purr({usingTransparentPNG: true});
+      }
+    },
+    function() {
+      if (tooltip_object!==null) {
+        tooltip_object.remove();
+        tooltip_object=null;
+      }
+    });
+  });
+  </script>
+
     {% endfor %}
     </div>
   </div>

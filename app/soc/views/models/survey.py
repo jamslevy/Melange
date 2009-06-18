@@ -50,8 +50,29 @@ from soc.views.models import base
 CHOICE_TYPES = set(('selection', 'pick_multi', 'choice'))
 TEXT_TYPES = set(('long_answer', 'short_answer'))
 PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
-QUESTION_TYPES = {"short_answer": "Short Answer", "choice": "Selection",
-                  "long_answer": "Long Answer"}
+QUESTION_TYPES = {"short_answer": ("Short Answer",
+                                   "Less than 40 characters. "
+                                   "Rendered as a text input. "
+                                   "It's possible to add a free form question"
+                                   " (Content) and a in-input propmt/example"
+                                   " text."),
+                  "choice": ("Selection",
+                             "Can be set as a single choice (selection) or "
+                             "multiple choice (pick_multi) question. "
+                             "Rendered as a select (single choice) or a group "
+                             "of checkboxes (multiple choice). "
+                            "It's possible to add a free form question"
+                            " (Content) and as many free form options as "
+                            "wanted. Each option can be edited (double-click), "
+                            "deleted (click on (-) button) or reordered (drag "
+                            "and drop)."),
+                  "long_answer": ("Long Answer",
+                                  "Unlimited length, auto-growing field. "
+                                  "Rendered as a textarea. "
+                                   "It's possible to add a free form question"
+                                   " (Content) and a in-input propmt/example"
+                                   " text.")
+                  }
 
 class View(base.View):
   """View methods for the Survey model.
@@ -479,6 +500,8 @@ class View(base.View):
     """Pass the question types for the survey creation template.
     """
 
+    # Avoid spurious results from showing on creation
+    self._entity = None
     context['question_types'] = QUESTION_TYPES
     return super(View, self).createGet(request, context, params, seed)
 
@@ -609,7 +632,7 @@ FIELDS = 'author modified_by'
 PLAIN = 'is_featured content created modified'
 
 
-def get_csv_header(sur):
+def _get_csv_header(sur):
   """CSV header helper, needs support for comment lines in CSV.
   """
 
@@ -626,7 +649,7 @@ def get_csv_header(sur):
   return ''.join(fields).replace('\n', '\r\n')
 
 
-def get_records(recs, props):
+def _get_records(recs, props):
   """Fetch properties from SurveyRecords for CSV export.
   """
 
@@ -648,11 +671,11 @@ def to_csv(survey):
   except StopIteration:
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
-  header = get_csv_header(survey)
+  header = _get_csv_header(survey)
   leading = ['user', 'created', 'modified']
   properties = leading + survey.this_survey.ordered_properties()
   recs = survey.survey_records.run()
-  recs = get_records(recs, properties)
+  recs = _get_records(recs, properties)
   output = StringIO.StringIO()
   writer = csv.writer(output)
   writer.writerow(properties)
