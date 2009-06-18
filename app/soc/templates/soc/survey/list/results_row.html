@@ -8,7 +8,7 @@ onclick="return false; document.location.href='{{ list.redirect }}'" name="name"
    </div>
   </td>
   -->
-  {% for value in list.item.get_values %}
+  {% for value in list.item.getValues %}
   <td><div class="{{ value }}"> {{ value }}</div></td>
   {% endfor %}
   <td><div class="author">{{ list.item.user.link_id }}</div></td>
@@ -23,8 +23,8 @@ onclick="return false; document.location.href='{{ list.redirect }}'" name="name"
     <select id="id_survey__{{ list.item.user.link_id }}__selection__grade"
     name="id_survey__{{ list.item.user.link_id }}__selection__grade">
       <option value='' {% ifequal list.item.grade '' %} selected="selected" {% endifequal %} >None</option>
-      <option value='Pass' {% ifequal list.item.grade 'Pass' %} selected="selected" {% endifequal %} >Pass</option>
-      <option value='Fail' {% ifequal list.item.grade 'Fail' %} selected="selected" {% endifequal %} >Fail</option>
+      <option value='pass' {% ifequal list.item.grade 'Pass' %} selected="selected" {% endifequal %} >Pass</option>
+      <option value='fail' {% ifequal list.item.grade 'Fail' %} selected="selected" {% endifequal %} >Fail</option>
     </select>
   </div></td>
   {% endif %}

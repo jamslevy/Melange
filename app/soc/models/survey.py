@@ -1,6 +1,6 @@
 #!/usr/bin/python2.5
 #
-# Copyright 2008 the Melange authors.
+# Copyright 2009 the Melange authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,16 +17,13 @@
 """This module contains the Survey models.
 
 Survey describes meta-information and permissions.
-
 SurveyContent contains the fields (questions) and their metadata.
-
 SurveyRecord represents a single survey result.
-
 """
 
 __authors__ = [
-  'Daniel Diniz',
-  'JamesLevy" <jamesalexanderlevy@gmail.com>',
+  '"Daniel Diniz" <ajaksu@gmail.com>',
+  '"James Levy" <jamesalexanderlevy@gmail.com>',
 ]
 
 
@@ -35,9 +32,10 @@ from google.appengine.ext import db
 from django.utils.translation import ugettext
 
 import soc.models.linkable
-import soc.models.work
-import soc.models.user
 import soc.models.student_project
+import soc.models.user
+import soc.models.work
+
 
 class SurveyContent(db.Expando):
   """Fields (questions) and schema representation of a Survey.
@@ -57,18 +55,12 @@ class SurveyContent(db.Expando):
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
 
-  def set_schema(self, schema):
-    self.schema = str(schema)
-
-  def get_schema(self):
-    return eval(self.schema)
-
-  def get_survey_order(self):
+  def getSurveyOrder(self):
     """Make survey questions always appear in the same (creation) order.
     """
 
     survey_order = {}
-    schema = self.get_schema()
+    schema = eval(self.schema)
     for property in self.dynamic_properties():
       # map out the order of the survey fields
       try:
@@ -82,42 +74,39 @@ class SurveyContent(db.Expando):
         pass
     return survey_order
 
-  def ordered_properties(self):
+  def orderedProperties(self):
     """Helper for View.get_fields(), keep field order.
     """
 
     properties = []
-    survey_order = self.get_survey_order().items()
+    survey_order = self.getSurveyOrder().items()
     for position,key in survey_order:
       properties.insert(position, key)
     return properties
 
 
 class Survey(soc.models.work.Work):
-  """Model of a survey.
+  """Model of a Survey.
 
   This model describes meta-information and permissions.
-
   The actual questions of the survey are contained in the SurveyContent entity.
-
-  Right now, this model has several properties from Document and it is unclear
-  if they are necessary.
-
-  The inherited scope property is used to reference to a program.
-  Would it be more clear if a 'program' property were used?
   """
 
+  #TODO(James) Right now, this model has several properties from Document and
+  #TODO(James) it is unclear if they are necessary.
+  #
+  #TODO(James)  The inherited scope property is used to reference to a program.
+  #TODO(James)  Would it be more clear if a 'program' property were used?
   URL_NAME = 'survey'
   # We should use euphemisms like "student" and "mentor" if possible
   SURVEY_ACCESS = ['admin', 'restricted', 'member', 'user']
 
-
-  # These are gsoc specific, so eventually we can subclass this
+  # These are GSoC specific, so eventually we can subclass this
   SURVEY_TAKING_ACCESS = ['student', 'mentor', 'everyone']
   GRADE_OPTIONS = {'midterm':['mid_term_passed', 'mid_term_failed'],
                    'final':['final_passed', 'final_failed'],
                    'N/A':[] }
-  # there should be a gsoc-specific property determining
+  # there should be a GSoC-specific property determining
   # whether the survey is for the midterm or the final
 
   #: field storing the prefix of this document
@@ -148,7 +137,8 @@ class Survey(soc.models.work.Work):
       choices=SURVEY_TAKING_ACCESS,
       verbose_name=ugettext('Survey Taking Access'))
   taking_access.help_text = ugettext(
-      'Indicates who can take this survey. Student/Mentor options are for Midterms and Finals.')
+      'Indicates who can take this survey. '
+      'Student/Mentor options are for Midterms and Finals.')
 
   #: field storing whether a link to the survey should be featured in
   #: the sidebar menu (and possibly elsewhere); FAQs, Terms of Service,
@@ -176,7 +166,7 @@ class Survey(soc.models.work.Work):
       verbose_name=ugettext('Gradable by mentors'))
 
   # this property should be named 'survey_content'
-  this_survey = db.ReferenceProperty(SurveyContent,
+  survey_content = db.ReferenceProperty(SurveyContent,
                                      collection_name="survey_parent")
 
 
@@ -194,23 +184,22 @@ class SurveyRecord(db.Expando):
 
   this_survey = db.ReferenceProperty(Survey, collection_name="survey_records")
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
-                              required=True, collection_name="taken_surveys",
+                              required=True, collection_name="surveys_taken",
                               verbose_name=ugettext('Created by'))
   project = db.ReferenceProperty(soc.models.student_project.StudentProject,
                                  collection_name="survey_records")
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
-  grade = db.StringProperty(required=False)
+  grade = db.BooleanProperty(required=False)
 
 
-  def get_values(self):
+  def getValues(self):
     """Method to get dynamic property values for a survey record.
 
-    Right now it gets all dynamic values, but
-    it could also be confined to the SurveyContent entity linked to
-    the this_survey entity.
+    Right now it gets all dynamic values, but it could also be confined to
+    the SurveyContent entity linked to the this_survey entity.
     """
-    survey_order = self.this_survey.this_survey.get_survey_order()
+    survey_order = self.this_survey.survey_content.getSurveyOrder()
     values = []
     for position, property in survey_order.items():
         values.insert(position, getattr(self, property, None))

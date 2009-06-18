@@ -1,6 +1,6 @@
 #!/usr/bin/python2.5
 #
-# Copyright 2008 the Melange authors.
+# Copyright 2009 the Melange authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 """
 
 __authors__ = [
-  'Daniel Diniz',
-  'JamesLevy" <jamesalexanderlevy@gmail.com>',
+  '"Daniel Diniz" <ajaksu@gmail.com>',
+  '"James Levy" <jamesalexanderlevy@gmail.com>',
   ]
 
 import logging
@@ -40,6 +40,9 @@ from soc.logic.models.mentor import logic as mentor_logic
 from soc.logic.models.student import logic as student_logic
 
 
+GRADES = {'pass': True, 'fail': False}
+
+
 class Logic(work.Logic):
   """Logic methods for the Survey model.
   """
@@ -52,21 +55,21 @@ class Logic(work.Logic):
     super(Logic, self).__init__(model=model, base_model=base_model,
                                 scope_logic=scope_logic)
 
-  def createSurvey(self, survey_fields, schema, this_survey=False):
+  def createSurvey(self, survey_fields, schema, survey_content=False):
     """Create a new survey from prototype.
     """
 
-    if not this_survey:
-      this_survey = SurveyContent()
+    if not survey_content:
+      survey_content = SurveyContent()
     else:
       # wipe clean existing dynamic properties if they exist
-      for prop in this_survey.dynamic_properties():
-        delattr(this_survey, prop)
+      for prop in survey_content.dynamic_properties():
+        delattr(survey_content, prop)
     for name, value in survey_fields.items():
-      setattr(this_survey, name, value)
-    this_survey.set_schema(schema)
-    db.put(this_survey)
-    return this_survey
+      setattr(survey_content, name, value)
+    survey_content.schema = str(schema)
+    db.put(survey_content)
+    return survey_content
 
   def updateSurveyRecord(self, user, survey_entity, survey_record, fields):
     """ Create a new survey record, or get an existing one.
@@ -77,17 +80,19 @@ class Logic(work.Logic):
         delattr(survey_record, prop)
     else:
       survey_record = SurveyRecord(user=user, this_survey=survey_entity)
-    schema = survey_entity.this_survey.get_schema()
+    schema = eval(survey_entity.survey_content.schema)
     for name, value in fields.items():
       if name == 'project':
         project = soc.models.student_project.StudentProject.get(value)
         survey_record.project = project
-        continue
-      pick_multi = name in schema and schema[name]['type'] == 'pick_multi'
-      if pick_multi and hasattr(fields, 'getlist'): # it's a multidict
-        setattr(survey_record, name, ','.join(fields.getlist(name)))
+      elif name == 'grade':
+        survey_record.grade = GRADES[value]
       else:
-        setattr(survey_record, name, value)
+        pick_multi = name in schema and schema[name]['type'] == 'pick_multi'
+        if pick_multi and hasattr(fields, 'getlist'): # it's a multidict
+          setattr(survey_record, name, ','.join(fields.getlist(name)))
+        else:
+          setattr(survey_record, name, value)
     db.put(survey_record)
     return survey_record
 
@@ -123,13 +128,15 @@ class Logic(work.Logic):
       from soc.models.student import Student
       role = Student.get_by_key_name(
       this_program.key().name() + "/test")
-      logging.warn('\n' + str(role.user.key()))
+      if role:
+        logging.warn('\n' + str(role.user.key()))
     if role: return role.user
 
   def getStudentProjects(self, user, program):
       import soc.models.student
-      logging.warn('\n' + str(user.key()))
-      logging.warn('\n' + str(user.roles.fetch(1000)))
+      if user:
+        logging.warn('\n' + str(user.key()))
+        logging.warn('\n' + str(user.roles.fetch(1000)))
       this_student = soc.models.student.Student.all(
       ).filter("user=", user
       ).get()
@@ -235,7 +242,7 @@ def getRoleSpecificFields(survey, user, survey_form):
   # check for this program - is this student or a mentor?
   # I'm assuming for now this is a student --
   # this should all be refactored as access
-  field_count = len(survey.this_survey.get_schema().items())
+  field_count = len(eval(survey.survey_content.schema).items())
   these_projects = logic.getProjects(survey, user)
   if not these_projects:
     # failed access check...no relevant project found

@@ -18,8 +18,8 @@
 """
 
 __authors__ = [
-  'Daniel Diniz',
-  'JamesLevy" <jamesalexanderlevy@gmail.com>',
+  '"Daniel Diniz" <ajaksu@gmail.com>',
+  '"James Levy" <jamesalexanderlevy@gmail.com>',
   ]
 
 import csv
@@ -36,7 +36,8 @@ from soc.cache import home
 from soc.logic import cleaning
 from soc.logic import dicts
 
-from soc.logic.models.survey import logic as survey_logic, getRoleSpecificFields
+from soc.logic.models.survey import logic as survey_logic
+from soc.logic.models.survey import getRoleSpecificFields, GRADES
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyRecord, Survey
 from soc.models.user import User
@@ -162,7 +163,7 @@ class View(base.View):
         }
     new_params['extra_dynaexclude'] = ['author', 'created', 'content',
                                        'home_for', 'modified_by', 'modified',
-                                       'take_survey', 'this_survey']
+                                       'take_survey', 'survey_content']
     new_params['edit_extra_dynaproperties'] = {
         'doc_key_name': forms.fields.CharField(widget=forms.HiddenInput),
         'created_by': forms.fields.CharField(widget=widgets.ReadOnlyInput(),
@@ -229,7 +230,7 @@ class View(base.View):
       survey_record = survey_logic.updateSurveyRecord(user, this_survey,
                                                         survey_record,
                                                         request.POST)
-    survey_content = this_survey.this_survey
+    survey_content = this_survey.survey_content
     survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                      user, this_survey).get()
 
@@ -364,19 +365,19 @@ class View(base.View):
     # Get schema options for choice questions
     self.get_schema_options(schema, survey_fields, request.POST)
 
-    this_survey = getattr(entity,'this_survey', None)
+    survey_content = getattr(entity,'survey_content', None)
     # Create or update a SurveyContent for this Survey
     survey_content = survey_logic.createSurvey(survey_fields, schema,
-                                                this_survey=this_survey)
+                                                survey_content=survey_content)
 
     # Enable grading
     if "has_grades" in request.POST and request.POST["has_grades"] == "on":
       survey_content.has_grades = True
     if entity:
-      entity.this_survey = survey_content
+      entity.survey_content = survey_content
       db.put(entity)
     else:
-      fields['this_survey'] = survey_content
+      fields['survey_content'] = survey_content
 
     fields['modified_by'] = user
     super(View, self)._editPost(request, entity, fields)
@@ -385,10 +386,10 @@ class View(base.View):
     """Populate the schema dict and get text survey questions.
     """
 
-    if hasattr(entity, 'this_survey'):
+    if hasattr(entity, 'survey_content'):
       # There is a SurveyContent already
-      survey_content = entity.this_survey
-      schema = survey_content.get_schema()
+      survey_content = entity.survey_content
+      schema = eval(survey_content.schema)
       for question_name in survey_content.dynamic_properties():
         # Get the current questions from the SurveyContent
         if question_name not in schema:
@@ -504,8 +505,7 @@ class View(base.View):
     """
 
     # Avoid spurious results from showing on creation
-    if 'survey_records' in context:
-      del context['survey_records']
+    context['survey_records'] = None
     context['question_types'] = QUESTION_TYPES
     return super(View, self).createGet(request, context, params, seed)
 
@@ -535,7 +535,7 @@ class View(base.View):
     """
 
     self._entity = entity
-    survey_content = entity.this_survey
+    survey_content = entity.survey_content
     user = user_logic.getForCurrentAccount()
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user, survey_record=None,
@@ -545,7 +545,7 @@ class View(base.View):
     if survey_content:
       grades = survey_content.survey_parent.get().has_grades
     local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
-                grades=grades, survey_h=entity.this_survey)
+                grades=grades, survey_h=entity.survey_content)
     context.update(local)
 
     params['edit_form'] = HelperForm(params['edit_form'])
@@ -606,7 +606,7 @@ class View(base.View):
       survey_record = SurveyRecord.gql(
           "WHERE user = :1 AND this_survey = :2", user, this_survey ).get()
       if survey_record:
-        survey_record.grade = grade
+        survey_record.grade = GRADES[grade]
         survey_record.put()
     #XXX Ditto for this redirect
     return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
@@ -648,7 +648,7 @@ def _get_csv_header(sur):
   fields += [tpl % (f, str(getattr(sur, f).link_id)) for f in FIELDS.split()]
   fields.sort()
   fields += ['#\n#---\n#\n']
-  schema =  str(sur.this_survey.get_schema())
+  schema =  sur.survey_content.schema
   indent = '},\n#' + ' ' * 9
   fields += [tpl % ('Schema', schema.replace('},', indent)) + '#\n']
   return ''.join(fields).replace('\n', '\r\n')
@@ -678,7 +678,7 @@ def to_csv(survey):
     return '', survey.link_id
   header = _get_csv_header(survey)
   leading = ['user', 'created', 'modified']
-  properties = leading + survey.this_survey.ordered_properties()
+  properties = leading + survey.survey_content.orderedProperties()
   recs = survey.survey_records.run()
   recs = _get_records(recs, properties)
   output = StringIO.StringIO()

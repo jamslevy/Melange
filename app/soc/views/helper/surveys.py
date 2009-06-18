@@ -18,8 +18,8 @@
 """
 
 __authors__ = [
-  'Daniel Diniz',
-  'JamesLevy" <jamesalexanderlevy@gmail.com>',
+  '"Daniel Diniz" <ajaksu@gmail.com>',
+  '"James Levy" <jamesalexanderlevy@gmail.com>',
   ]
 
 
@@ -85,7 +85,7 @@ class SurveyForm(djangoforms.ModelForm):
         extra_attrs['disabled'] = 'disabled'
     kwargs = self.kwargs
     self.survey_fields = {}
-    schema = self.survey_content.get_schema()
+    schema = eval(self.survey_content.schema)
     has_record = (not self.editing) and self.survey_record
     for property in self.survey_content.dynamic_properties():
       if has_record and hasattr(self.survey_record, property):
@@ -165,7 +165,7 @@ class SurveyForm(djangoforms.ModelForm):
     return self.insertFields()
 
   def insertFields(self):
-    survey_order = self.survey_content.get_survey_order()
+    survey_order = self.survey_content.getSurveyOrder()
     # first, insert dynamic survey fields
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
@@ -344,7 +344,7 @@ class SurveyResults(widgets.Widget):
       list_['row'] = 'soc/survey/list/results_row.html'
       list_['heading'] = 'soc/survey/list/results_heading.html'
       list_['description'] = 'Survey Results:'
-    context['properties'] = this_survey.this_survey.ordered_properties()
+    context['properties'] = this_survey.survey_content.orderedProperties()
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
