@@ -34,8 +34,7 @@ from soc.models.survey import SurveyContent, Survey, SurveyRecord
 from soc.models.work import Work
 from soc.logic.models.news_feed import logic as newsfeed_logic
 from soc.logic.models.user import logic as user_logic
-from soc.logic.models.mentor import logic as mentor_logic
-from soc.logic.models.student import logic as student_logic
+
 
 
 class Logic(work.Logic):
@@ -86,7 +85,7 @@ class Logic(work.Logic):
     return survey_record
 
 
-  def getProjects(self, this_survey, user, debug=False):
+  def getProjects(self, this_survey, user):
     """
     Get projects linking user to a program.
     Serves as access handler (since no projects == no access)
@@ -101,7 +100,6 @@ class Logic(work.Logic):
       these_projects = self.getMentorProjects(user, this_program)
     if this_survey.taking_access == 'student':
       these_projects = self.getStudentProjects(user, this_program)
-    logging.warn('\n' + str(these_projects))
     if len(these_projects) == 0:
       return False
     return these_projects
@@ -117,34 +115,27 @@ class Logic(work.Logic):
       from soc.models.student import Student
       role = Student.get_by_key_name(
       this_program.key().name() + "/test")
-      logging.warn('\n' + str(role.user.key()))
     if role: return role.user
+
 
   def getStudentProjects(self, user, program):
       import soc.models.student
-      logging.warn('\n' + str(user.key()))
-      logging.warn('\n' + str(user.roles.fetch(1000)))
-      this_student = soc.models.student.Student.all(
-      ).filter("user=", user
-      ).get()
-      logging.warn('\n' + str(this_student))
-      if not this_student: return []
-      logging.warn('\n' + str(this_student.key))
+      from soc.logic.models.student import logic as student_logic   
+      user_students = student_logic.getForFields({'user': user}) # status=active?
+      if not user_students: return []
+      return [project for project in sum((list(u.student_projects.run()
+      ) for u in user_students), []
+      ) if project.program.key() == program.key()]
 
-      projects = soc.models.student_project.StudentProject.filter(
-      "student=", this_student).filter("program=", program).fetch(1000)
-      return projects
 
   def getMentorProjects(self, user, program):
       import soc.models.mentor
-      this_mentor = soc.models.mentor.Mentor.all(
-      ).filter("user=", user
-      ).filter("program=", program
-      ).get()
-      if not this_mentor: return []
-      projects = soc.models.student_project.StudentProject.filter(
-      "mentor=", this_mentor).filter("program=", program).fetch(1000)
-      return projects
+      from soc.logic.models.mentor import logic as mentor_logic
+      user_mentors = mentor_logic.getForFields({'user': user}) # program = program  # status=active? 
+      if not user_mentors: return []
+      return [project for project in sum((list(u.student_projects.run()
+      ) for u in user_mentors), []
+      ) if project.program.key() == program.key()]
 
   def getKeyValuesFromEntity(self, entity):
     """See base.Logic.getKeyNameValues.
@@ -223,27 +214,11 @@ logic = Logic()
 
 
 def getRoleSpecificFields(survey, user, survey_form):
+  # Serves as both access handler and retrieves projects for selection
   from django import forms
-  # XXX This code really doesn't work...
-  # these survey fields are only present when taking the survey
-  # check for this program - is this student or a mentor?
-  # I'm assuming for now this is a student --
-  # this should all be refactored as access
   field_count = len(survey.this_survey.get_schema().items())
   these_projects = logic.getProjects(survey, user)
-  if not these_projects:
-    # failed access check...no relevant project found
-    #return False
-    # Hack so we can move forward
-    access = survey.taking_access
-    if access == 'mentor':
-      found = mentor_logic.getForFields({'user': user})
-    elif access == 'student':
-      found = student_logic.getForFields({'user': user})
-    if not found:
-      return False
-    else:
-      these_projects = sum((list(u.student_projects.run()) for u in found), [])
+  if not these_projects: return False # no projects found
 
   project_pairs = []
   #insert a select field with options for each project
@@ -256,10 +231,7 @@ def getRoleSpecificFields(survey, user, survey_form):
                                 choices=tuple(project_pairs),
                                 widget=forms.Select())
                             )
-  filter = {'user': user_logic.getForCurrentAccount(),
-            'status': 'active'}
-  mentor_entity = mentor_logic.getForFields(filter, unique=True)
-  if mentor_entity:
+  if survey.taking_access == "mentor":
     # if this is a mentor, add a field
     # determining if student passes or fails
     # Activate grades handler should determine whether new status
@@ -268,7 +240,7 @@ def getRoleSpecificFields(survey, user, survey_form):
                                            widget=forms.Select())
     survey_form.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
-  return True
+  return survey_form
 
 
 class ResultsLogic(work.Logic):

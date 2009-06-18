@@ -248,10 +248,9 @@ class View(base.View):
                                      read_only=read_only)
     survey_form.getFields()
     if this_survey.taking_access != "everyone":
-      ## the access check component should be refactored out
-      role_fields = getRoleSpecificFields(this_survey, user, survey_form)
-      if not role_fields:
-        survey_form = False
+      # midterm survey
+      # should this be context['survey_form'] ?
+      survey_form = getRoleSpecificFields(this_survey, user, survey_form)
 
     # Set help and status text
     self.set_help_status(context, read_only, survey_record, survey_form)
