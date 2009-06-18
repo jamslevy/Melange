@@ -18,7 +18,6 @@
 
 Survey describes meta-information and permissions.
 SurveyContent contains the fields (questions) and their metadata.
-SurveyRecord represents a single survey result.
 """
 
 __authors__ = [
@@ -31,9 +30,6 @@ from google.appengine.ext import db
 
 from django.utils.translation import ugettext
 
-import soc.models.linkable
-import soc.models.student_project
-import soc.models.user
 import soc.models.work
 
 
@@ -63,15 +59,12 @@ class SurveyContent(db.Expando):
     schema = eval(self.schema)
     for property in self.dynamic_properties():
       # map out the order of the survey fields
-      try:
-        index = schema[property]["index"]
-        if index not in survey_order:
-          survey_order[index] = property
-        else:
-          # Handle duplicated indexes
-          survey_order[max(survey_order) + 1] = property
-      except KeyError:
-        pass
+      index = schema[property]["index"]
+      if index not in survey_order:
+        survey_order[index] = property
+      else:
+        # Handle duplicated indexes
+        survey_order[max(survey_order) + 1] = property
     return survey_order
 
   def orderedProperties(self):
@@ -168,39 +161,3 @@ class Survey(soc.models.work.Work):
   # this property should be named 'survey_content'
   survey_content = db.ReferenceProperty(SurveyContent,
                                      collection_name="survey_parent")
-
-
-class SurveyRecord(db.Expando):
-  """Record produced each time Survey is taken.
-
-  Like SurveyContent, this model includes dynamic properties
-  corresponding to the fields of the survey.
-
-  This should also contain a grade value that can be added/edited
-  by the administrator of the survey.
-
-  Should this grade value be Binary, String, Integer...?
-  """
-
-  survey = db.ReferenceProperty(Survey, collection_name="survey_records")
-  user = db.ReferenceProperty(reference_class=soc.models.user.User,
-                              required=True, collection_name="surveys_taken",
-                              verbose_name=ugettext('Created by'))
-  project = db.ReferenceProperty(soc.models.student_project.StudentProject,
-                                 collection_name="survey_records")
-  created = db.DateTimeProperty(auto_now_add=True)
-  modified = db.DateTimeProperty(auto_now=True)
-  grade = db.BooleanProperty(required=False)
-
-
-  def getValues(self):
-    """Method to get dynamic property values for a survey record.
-
-    Right now it gets all dynamic values, but it could also be confined to
-    the SurveyContent entity linked to the survey entity.
-    """
-    survey_order = self.survey.survey_content.getSurveyOrder()
-    values = []
-    for position, property in survey_order.items():
-        values.insert(position, getattr(self, property, None))
-    return values

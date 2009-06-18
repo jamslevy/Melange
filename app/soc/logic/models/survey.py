@@ -32,7 +32,8 @@ from soc.cache import sidebar
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
 from soc.models.program import Program
-from soc.models.survey import SurveyContent, Survey, SurveyRecord
+from soc.models.survey import SurveyContent, Survey
+from soc.models.survey_record import SurveyRecord
 from soc.models.work import Work
 from soc.logic.models.news_feed import logic as newsfeed_logic
 from soc.logic.models.user import logic as user_logic
@@ -129,7 +130,7 @@ class Logic(work.Logic):
 
   def getStudentProjects(self, user, program):
       import soc.models.student
-      from soc.logic.models.student import logic as student_logic   
+      from soc.logic.models.student import logic as student_logic
       user_students = student_logic.getForFields({'user': user}) # status=active?
       if not user_students: return []
       return [project for project in sum((list(u.student_projects.run()
@@ -140,7 +141,7 @@ class Logic(work.Logic):
   def getMentorProjects(self, user, program):
       import soc.models.mentor
       from soc.logic.models.mentor import logic as mentor_logic
-      user_mentors = mentor_logic.getForFields({'user': user}) # program = program  # status=active? 
+      user_mentors = mentor_logic.getForFields({'user': user}) # program = program  # status=active?
       if not user_mentors: return []
       return [project for project in sum((list(u.student_projects.run()
       ) for u in user_mentors), []

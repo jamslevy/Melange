@@ -39,7 +39,10 @@ from soc.logic import dicts
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.survey import getRoleSpecificFields, GRADES
 from soc.logic.models.user import logic as user_logic
-from soc.models.survey import SurveyRecord, Survey
+
+from soc.models.survey import Survey
+from soc.models.survey_record import SurveyRecord
+
 from soc.models.user import User
 from soc.views.helper import access
 from soc.views.helper import decorators
