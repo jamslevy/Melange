@@ -403,10 +403,6 @@ def getRoleSpecificFields(survey, user):
     survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
-
-
-
-
 class SurveyResults(widgets.Widget):
   """Render List of Survey Results For Given Survey.
   """

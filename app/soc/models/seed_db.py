@@ -1040,7 +1040,7 @@ def seed_many(request, *args, **kwargs):
     for properties in props if isinstance(props, list) else [props]:
       entity = model(**properties)
       if seed_type == 'survey':
-        survey_content = survey_logic.create_survey(properties['fields'],
+        survey_content = survey_logic.createSurvey(properties['fields'],
                                                     properties['schema'],
                                                     this_survey=None
                                                     )
