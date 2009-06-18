@@ -35,6 +35,7 @@ from soc.models.work import Work
 from soc.logic.models.news_feed import logic as newsfeed_logic
 from soc.logic.models.user import logic as user_logic
 from soc.logic.models.mentor import logic as mentor_logic
+from soc.logic.models.student import logic as student_logic
 
 
 class Logic(work.Logic):
@@ -221,7 +222,7 @@ class Logic(work.Logic):
 logic = Logic()
 
 
-def getRoleSpecificFields(survey, user):
+def getRoleSpecificFields(survey, user, survey_form):
   from django import forms
   # XXX This code really doesn't work...
   # these survey fields are only present when taking the survey
@@ -232,26 +233,42 @@ def getRoleSpecificFields(survey, user):
   these_projects = logic.getProjects(survey, user)
   if not these_projects:
     # failed access check...no relevant project found
-    return False
+    #return False
+    # Hack so we can move forward
+    access = survey.taking_access
+    if access == 'mentor':
+      found = mentor_logic.getForFields({'user': user})
+    elif access == 'student':
+      found = student_logic.getForFields({'user': user})
+    if not found:
+      return False
+    else:
+      these_projects = sum((list(u.student_projects.run()) for u in found), [])
+
   project_pairs = []
   #insert a select field with options for each project
   for project in these_projects:
-    project_pairs.append((project.key()), (project.title))
-  # add select field containing list of projects
-  survey.fields.insert(0, 'project', forms.fields.ChoiceField(
-  choices=tuple(project_pairs), widget=forms.Select()))
-
-  filter = {'user': user_logic.logic.getForCurrentAccount(),
+    project_pairs.append((project.key(), project.title))
+  if project_pairs:
+    # add select field containing list of projects
+    survey_form.fields.insert(0, 'project',
+                            forms.fields.ChoiceField(
+                                choices=tuple(project_pairs),
+                                widget=forms.Select())
+                            )
+  filter = {'user': user_logic.getForCurrentAccount(),
             'status': 'active'}
-  mentor_entity = mentor_logic.logic.getForFields(filter, unique=True)
+  mentor_entity = mentor_logic.getForFields(filter, unique=True)
   if mentor_entity:
     # if this is a mentor, add a field
     # determining if student passes or fails
     # Activate grades handler should determine whether new status
     # is midterm_passed, final_passed, etc.
-    grade_field = forms.fields.ChoiceField(choices=('pass','fail'),
+    grade_field = forms.fields.ChoiceField(choices=(('pass','fail'),),
                                            widget=forms.Select())
-    survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
+    survey_form.fields.insert(field_count + 1, 'pass/fail', grade_field)
+
+  return True
 
 
 class ResultsLogic(work.Logic):
