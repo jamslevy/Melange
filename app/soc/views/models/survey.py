@@ -385,7 +385,7 @@ class View(base.View):
     if hasattr(entity, 'this_survey'):
       # There is a SurveyContent already
       survey_content = entity.this_survey
-      schema = survey_content.getSchema()
+      schema = survey_content.get_schema()
       for question_name in survey_content.dynamic_properties():
         # Get the current questions from the SurveyContent
         if question_name not in schema:
