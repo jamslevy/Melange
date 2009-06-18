@@ -516,9 +516,10 @@ def seed(request, *args, **kwargs):
   melange_mentor = Mentor(**role_properties)
   melange_mentor.put()
 
+  student_id = 'test'
   student_properties = {
-      'key_name': 'site/site/home',
-      'link_id': 'test', 
+      'key_name': gsoc2009.key().name() + "/" + student_id,
+      'link_id': student_id, 
       'scope_path': gsoc2009.key().name(),
       'scope': gsoc2009,
       'program': gsoc2009,

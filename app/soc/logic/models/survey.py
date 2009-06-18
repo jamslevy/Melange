@@ -79,7 +79,7 @@ class Logic(work.Logic):
     return survey_record
 
 
-  def getProjects(self, this_survey, user):
+  def getProjects(self, this_survey, user, debug=False):
     """
     Get projects linking user to a program.
     Serves as access handler (since no projects == no access)
@@ -87,20 +87,46 @@ class Logic(work.Logic):
     
     """
     this_program = this_survey.scope
+    from settings import DEBUG as debug 
+    if debug:
+      user = self.getDebugUser(this_survey, this_program)
     if this_survey.taking_access == 'mentor':
       these_projects = self.getMentorProjects(user, this_program)
     if this_survey.taking_access == 'student':
       these_projects = self.getStudentProjects(user, this_program)
+    print ""
+    print these_projects
     if len(these_projects) == 0: return False
     return these_projects
 
+  def getDebugUser(self, this_survey, this_program):
+    # impersonate another user, for debugging
+    if this_survey.taking_access == 'mentor':
+      from soc.models.mentor import Mentor
+      role = Mentor.get_by_key_name(
+      this_program.key().name() + "/org_1/test")
+      
+    if this_survey.taking_access == 'student':
+      from soc.models.student import Student
+      role = Student.get_by_key_name(
+      this_program.key().name() + "/test")
+      print ""
+      print role.user.key()
+    if role: return role.user
 
   def getStudentProjects(self, user, program):
       import soc.models.student
+      print ""
+      print user.key()
+      print user.roles.fetch(1000)
       this_student = soc.models.student.Student.all(
-      ).filter("user=", user # should filter on user key
+      ).filter("user=", user
       ).get()
+      print this_student
       if not this_student: return []
+      print ""
+      print this_student.key
+      
       projects = soc.models.student_project.StudentProject.filter(
       "student=", this_student).filter("program=", program).fetch(1000)
       return projects
@@ -108,7 +134,7 @@ class Logic(work.Logic):
   def getMentorProjects(self,user, program):
       import soc.models.mentor
       this_mentor = soc.models.mentor.Mentor.all(
-      ).filter("user=", user # should filter on user key
+      ).filter("user=", user
       ).filter("program=", program
       ).get()
       if not this_mentor: return []

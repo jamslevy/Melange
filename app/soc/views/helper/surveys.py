@@ -399,16 +399,6 @@ def getRoleSpecificFields(survey, user):
     survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
-def Debug(user, this_program, taking_access):
-  # create student and mentor entities to test survey
-  from soc.models.student_project import StudentProject
-  this_project = StudentProject()
-  if taking_access == 'mentor':
-    from soc.models.mentor import Mentor
-    survey_taker = Mentor()
-  if taking_access == 'student':
-    from soc.models.mentor import Mentor
-    survey_taker = Mentor()
 
 
 
