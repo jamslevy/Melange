@@ -244,10 +244,10 @@ class View(base.View):
                                      this_user=user,
                                      survey_record=survey_record,
                                      read_only=read_only)
-    survey_form.get_fields()
+    survey_form.getFields()
     if this_survey.taking_access != "everyone":
       ## the access check component should be refactored out
-      role_fields = surveys.get_role_specific_fields(this_survey, user)
+      role_fields = surveys.getRoleSpecificFields(this_survey, user)
       if not role_fields: survey_form = False
     if not read_only:
       if survey_record:
@@ -444,7 +444,7 @@ class View(base.View):
     this_user = user_logic.getForCurrentAccount()
     survey_form = surveys.SurveyEditForm(survey_content=survey_content,
     this_user = this_user, survey_record=None)
-    survey_form.get_fields()
+    survey_form.getFields()
     grades = False
     if survey_content:
       grades = survey_content.survey_parent.get().has_grades
