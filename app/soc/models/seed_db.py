@@ -1049,7 +1049,7 @@ def seed_many(request, *args, **kwargs):
         record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                   properties['user'], properties['_survey']
                                   ).get()
-        entity = survey_logic.update_survey_record(properties['user'],
+        entity = survey_logic.updateSurveyRecord(properties['user'],
                                                    properties['_survey'],
                                                    record,
                                                    properties['_fields']
