@@ -26,6 +26,8 @@ import logging
 
 from google.appengine.ext import db
 
+import soc.models.student_project
+
 from soc.cache import sidebar
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
@@ -77,6 +79,10 @@ class Logic(work.Logic):
       survey_record = SurveyRecord(user=user, this_survey=survey_entity)
     schema = survey_entity.this_survey.get_schema()
     for name, value in fields.items():
+      if name == 'project':
+        project = soc.models.student_project.StudentProject.get(value)
+        survey_record.project = project
+        continue
       pick_multi = name in schema and schema[name]['type'] == 'pick_multi'
       if pick_multi and hasattr(fields, 'getlist'): # it's a multidict
         setattr(survey_record, name, ','.join(fields.getlist(name)))
@@ -264,9 +270,10 @@ def getRoleSpecificFields(survey, user, survey_form):
     # determining if student passes or fails
     # Activate grades handler should determine whether new status
     # is midterm_passed, final_passed, etc.
-    grade_field = forms.fields.ChoiceField(choices=(('pass','fail'),),
+    choices = (('pass', 'pass'), ('fail', 'fail'))
+    grade_field = forms.fields.ChoiceField(choices=choices,
                                            widget=forms.Select())
-    survey_form.fields.insert(field_count + 1, 'pass/fail', grade_field)
+    survey_form.fields.insert(field_count + 1, 'grade', grade_field)
 
   return True
 
