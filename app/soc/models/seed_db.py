@@ -52,6 +52,7 @@ from soc.models.program import Program
 from soc.models.ranker_root import RankerRoot
 from soc.models.site import Site
 from soc.models.student import Student
+from soc.models.student_project import StudentProject
 from soc.models.student_proposal import StudentProposal
 from soc.models.survey import Survey, SurveyContent, SurveyRecord
 from soc.models.sponsor import Sponsor
@@ -515,7 +516,60 @@ def seed(request, *args, **kwargs):
   melange_mentor = Mentor(**role_properties)
   melange_mentor.put()
 
+  student_properties = {
+      'key_name': 'site/site/home',
+      'link_id': 'test', 
+      'scope_path': gsoc2009.key().name(),
+      'scope': gsoc2009,
+      'program': gsoc2009,
+      'user': current_user, # should this not be current user? 
+      'given_name': 'test',
+      'surname': 'test',
+      'birth_date': db.DateProperty.now(),
+      'email': 'test@email.com',
+      'im_handle': 'test_im_handle',
+      'major': 'test major',
+      'name_on_documents': 'test',
+      'res_country': 'United States',
+      'res_city': 'city',
+      'res_street': 'test street',
+      'res_postalcode': '12345',
+      'publish_location': True,
+      'blog': 'http://www.blog.com/',
+      'home_page': 'http://www.homepage.com/',
+      'photo_url': 'http://www.photosite.com/thumbnail.png',
+      'ship_state': None,
+      'expected_graduation': 2009,
+      'school_country': 'United States',
+      'school_name': 'Test School', 
+      'tshirt_size': 'XS',
+      'tshirt_style': 'male',
+      'degree': 'Undergraduate',
+      'phone': '1650253000',
+      'can_we_contact_you': True, 
+      'program_knowledge': 'I heard about this program through a friend.'
+      }
 
+  melange_student = Student(**student_properties)
+  melange_student.put()
+                               
+  project_properties = {
+      'key_name': 'site/site/home',
+      'link_id': 'test', 
+      'scope_path': gsoc2009.key().name(),
+      'scope': gsoc2009,
+
+      'title': 'test project',
+      'abstract': 'test abstract',
+      'status': 'accepted',
+      'student': melange_student,
+      'mentor': org_1_mentor,
+      'program':  gsoc2009
+       }
+
+  melange_project = StudentProject(**project_properties)
+  melange_project.put()
+  
   document_properties = {
       'key_name': 'site/site/home',
       'link_id': 'home',

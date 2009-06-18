@@ -204,7 +204,7 @@ class View(base.View):
       survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
                                        user, this_survey ).get()
       context['notice'] = "Survey Submission Saved"
-      survey_record = survey_logic.update_survey_record(user, this_survey,
+      survey_record = survey_logic.updateSurveyRecord(user, this_survey,
                                                         survey_record,
                                                         request.POST)
     survey_content = this_survey.this_survey
@@ -227,7 +227,7 @@ class View(base.View):
     survey_form.get_fields()
     if this_survey.taking_access != "everyone":
       ## the access check component should be refactored out
-      role_fields = surveys.get_role_specific_fields(this_survey, user)
+      role_fields = surveys.getRoleSpecificFields(this_survey, user)
       if not role_fields: survey_form = False
 
     # Set help and status text
@@ -342,7 +342,7 @@ class View(base.View):
 
     this_survey = getattr(entity,'this_survey', None)
     # Create or update a SurveyContent for this Survey
-    survey_content = survey_logic.create_survey(survey_fields, schema,
+    survey_content = survey_logic.createSurvey(survey_fields, schema,
                                                 this_survey=this_survey)
 
     # Enable grading
@@ -364,7 +364,7 @@ class View(base.View):
     if hasattr(entity, 'this_survey'):
       # There is a SurveyContent already
       survey_content = entity.this_survey
-      schema = survey_content.get_schema()
+      schema = survey_content.getSchema()
       for question_name in survey_content.dynamic_properties():
         # Get the current questions from the SurveyContent
         if question_name not in schema:
@@ -512,7 +512,7 @@ class View(base.View):
     user = user_logic.getForCurrentAccount()
     survey_form = surveys.SurveyEditForm(survey_content=survey_content,
                                          this_user=user, survey_record=None)
-    survey_form.get_fields()
+    survey_form.getFields()
     grades = False
     if survey_content:
       grades = survey_content.survey_parent.get().has_grades

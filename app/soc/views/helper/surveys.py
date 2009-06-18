@@ -70,7 +70,7 @@ class SurveyForm(djangoforms.ModelForm):
       del self.kwargs['read_only']
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
-  def get_fields(self):
+  def getFields(self):
     """Build the SurveyContent (questions) form fields.
     """
 
@@ -146,9 +146,9 @@ class SurveyForm(djangoforms.ModelForm):
             initial=value,
             )
 
-    return self.insert_fields()
+    return self.insertFields()
 
-  def insert_fields(self):
+  def insertFields(self):
     survey_order = self.survey_content.get_survey_order()
     # first, insert dynamic survey fields
     for position, property in survey_order.items():
@@ -172,7 +172,7 @@ class SurveyEditForm(SurveyForm):
 
     super(SurveyEditForm, self).__init__(*args, **kwargs)
 
-  def get_fields(self):
+  def getFields(self):
     if not self.survey_content: return
     kwargs = self.kwargs
     self.survey_fields = {}
@@ -229,9 +229,9 @@ class SurveyEditForm(SurveyForm):
             choices=tuple(these_choices),
             widget=UniversalChoiceEditor(kind, render), initial=value)
 
-    return self.insert_fields()
+    return self.insertFields()
 
-  def insert_fields(self):
+  def insertFields(self):
     survey_order = self.survey_content.get_survey_order()
     # first, insert dynamic survey fields
     for position, property in survey_order.items():
@@ -372,13 +372,13 @@ WIDGETS = {'multi_checkbox': PickManyCheckbox,
            'single_select': PickOneSelect}
 
 
-def get_role_specific_fields(survey, user):
+def getRoleSpecificFields(survey, user):
   # these survey fields are only present when taking the survey
   # check for this program - is this student or a mentor?
   # I'm assuming for now this is a student --
   # this should all be refactored as access
   field_count = len(survey.this_survey.get_schema().items())
-  these_projects = survey_logic.get_projects(survey, user)
+  these_projects = survey_logic.getProjects(survey, user)
   if not these_projects:
     # failed access check...no relevant project found
     return False
@@ -403,7 +403,7 @@ def get_role_specific_fields(survey, user):
     survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
-def debug(user, this_program, taking_access):
+def Debug(user, this_program, taking_access):
   # create student and mentor entities to test survey
   from soc.models.student_project import StudentProject
   this_project = StudentProject()
