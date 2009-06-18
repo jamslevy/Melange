@@ -208,10 +208,10 @@ class View(base.View):
 
     # this won't work -- there's *always* a survey entity. We want to
     # check if there is a survey record from this user.
-    this_survey = entity
+    survey = entity
     user = user_logic.getForCurrentAccount()
 
-    status = self.get_status(request, context, user, this_survey)
+    status = self.getStatus(request, context, user, survey)
     read_only, can_write, not_ready = status
 
     # If user can edit this survey and is requesting someone else's results,
@@ -224,15 +224,15 @@ class View(base.View):
       pass
     else:
       # submitting a completed survey record
-      survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                       user, this_survey ).get()
+      survey_record = SurveyRecord.gql("WHERE user = :1 AND survey = :2",
+                                       user, survey).get()
       context['notice'] = "Survey Submission Saved"
-      survey_record = survey_logic.updateSurveyRecord(user, this_survey,
+      survey_record = survey_logic.updateSurveyRecord(user, survey,
                                                         survey_record,
                                                         request.POST)
-    survey_content = this_survey.survey_content
-    survey_record = SurveyRecord.gql("WHERE user = :1 AND this_survey = :2",
-                                     user, this_survey).get()
+    survey_content = survey.survey_content
+    survey_record = SurveyRecord.gql("WHERE user = :1 AND survey = :2",
+                                     user, survey).get()
 
     if not survey_record and read_only:
       # No recorded answers, we're either past deadline or want to see answers
@@ -249,23 +249,23 @@ class View(base.View):
                                      read_only=read_only,
                                      editing=False)
     survey_form.getFields()
-    if this_survey.taking_access != "everyone":
+    if survey.taking_access != "everyone":
       ## the access check component should be refactored out
-      role_fields = getRoleSpecificFields(this_survey, user, survey_form)
+      role_fields = getRoleSpecificFields(survey, user, survey_form)
       if not role_fields:
         survey_form = False
 
     # Set help and status text
-    self.set_help_status(context, read_only, survey_record, survey_form)
+    self.setHelpStatus(context, read_only, survey_record, survey_form, survey)
 
     if not context['survey_form']:
       access_tpl = "You Must Be a %s to Take This Survey"
-      context["notice"] = access_tpl % this_survey.taking_access.capitalize()
+      context["notice"] = access_tpl % survey.taking_access.capitalize()
 
     context['read_only'] = read_only
     return True
 
-  def get_status(self, request, context, user, this_survey):
+  def getStatus(self, request, context, user, survey):
     """Determine if we're past deadline or before opening, check user rights.
     """
 
@@ -276,21 +276,21 @@ class View(base.View):
     now = datetime.datetime.now()
 
     # Check deadline, see check for opening below
-    if this_survey.deadline and now > this_survey.deadline:
+    if survey.deadline and now > survey.deadline:
       # Are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
       read_only = True
 
     # Check if user can edit this survey
-    params = dict(prefix=this_survey.prefix, scope_path=this_survey.scope_path)
-    checker = access.rights_logic.Checker(this_survey.prefix)
-    roles = checker.getMembership(this_survey.write_access)
+    params = dict(prefix=survey.prefix, scope_path=survey.scope_path)
+    checker = access.rights_logic.Checker(survey.prefix)
+    roles = checker.getMembership(survey.write_access)
     rights = self._params['rights']
     can_write = access.Checker.hasMembership(rights, roles, params)
 
     # Check if we're past the opening date
     not_ready = False
-    if this_survey.opening and now < this_survey.opening:
+    if survey.opening and now < survey.opening:
       not_ready = True
       if not can_write:
         context["notice"] = "There is no such survey available."
@@ -300,16 +300,19 @@ class View(base.View):
 
     return read_only, can_write, not_ready
 
-  def set_help_status(self, context, read_only, survey_record, survey_form):
+  def setHelpStatus(self, context, read_only, survey_record, survey_form, survey):
     """Set help_text and status for template use.
     """
 
     if not read_only:
+      if not this_survey.deadline: deadline_text = ""
+      else: deadline_text = " by " + str(
+      this_survey.deadline.strftime("%A, %d. %B %Y %I:%M%p"))
       if survey_record:
-        help_text = "Edit and re-submit this survey."
+        help_text = "Edit and re-submit this survey" + deadline_text + "."
         status = "edit"
       else:
-        help_text = "Please complete this survey."
+        help_text = "Please complete this survey" + deadline_text + "."
         status = "create"
     else:
       help_text = "Read-only view."
@@ -354,16 +357,16 @@ class View(base.View):
       fields['author'] = user
     else:
       fields['author'] = entity.author
-      schema = self.load_survey_content(schema, survey_fields, entity)
+      schema = self.loadSurveyContent(schema, survey_fields, entity)
 
     # Remove deleted properties from the model
-    self.delete_questions(schema, survey_fields, request.POST)
+    self.deleteQuestions(schema, survey_fields, request.POST)
 
     # Add new text questions and re-build choice questions
-    self.get_request_questions(schema, survey_fields, request.POST)
+    self.getRequestQuestions(schema, survey_fields, request.POST)
 
     # Get schema options for choice questions
-    self.get_schema_options(schema, survey_fields, request.POST)
+    self.getSchemaOptions(schema, survey_fields, request.POST)
 
     survey_content = getattr(entity,'survey_content', None)
     # Create or update a SurveyContent for this Survey
@@ -382,7 +385,7 @@ class View(base.View):
     fields['modified_by'] = user
     super(View, self)._editPost(request, entity, fields)
 
-  def load_survey_content(self, schema, survey_fields, entity):
+  def loadSurveyContent(self, schema, survey_fields, entity):
     """Populate the schema dict and get text survey questions.
     """
 
@@ -401,7 +404,7 @@ class View(base.View):
           survey_fields[question_name] = question
     return schema
 
-  def delete_questions(self, schema, survey_fields, POST):
+  def deleteQuestions(self, schema, survey_fields, POST):
     """Process the list of questions to delete, from a hidden input.
     """
 
@@ -414,7 +417,7 @@ class View(base.View):
         if d in survey_fields:
           del survey_fields[d]
 
-  def get_request_questions(self, schema, survey_fields, POST):
+  def getRequestQuestions(self, schema, survey_fields, POST):
     """Get fields from request.
 
     We use two field/question naming and processing schemes:
@@ -463,7 +466,7 @@ class View(base.View):
             schema[field_name]["type"] = ptype
         survey_fields[field_name] = value
 
-  def get_schema_options(self, schema, survey_fields, POST):
+  def getSchemaOptions(self, schema, survey_fields, POST):
     """Get question, type, rendering and option order for choice questions.
     """
 
@@ -504,9 +507,9 @@ class View(base.View):
     """Pass the question types for the survey creation template.
     """
 
-    # Avoid spurious results from showing on creation
-    context['survey_records'] = None
     context['question_types'] = QUESTION_TYPES
+    # Avoid spurious results from showing on creation
+    context['new_survey'] = True
     return super(View, self).createGet(request, context, params, seed)
 
   def editGet(self, request, entity, context, params=None):
@@ -596,7 +599,7 @@ class View(base.View):
     suffix = '__selection__grade'
     link_id = request.path.split('/')[-1].split('?')[0]
     #XXX There has to be better way to do this than this gql :-)
-    this_survey = Survey.gql("WHERE link_id = :1", link_id).get()
+    survey = Survey.gql("WHERE link_id = :1", link_id).get()
     for user, grade in request.POST.items():
       if user.startswith(prefix):
         user = user.replace(prefix, '').replace(suffix, '')
@@ -604,7 +607,7 @@ class View(base.View):
         continue
       user = User.gql("WHERE link_id = :1", user).get()
       survey_record = SurveyRecord.gql(
-          "WHERE user = :1 AND this_survey = :2", user, this_survey ).get()
+          "WHERE user = :1 AND survey = :2", user, survey).get()
       if survey_record:
         survey_record.grade = GRADES[grade]
         survey_record.put()

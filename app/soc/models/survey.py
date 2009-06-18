@@ -182,7 +182,7 @@ class SurveyRecord(db.Expando):
   Should this grade value be Binary, String, Integer...?
   """
 
-  this_survey = db.ReferenceProperty(Survey, collection_name="survey_records")
+  survey = db.ReferenceProperty(Survey, collection_name="survey_records")
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
                               required=True, collection_name="surveys_taken",
                               verbose_name=ugettext('Created by'))
@@ -197,9 +197,9 @@ class SurveyRecord(db.Expando):
     """Method to get dynamic property values for a survey record.
 
     Right now it gets all dynamic values, but it could also be confined to
-    the SurveyContent entity linked to the this_survey entity.
+    the SurveyContent entity linked to the survey entity.
     """
-    survey_order = self.this_survey.survey_content.getSurveyOrder()
+    survey_order = self.survey.survey_content.getSurveyOrder()
     values = []
     for position, property in survey_order.items():
         values.insert(position, getattr(self, property, None))

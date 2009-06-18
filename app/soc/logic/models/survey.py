@@ -79,7 +79,7 @@ class Logic(work.Logic):
       for prop in survey_record.dynamic_properties():
         delattr(survey_record, prop)
     else:
-      survey_record = SurveyRecord(user=user, this_survey=survey_entity)
+      survey_record = SurveyRecord(user=user, survey=survey_entity)
     schema = eval(survey_entity.survey_content.schema)
     for name, value in fields.items():
       if name == 'project':
@@ -97,34 +97,34 @@ class Logic(work.Logic):
     return survey_record
 
 
-  def getProjects(self, this_survey, user, debug=False):
+  def getProjects(self, survey, user, debug=False):
     """
     Get projects linking user to a program.
     Serves as access handler (since no projects == no access)
     And retrieves projects to choose from (if mentors have >1 projects)
 
     """
-    this_program = this_survey.scope
+    this_program = survey.scope
     from settings import DEBUG as debug
     if debug:
-      user = self.getDebugUser(this_survey, this_program)
-    if this_survey.taking_access == 'mentor':
+      user = self.getDebugUser(survey, this_program)
+    if survey.taking_access == 'mentor':
       these_projects = self.getMentorProjects(user, this_program)
-    if this_survey.taking_access == 'student':
+    if survey.taking_access == 'student':
       these_projects = self.getStudentProjects(user, this_program)
     logging.warn('\n' + str(these_projects))
     if len(these_projects) == 0:
       return False
     return these_projects
 
-  def getDebugUser(self, this_survey, this_program):
+  def getDebugUser(self, survey, this_program):
     # impersonate another user, for debugging
-    if this_survey.taking_access == 'mentor':
+    if survey.taking_access == 'mentor':
       from soc.models.mentor import Mentor
       role = Mentor.get_by_key_name(
       this_program.key().name() + "/org_1/test")
 
-    if this_survey.taking_access == 'student':
+    if survey.taking_access == 'student':
       from soc.models.student import Student
       role = Student.get_by_key_name(
       this_program.key().name() + "/test")

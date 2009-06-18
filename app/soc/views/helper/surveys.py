@@ -49,7 +49,7 @@ class SurveyForm(djangoforms.ModelForm):
     - User taking survey
     - User updating already taken survey
 
-    Using dynamic properties of the this_survey model (if passed
+    Using dynamic properties of the survey model (if passed
     as an arg) the survey form is dynamically formed.
 
     """
@@ -314,10 +314,10 @@ class SurveyResults(widgets.Widget):
   """Render List of Survey Results For Given Survey.
   """
 
-  def render(self, this_survey, params, filter=filter, limit=1000, offset=0,
+  def render(self, survey, params, filter=filter, limit=1000, offset=0,
              order=[], idx=0, context={}):
     logic = results_logic
-    filter = {'this_survey': this_survey}
+    filter = {'survey': survey}
     data = logic.getForFields(filter=filter, limit=limit, offset=offset,
                               order=order)
 
@@ -344,13 +344,13 @@ class SurveyResults(widgets.Widget):
       list_['row'] = 'soc/survey/list/results_row.html'
       list_['heading'] = 'soc/survey/list/results_heading.html'
       list_['description'] = 'Survey Results:'
-    context['properties'] = this_survey.survey_content.orderedProperties()
+    context['properties'] = survey.survey_content.orderedProperties()
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
-    context['grades'] = this_survey.has_grades
-    path = (this_survey.entity_type().lower(), this_survey.prefix,
-            this_survey.scope_path, this_survey.link_id)
+    context['grades'] = survey.has_grades
+    path = (survey.entity_type().lower(), survey.prefix,
+            survey.scope_path, survey.link_id)
     context['grade_action'] = "/%s/grade/%s/%s/%s" % path
 
     markup = loader.render_to_string('soc/survey/results.html',
