@@ -550,6 +550,39 @@ def seed(request, *args, **kwargs):
   melange_student = Student(**student_properties)
   melange_student.put()
 
+  project_properties = {
+      'key_name': 'site/site/home',
+      'link_id': 'test', 
+      'scope_path': gsoc2009.key().name(),
+      'scope': gsoc2009,
+      'program': gsoc2009,
+      'user': current_user, # should this not be current user? 
+      
+      'surname': 'test',
+      'im_handle': 'test_im_handle',
+      'major': 'test major',
+      'name_on_documents': 'test',
+      'res_street': 'test street',
+      'rese_postalcode': '12345',
+      'publish_location': True,
+      'blog': 'http://www.blog.com/',
+      'home_page': 'http://www.homepage.com/',
+      'photo_url': 'http://www.photosite.com/thumbnail.png',
+      'ship_state': None,
+      'expected_graduation': 2009,
+      'school_country': 'United States',
+      'school_name': 'Test School', 
+      'tshirt_size': 'XS',
+      'tshirt_style': 'male',
+      'degree': 'Undergraduate',
+      'phone': '1650253000',
+      'can_we_contact_you': True, 
+      'program_knowledge': 'I heard about this program through a friend.'
+      }
+
+  melange_project = StudentProject(**project_properties)
+  melange_project.put()
+  
   document_properties = {
       'key_name': 'site/site/home',
       'link_id': 'home',
