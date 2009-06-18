@@ -250,10 +250,9 @@ class View(base.View):
                                      editing=False)
     survey_form.getFields()
     if survey.taking_access != "everyone":
-      ## the access check component should be refactored out
-      role_fields = getRoleSpecificFields(survey, user, survey_form)
-      if not role_fields:
-        survey_form = False
+      # midterm survey
+      # should this be context['survey_form'] ?
+      survey_form = getRoleSpecificFields(survey, user, survey_form)
 
     # Set help and status text
     self.setHelpStatus(context, read_only, survey_record, survey_form, survey)
@@ -300,14 +299,15 @@ class View(base.View):
 
     return read_only, can_write, not_ready
 
-  def setHelpStatus(self, context, read_only, survey_record, survey_form, survey):
+  def setHelpStatus(self, context, read_only, survey_record, survey_form,
+                    survey):
     """Set help_text and status for template use.
     """
 
     if not read_only:
-      if not this_survey.deadline: deadline_text = ""
+      if not survey.deadline: deadline_text = ""
       else: deadline_text = " by " + str(
-      this_survey.deadline.strftime("%A, %d. %B %Y %I:%M%p"))
+      survey.deadline.strftime("%A, %d. %B %Y %I:%M%p"))
       if survey_record:
         help_text = "Edit and re-submit this survey" + deadline_text + "."
         status = "edit"
