@@ -35,7 +35,8 @@ from google.appengine.ext import db
 from soc.cache import home
 from soc.logic import cleaning
 from soc.logic import dicts
-from soc.logic.models.survey import logic as survey_logic
+
+from soc.logic.models.survey import logic as survey_logic, getRoleSpecificFields
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import SurveyRecord, Survey
 from soc.models.user import User
@@ -248,7 +249,7 @@ class View(base.View):
     survey_form.getFields()
     if this_survey.taking_access != "everyone":
       ## the access check component should be refactored out
-      role_fields = surveys.getRoleSpecificFields(this_survey, user)
+      role_fields = getRoleSpecificFields(this_survey, user)
       if not role_fields: survey_form = False
 
     # Set help and status text

@@ -18,8 +18,11 @@
 """
 
 __authors__ = [
+  'Daniel Diniz',
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
+
+import logging
 
 from google.appengine.ext import db
 
@@ -30,6 +33,9 @@ from soc.models.program import Program
 from soc.models.survey import SurveyContent, Survey, SurveyRecord
 from soc.models.work import Work
 from soc.logic.models.news_feed import logic as newsfeed_logic
+from soc.logic.models.user import logic as user_logic
+from soc.logic.models.mentor import logic as mentor_logic
+
 
 class Logic(work.Logic):
   """Logic methods for the Survey model.
@@ -87,16 +93,16 @@ class Logic(work.Logic):
 
     """
     this_program = this_survey.scope
-    from settings import DEBUG as debug 
+    from settings import DEBUG as debug
     if debug:
       user = self.getDebugUser(this_survey, this_program)
     if this_survey.taking_access == 'mentor':
       these_projects = self.getMentorProjects(user, this_program)
     if this_survey.taking_access == 'student':
       these_projects = self.getStudentProjects(user, this_program)
-    print ""
-    print these_projects
-    if len(these_projects) == 0: return False
+    logging.warn('\n' + str(these_projects))
+    if len(these_projects) == 0:
+      return False
     return these_projects
 
   def getDebugUser(self, this_survey, this_program):
@@ -105,33 +111,30 @@ class Logic(work.Logic):
       from soc.models.mentor import Mentor
       role = Mentor.get_by_key_name(
       this_program.key().name() + "/org_1/test")
-      
+
     if this_survey.taking_access == 'student':
       from soc.models.student import Student
       role = Student.get_by_key_name(
       this_program.key().name() + "/test")
-      print ""
-      print role.user.key()
+      logging.warn('\n' + str(role.user.key()))
     if role: return role.user
 
   def getStudentProjects(self, user, program):
       import soc.models.student
-      print ""
-      print user.key()
-      print user.roles.fetch(1000)
+      logging.warn('\n' + str(user.key()))
+      logging.warn('\n' + str(user.roles.fetch(1000)))
       this_student = soc.models.student.Student.all(
       ).filter("user=", user
       ).get()
-      print this_student
+      logging.warn('\n' + str(this_student))
       if not this_student: return []
-      print ""
-      print this_student.key
-      
+      logging.warn('\n' + str(this_student.key))
+
       projects = soc.models.student_project.StudentProject.filter(
       "student=", this_student).filter("program=", program).fetch(1000)
       return projects
 
-  def getMentorProjects(self,user, program):
+  def getMentorProjects(self, user, program):
       import soc.models.mentor
       this_mentor = soc.models.mentor.Mentor.all(
       ).filter("user=", user
@@ -216,6 +219,39 @@ class Logic(work.Logic):
 
 
 logic = Logic()
+
+
+def getRoleSpecificFields(survey, user):
+  from django import forms
+  # XXX This code really doesn't work...
+  # these survey fields are only present when taking the survey
+  # check for this program - is this student or a mentor?
+  # I'm assuming for now this is a student --
+  # this should all be refactored as access
+  field_count = len(survey.this_survey.get_schema().items())
+  these_projects = logic.getProjects(survey, user)
+  if not these_projects:
+    # failed access check...no relevant project found
+    return False
+  project_pairs = []
+  #insert a select field with options for each project
+  for project in these_projects:
+    project_pairs.append((project.key()), (project.title))
+  # add select field containing list of projects
+  survey.fields.insert(0, 'project', forms.fields.ChoiceField(
+  choices=tuple(project_pairs), widget=forms.Select()))
+
+  filter = {'user': user_logic.logic.getForCurrentAccount(),
+            'status': 'active'}
+  mentor_entity = mentor_logic.logic.getForFields(filter, unique=True)
+  if mentor_entity:
+    # if this is a mentor, add a field
+    # determining if student passes or fails
+    # Activate grades handler should determine whether new status
+    # is midterm_passed, final_passed, etc.
+    grade_field = forms.fields.ChoiceField(choices=('pass','fail'),
+                                           widget=forms.Select())
+    survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
 class ResultsLogic(work.Logic):

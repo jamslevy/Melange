@@ -35,11 +35,7 @@ from google.appengine.ext.db import djangoforms
 
 from soc.logic import dicts
 from soc.logic.lists import Lists
-#XXX Some of these logic imports should be moved to Survey logic
-from soc.logic.models.user import logic as user_logic
-from soc.logic.models.mentor import logic as mentor_logic
 from soc.logic.models.survey import results_logic
-from soc.logic.models.survey import logic as survey_logic
 from soc.models.survey import SurveyContent
 
 
@@ -368,39 +364,9 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
     return id_
   id_for_label = classmethod(id_for_label)
 
+
 WIDGETS = {'multi_checkbox': PickManyCheckbox,
            'single_select': PickOneSelect}
-
-
-def getRoleSpecificFields(survey, user):
-  # these survey fields are only present when taking the survey
-  # check for this program - is this student or a mentor?
-  # I'm assuming for now this is a student --
-  # this should all be refactored as access
-  field_count = len(survey.this_survey.get_schema().items())
-  these_projects = survey_logic.getProjects(survey, user)
-  if not these_projects:
-    # failed access check...no relevant project found
-    return False
-  project_pairs = []
-  #insert a select field with options for each project
-  for project in these_projects:
-    project_pairs.append((project.key()), (project.title))
-  # add select field containing list of projects
-  survey.fields.insert(0, 'project', forms.fields.ChoiceField(
-  choices=tuple(project_pairs), widget=forms.Select()))
-
-  filter = {'user': user_logic.logic.getForCurrentAccount(),
-            'status': 'active'}
-  mentor_entity = mentor_logic.logic.getForFields(filter, unique=True)
-  if mentor_entity:
-    # if this is a mentor, add a field
-    # determining if student passes or fails
-    # Activate grades handler should determine whether new status
-    # is midterm_passed, final_passed, etc.
-    grade_field = forms.fields.ChoiceField(choices=('pass','fail'),
-                                           widget=forms.Select())
-    survey.fields.insert(field_count + 1, 'pass/fail', grade_field)
 
 
 class SurveyResults(widgets.Widget):
