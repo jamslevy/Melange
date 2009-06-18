@@ -224,7 +224,7 @@ class View(base.View):
                                      this_user=user,
                                      survey_record=survey_record,
                                      read_only=read_only)
-    survey_form.get_fields()
+    survey_form.getFields()
     if this_survey.taking_access != "everyone":
       ## the access check component should be refactored out
       role_fields = surveys.getRoleSpecificFields(this_survey, user)
