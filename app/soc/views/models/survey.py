@@ -210,7 +210,7 @@ class View(base.View):
     this_survey = entity
     user = user_logic.getForCurrentAccount()
 
-    status = self.get_status(request, context, user, this_survey)
+    status = self.getStatus(request, context, user, this_survey)
     read_only, can_write, not_ready = status
 
     # If user can edit this survey and is requesting someone else's results,
@@ -253,7 +253,7 @@ class View(base.View):
       survey_form = getRoleSpecificFields(this_survey, user, survey_form)
 
     # Set help and status text
-    self.set_help_status(context, read_only, survey_record, survey_form)
+    self.setHelpStatus(context, read_only, survey_record, survey_form, this_survey)
 
     if not context['survey_form']:
       access_tpl = "You Must Be a %s to Take This Survey"
@@ -262,7 +262,7 @@ class View(base.View):
     context['read_only'] = read_only
     return True
 
-  def get_status(self, request, context, user, this_survey):
+  def getStatus(self, request, context, user, this_survey):
     """Determine if we're past deadline or before opening, check user rights.
     """
 
@@ -297,16 +297,19 @@ class View(base.View):
 
     return read_only, can_write, not_ready
 
-  def set_help_status(self, context, read_only, survey_record, survey_form):
+  def setHelpStatus(self, context, read_only, survey_record, survey_form, this_survey):
     """Set help_text and status for template use.
     """
 
     if not read_only:
+      if not this_survey.deadline: deadline_text = ""
+      else: deadline_text = " by " + str(
+      this_survey.deadline.strftime("%A, %d. %B %Y %I:%M%p")) 
       if survey_record:
-        help_text = "Edit and re-submit this survey."
+        help_text = "Edit and re-submit this survey" + deadline_text + "."
         status = "edit"
       else:
-        help_text = "Please complete this survey."
+        help_text = "Please complete this survey" + deadline_text + "."
         status = "create"
     else:
       help_text = "Read-only view."
@@ -351,16 +354,16 @@ class View(base.View):
       fields['author'] = user
     else:
       fields['author'] = entity.author
-      schema = self.load_survey_content(schema, survey_fields, entity)
+      schema = self.loadSurveyContent(schema, survey_fields, entity)
 
     # Remove deleted properties from the model
-    self.delete_questions(schema, survey_fields, request.POST)
+    self.deleteQuestions(schema, survey_fields, request.POST)
 
     # Add new text questions and re-build choice questions
-    self.get_request_questions(schema, survey_fields, request.POST)
+    self.getRequestQuestions(schema, survey_fields, request.POST)
 
     # Get schema options for choice questions
-    self.get_schema_options(schema, survey_fields, request.POST)
+    self.getSchemaOptions(schema, survey_fields, request.POST)
 
     this_survey = getattr(entity,'this_survey', None)
     # Create or update a SurveyContent for this Survey
@@ -379,7 +382,7 @@ class View(base.View):
     fields['modified_by'] = user
     super(View, self)._editPost(request, entity, fields)
 
-  def load_survey_content(self, schema, survey_fields, entity):
+  def loadSurveyContent(self, schema, survey_fields, entity):
     """Populate the schema dict and get text survey questions.
     """
 
@@ -398,7 +401,7 @@ class View(base.View):
           survey_fields[question_name] = question
     return schema
 
-  def delete_questions(self, schema, survey_fields, POST):
+  def deleteQuestions(self, schema, survey_fields, POST):
     """Process the list of questions to delete, from a hidden input.
     """
 
@@ -411,7 +414,7 @@ class View(base.View):
         if d in survey_fields:
           del survey_fields[d]
 
-  def get_request_questions(self, schema, survey_fields, POST):
+  def getRequestQuestions(self, schema, survey_fields, POST):
     """Get fields from request.
 
     We use two field/question naming and processing schemes:
@@ -460,7 +463,7 @@ class View(base.View):
             schema[field_name]["type"] = ptype
         survey_fields[field_name] = value
 
-  def get_schema_options(self, schema, survey_fields, POST):
+  def getSchemaOptions(self, schema, survey_fields, POST):
     """Get question, type, rendering and option order for choice questions.
     """
 
