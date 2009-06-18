@@ -14,31 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Custom widgets used for form fields.
+"""Custom widgets used for Survey form fields, plus the SurveyContent form.
 """
 
 __authors__ = [
+  'Daniel Diniz',
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
+
 import datetime
+from itertools import chain
 
 from django import forms
 from django.forms import widgets
 from django.template import loader
 from django.utils.html import escape
-from itertools import chain
 
 from google.appengine.ext.db import djangoforms
 
 from soc.logic import dicts
 from soc.logic.lists import Lists
+#XXX Some of these logic imports should be moved to Survey logic
 from soc.logic.models.user import logic as user_logic
 from soc.logic.models.mentor import logic as mentor_logic
 from soc.logic.models.survey import results_logic
 from soc.logic.models.survey import logic as survey_logic
-from soc.logic.models.user import logic as user_logic
-from soc.models.survey import SurveyContent, SurveyRecord
+from soc.models.survey import SurveyContent
 
 
 class SurveyForm(djangoforms.ModelForm):
@@ -54,9 +56,6 @@ class SurveyForm(djangoforms.ModelForm):
     Using dynamic properties of the this_survey model (if passed
     as an arg) the survey form is dynamically formed.
 
-    TODO: Form now scrambles the order of fields. If it's important
-    that fields are listed in a certain order, an alternative to
-    the schema dictionary will have to be used.
     """
 
     self.kwargs = kwargs
@@ -72,6 +71,9 @@ class SurveyForm(djangoforms.ModelForm):
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
   def get_fields(self):
+    """Build the SurveyContent (questions) form fields.
+    """
+
     if not self.survey_content: return
     read_only = self.read_only
     if not read_only:
@@ -164,6 +166,8 @@ class SurveyEditForm(SurveyForm):
 
     Using dynamic properties of the this_survey model (if passed
     as an arg) the survey form is dynamically formed.
+
+    Should be merged into the SurveyForm
     """
 
     super(SurveyEditForm, self).__init__(*args, **kwargs)
