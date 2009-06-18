@@ -245,7 +245,8 @@ class View(base.View):
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user,
                                      survey_record=survey_record,
-                                     read_only=read_only)
+                                     read_only=read_only,
+                                     editing=False)
     survey_form.getFields()
     if this_survey.taking_access != "everyone":
       ## the access check component should be refactored out
@@ -370,7 +371,7 @@ class View(base.View):
 
     # Enable grading
     if "has_grades" in request.POST and request.POST["has_grades"] == "on":
-      this_survey.has_grades = True
+      survey_content.has_grades = True
     if entity:
       entity.this_survey = survey_content
       db.put(entity)
@@ -511,7 +512,7 @@ class View(base.View):
   def editGet(self, request, entity, context, params=None):
     """Process GET requests for the specified entity.
 
-    Builds the SurveyEditForm that represents the Survey question contents.
+    Builds the SurveyForm that represents the Survey question contents.
     """
 
     #XXX:ajaksu shoudn't CHOOSE_A_PROJECT_FIELD and CHOOSE_A_GRADE_FIELD
@@ -536,8 +537,9 @@ class View(base.View):
     self._entity = entity
     survey_content = entity.this_survey
     user = user_logic.getForCurrentAccount()
-    survey_form = surveys.SurveyEditForm(survey_content=survey_content,
-                                         this_user=user, survey_record=None)
+    survey_form = surveys.SurveyForm(survey_content=survey_content,
+                                     this_user=user, survey_record=None,
+                                     editing=True, read_only=False)
     survey_form.getFields()
     grades = False
     if survey_content:

@@ -64,6 +64,10 @@ class SurveyForm(djangoforms.ModelForm):
     self.read_only = self.kwargs.get('read_only', None)
     if 'read_only' in self.kwargs:
       del self.kwargs['read_only']
+    self.editing = self.kwargs.get('editing', None)
+    if 'editing' in self.kwargs:
+      del self.kwargs['editing']
+
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
   def getFields(self):
@@ -71,18 +75,20 @@ class SurveyForm(djangoforms.ModelForm):
     """
 
     if not self.survey_content: return
-    read_only = self.read_only
-    if not read_only:
-      deadline = self.survey_content.survey_parent.get().deadline
-      read_only =  deadline and (datetime.datetime.now() > deadline)
     extra_attrs = {}
-    if read_only:
-      extra_attrs['disabled'] = 'disabled'
+    if not self.editing:
+      read_only = self.read_only
+      if not read_only:
+        deadline = self.survey_content.survey_parent.get().deadline
+        read_only =  deadline and (datetime.datetime.now() > deadline)
+      if read_only:
+        extra_attrs['disabled'] = 'disabled'
     kwargs = self.kwargs
     self.survey_fields = {}
     schema = self.survey_content.get_schema()
+    has_record = (not self.editing) and self.survey_record
     for property in self.survey_content.dynamic_properties():
-      if self.survey_record and hasattr(self.survey_record, property):
+      if has_record and hasattr(self.survey_record, property):
         # use previously entered value
         value = getattr(self.survey_record, property)
       else: # use prompts set by survey creator
@@ -101,7 +107,6 @@ class SurveyForm(djangoforms.ModelForm):
                                     widget=widgets.Textarea(attrs=extra_attrs),
                                     initial=value,
                                     )
-                                    #custom rows
       if schema[property]["type"] == "short_answer":
         extra_attrs['class'] = "text_question"
         self.survey_fields[property] = forms.fields.CharField(
@@ -109,8 +114,16 @@ class SurveyForm(djangoforms.ModelForm):
                                     required=False,
                                     label=label,
                                     widget=widgets.TextInput(attrs=extra_attrs),
-                                    max_length=40,initial=value)
+                                    max_length=40,
+                                    initial=value,
+                                    )
       if schema[property]["type"] == "selection":
+        if self.editing:
+          kind = schema[property]["type"]
+          render = schema[property]["render"]
+          widget = UniversalChoiceEditor(kind, render)
+        else:
+          widget = WIDGETS[schema[property]['render']](attrs=extra_attrs)
         these_choices = []
         # add all properties, but select chosen one
         options = getattr(self.survey_content, property)
@@ -125,9 +138,16 @@ class SurveyForm(djangoforms.ModelForm):
             required=False,
             label=label,
             choices=tuple(these_choices),
-            widget=WIDGETS[schema[property]['render']](attrs=extra_attrs))
+            widget=widget)
       if schema[property]["type"] == "pick_multi":
+        if self.editing:
+          kind = schema[property]["type"]
+          render = schema[property]["render"]
+          widget = UniversalChoiceEditor(kind, render)
+        else:
+          widget = WIDGETS[schema[property]['render']](attrs=extra_attrs)
         if self.survey_record and isinstance(value, basestring):
+          #XXX Need to allow checking checkboxes by default
           # Pass as 'initial' so MultipleChoiceField can render checked boxes
           value = value.split(',')
         else:
@@ -138,7 +158,7 @@ class SurveyForm(djangoforms.ModelForm):
             required=False,
             label=label,
             choices=tuple(these_choices),
-            widget=WIDGETS[schema[property]['render']](attrs=extra_attrs),
+            widget=widget,
             initial=value,
             )
 
@@ -154,85 +174,6 @@ class SurveyForm(djangoforms.ModelForm):
   class Meta(object):
     model = SurveyContent
     exclude = ['schema']
-
-
-class SurveyEditForm(SurveyForm):
-  def __init__(self, *args, **kwargs):
-    """Survey form for creating or updating existing surveys.
-
-    Using dynamic properties of the this_survey model (if passed
-    as an arg) the survey form is dynamically formed.
-
-    Should be merged into the SurveyForm
-    """
-
-    super(SurveyEditForm, self).__init__(*args, **kwargs)
-
-  def getFields(self):
-    if not self.survey_content: return
-    kwargs = self.kwargs
-    self.survey_fields = {}
-    schema = self.survey_content.get_schema()
-    for property in self.survey_content.dynamic_properties():
-      value = getattr(self.survey_content, property)
-      if property not in schema: continue
-      # correct answers? Necessary for grading
-      if 'question' in schema[property]:
-        label = schema[property]['question']
-      else:
-        label = property
-      if schema[property]["type"] == "long_answer":
-        self.survey_fields[property] = forms.fields.CharField(
-                                    required=False,
-                                    label=label,
-                                    widget=widgets.Textarea(), initial=value)
-                                    #custom rows
-      if schema[property]["type"] == "short_answer":
-        self.survey_fields[property] = forms.fields.CharField(
-                                    required=False,
-                                    label=label,
-                                    max_length=40, initial=value)
-      if schema[property]["type"] == "selection":
-        kind = schema[property]["type"]
-        render = schema[property]["render"]
-        these_choices = []
-        # add all properties, but select chosen one
-        options = getattr(self.survey_content, property)
-        if self.survey_record and hasattr(self.survey_record, property):
-          these_choices.append((value, value))
-          if value in options:
-            options.remove(value)
-        for option in options:
-          these_choices.append((option, option))
-        self.survey_fields[property] = PickOneField(
-            required=False,
-            label=label,
-            choices=tuple(these_choices),
-            widget=UniversalChoiceEditor(kind, render))
-      if schema[property]["type"] == "pick_multi":
-        kind = schema[property]["type"]
-        render = schema[property]["render"]
-        if self.survey_record and isinstance(value, basestring):
-          #XXX Need to allow checking checkboxes by default
-          # Pass as 'initial' so MultipleChoiceField can render checked boxes
-          value = value.split(',')
-        else:
-          value = None
-        these_choices = [(v,v) for v in getattr(self.survey_content, property)]
-        self.survey_fields[property] = PickManyField(
-            required=False,
-            label=label,
-            choices=tuple(these_choices),
-            widget=UniversalChoiceEditor(kind, render), initial=value)
-
-    return self.insertFields()
-
-  def insertFields(self):
-    survey_order = self.survey_content.get_survey_order()
-    # first, insert dynamic survey fields
-    for position, property in survey_order.items():
-      self.fields.insert(position, property, self.survey_fields[property])
-    return self.fields
 
 
 class UniversalChoiceEditor(widgets.Widget):
