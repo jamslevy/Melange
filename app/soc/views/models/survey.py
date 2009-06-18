@@ -501,7 +501,8 @@ class View(base.View):
     """
 
     # Avoid spurious results from showing on creation
-    self._entity = None
+    if 'survey_records' in context:
+      del context['survey_records']
     context['question_types'] = QUESTION_TYPES
     return super(View, self).createGet(request, context, params, seed)
 
