@@ -43,7 +43,7 @@ class Logic(work.Logic):
     super(Logic, self).__init__(model=model, base_model=base_model,
                                 scope_logic=scope_logic)
 
-  def create_survey(self, survey_fields, schema, this_survey=False):
+  def createSurvey(self, survey_fields, schema, this_survey=False):
     """Create a new survey from prototype.
     """
 
@@ -59,7 +59,7 @@ class Logic(work.Logic):
     db.put(this_survey)
     return this_survey
 
-  def update_survey_record(self, user, survey_entity, survey_record, fields):
+  def updateSurveyRecord(self, user, survey_entity, survey_record, fields):
     """ Create a new survey record, or get an existing one.
     """
 
@@ -79,7 +79,7 @@ class Logic(work.Logic):
     return survey_record
 
 
-  def get_projects(self, this_survey, user):
+  def getProjects(self, this_survey, user):
     """
     Get projects linking user to a program.
     Serves as access handler (since no projects == no access)

@@ -225,7 +225,7 @@ class View(base.View):
       pass
     else: # submitting a completed survey record
       context['notice'] = "Survey Submission Saved"
-      survey_record = survey_logic.update_survey_record(user, this_survey,
+      survey_record = survey_logic.updateSurveyRecord(user, this_survey,
                                                         survey_record,
                                                         request.POST)
 
@@ -317,7 +317,7 @@ class View(base.View):
 
     self.get_schema_options(schema, survey_fields, request.POST)
 
-    this_survey = survey_logic.create_survey(survey_fields, schema,
+    this_survey = survey_logic.createSurvey(survey_fields, schema,
                       this_survey=getattr(entity,'this_survey', None))
 
     if "has_grades" in request.POST and request.POST["has_grades"] == "on":

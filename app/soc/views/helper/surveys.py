@@ -374,7 +374,7 @@ def get_role_specific_fields(survey, user):
   # I'm assuming for now this is a student --
   # this should all be refactored as access
   field_count = len(survey.this_survey.get_schema().items())
-  these_projects = survey_logic.get_projects(survey, user)
+  these_projects = survey_logic.getProjects(survey, user)
   if not these_projects:
     # failed access check...no relevant project found
     return False
