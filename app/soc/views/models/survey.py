@@ -523,6 +523,9 @@ class View(base.View):
 
     #XXX:ajaksu shoudn't CHOOSE_A_PROJECT_FIELD and CHOOSE_A_GRADE_FIELD
     # go into a template? Then permission flags on context control display?
+    
+    # jamtoday: template would work, but isn't necessary.
+    # don't understand what you're saying about permissions
     CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
     <th><label>Choose Project:</label></th>
     <td>
@@ -555,6 +558,9 @@ class View(base.View):
     context.update(local)
 
     params['edit_form'] = HelperForm(params['edit_form'])
+    # activate grades flag
+    if request._get.get('activate'):
+      self.grade(request)
     return super(View, self).editGet(request, entity, context, params=params)
 
   def getMenusForScope(self, entity, params):
@@ -600,14 +606,16 @@ class View(base.View):
     #TODO: Move to the survey results page
     prefix = 'id_survey__'
     suffix = '__selection__grade'
-    link_id = request.path.split('/')[-1].split('?')[0]
-    #XXX There has to be better way to do this than this gql :-)
-    survey = Survey.gql("WHERE link_id = :1", link_id).get()
+    survey_key_name = survey_logic.getKeyNameFromPath(request.path)
+    survey = Survey.get_by_key_name(survey_key_name)
+    return
     for user, grade in request.POST.items():
       if user.startswith(prefix):
         user = user.replace(prefix, '').replace(suffix, '')
       else:
         continue
+      # one alternative would be to store the user key as an id attr 
+      # and send it in the request instead of the link_id
       user = User.gql("WHERE link_id = :1", user).get()
       survey_record = SurveyRecord.gql(
           "WHERE user = :1 AND survey = :2", user, survey).get()

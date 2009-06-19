@@ -1,6 +1,6 @@
 #!/usr/bin/python2.5
 #
-# Copyright 2008 the Melange authors.
+# Copyright 2009 the Melange authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ from itertools import chain
 
 from django import forms
 from django.forms import widgets
+from django.forms.fields import CharField
 from django.template import loader
 from django.utils.html import escape
 
@@ -40,18 +41,23 @@ from soc.models.survey import SurveyContent
 
 
 class SurveyForm(djangoforms.ModelForm):
-  def __init__(self, *args, **kwargs):
-    """ This class is used to produce survey forms for several
-    circumstances:
+  """Main SurveyContent form.
 
+  This class is used to produce survey forms for several circumstances:
     - Admin creating survey from scratch
     - Admin updating existing survey
     - User taking survey
     - User updating already taken survey
 
-    Using dynamic properties of the survey model (if passed
-    as an arg) the survey form is dynamically formed.
+  Using dynamic properties of the survey model (if passed as an arg) the
+  survey form is dynamically formed
+  """
 
+  def __init__(self, *args, **kwargs):
+    """Store special kwargs as attributes.
+
+      read_only: controls whether the survey taking UI allows data entry.
+      editing: controls whether to show the edit or show form.
     """
 
     self.kwargs = kwargs
@@ -72,104 +78,138 @@ class SurveyForm(djangoforms.ModelForm):
 
   def getFields(self):
     """Build the SurveyContent (questions) form fields.
+
+    Populates self.survey_fields, which will be ordered in self.insert_fields.
     """
 
-    if not self.survey_content: return
+    if not self.survey_content:
+      return
+    self.survey_fields = {}
+    schema = eval(self.survey_content.schema)
+    has_record = (not self.editing) and self.survey_record
     extra_attrs = {}
+
+    # Figure out whether we want a read-only view
     if not self.editing:
+      # Only survey taking can be read-only
       read_only = self.read_only
       if not read_only:
         deadline = self.survey_content.survey_parent.get().deadline
         read_only =  deadline and (datetime.datetime.now() > deadline)
       if read_only:
         extra_attrs['disabled'] = 'disabled'
-    kwargs = self.kwargs
-    self.survey_fields = {}
-    schema = eval(self.survey_content.schema)
-    has_record = (not self.editing) and self.survey_record
-    for property in self.survey_content.dynamic_properties():
-      if has_record and hasattr(self.survey_record, property):
-        # use previously entered value
-        value = getattr(self.survey_record, property)
-      else: # use prompts set by survey creator
-        value = getattr(self.survey_content, property)
-      if property not in schema: continue
-      # correct answers? Necessary for grading
-      if 'question' in schema[property]:
-        label = schema[property]['question']
-      else:
-        label = property
-      if schema[property]["type"] == "long_answer":
-        self.survey_fields[property] = forms.fields.CharField(
-                                    help_text = 'Testing Tooltip!',
-                                    required=False,
-                                    label=label,
-                                    widget=widgets.Textarea(attrs=extra_attrs),
-                                    initial=value,
-                                    )
-      if schema[property]["type"] == "short_answer":
-        extra_attrs['class'] = "text_question"
-        self.survey_fields[property] = forms.fields.CharField(
-                                    help_text = 'Testing Tooltip Again!',
-                                    required=False,
-                                    label=label,
-                                    widget=widgets.TextInput(attrs=extra_attrs),
-                                    max_length=40,
-                                    initial=value,
-                                    )
-      if schema[property]["type"] == "selection":
-        if self.editing:
-          kind = schema[property]["type"]
-          render = schema[property]["render"]
-          widget = UniversalChoiceEditor(kind, render)
-        else:
-          widget = WIDGETS[schema[property]['render']](attrs=extra_attrs)
-        these_choices = []
-        # add all properties, but select chosen one
-        options = getattr(self.survey_content, property)
-        if self.survey_record and hasattr(self.survey_record, property):
-          these_choices.append((value, value))
-          if value in options:
-            options.remove(value)
-        for option in options:
-          these_choices.append((option, option))
-        self.survey_fields[property] = PickOneField(
-            help_text = 'Testing Tooltip for Selects!',
-            required=False,
-            label=label,
-            choices=tuple(these_choices),
-            widget=widget)
-      if schema[property]["type"] == "pick_multi":
-        if self.editing:
-          kind = schema[property]["type"]
-          render = schema[property]["render"]
-          widget = UniversalChoiceEditor(kind, render)
-        else:
-          widget = WIDGETS[schema[property]['render']](attrs=extra_attrs)
-        if self.survey_record and isinstance(value, basestring):
-          #XXX Need to allow checking checkboxes by default
-          # Pass as 'initial' so MultipleChoiceField can render checked boxes
-          value = value.split(',')
-        else:
-          value = None
-        these_choices = [(v,v) for v in getattr(self.survey_content, property)]
-        self.survey_fields[property] = PickManyField(
-            help_text = 'Testing Tooltip for Checkboxes!',
-            required=False,
-            label=label,
-            choices=tuple(these_choices),
-            widget=widget,
-            initial=value,
-            )
 
+    # Add unordered fields to self.survey_fields
+    for field in self.survey_content.dynamic_properties():
+      if has_record and hasattr(self.survey_record, field):
+        # previously entered value
+        value = getattr(self.survey_record, field)
+      else:
+        # use prompts set by survey creator
+        value = getattr(self.survey_content, field)
+      if field not in schema:
+        continue #XXX Should we error here?
+      elif 'question' in schema[field]:
+        label = schema[field].get('question', None) or field
+      # Dispatch to field-specific methods
+      if schema[field]["type"] == "long_answer":
+        self.addLongField(field, value, extra_attrs, label=label)
+      elif schema[field]["type"] == "short_answer":
+        self.addShortField(field, value, extra_attrs, label=label)
+      elif schema[field]["type"] == "selection":
+        self.addSingleField(field, value, extra_attrs, schema, label=label)
+      elif schema[field]["type"] == "pick_multi":
+        self.addMultiField(field, value, extra_attrs, schema, label=label)
     return self.insertFields()
 
   def insertFields(self):
+    """Add ordered fields to self.fields.
+    """
+
     survey_order = self.survey_content.getSurveyOrder()
     # first, insert dynamic survey fields
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
     return self.fields
+
+  def addLongField(self, field, value, attrs, req=False, label='', tip=''):
+    """Add a long answer fields to this form.
+    """
+
+    widget = widgets.Textarea(attrs=attrs)
+    if not tip:
+      tip = 'Testing Tooltip!'
+    question = CharField(help_text=tip, required=req, label=label,
+                         widget=widget, initial=value)
+    self.survey_fields[field] = question
+
+  def addShortField(self, field, value, attrs, req=False, label='', tip=''):
+    """Add a short answer fields to this form.
+    """
+
+    attrs['class'] = "text_question"
+    widget = widgets.TextInput(attrs=attrs)
+    if not tip:
+      tip = 'Testing Tooltip!'
+    #TODO(ajaksu) max_length should be configurable
+    question = CharField(help_text=tip, required=req, label=label,
+                         widget=widget, max_length=40, initial=value)
+    self.survey_fields[field] = question
+
+  def addSingleField(self, field, value, attrs, schema, req=False, label='',
+                     tip=''):
+    """Add a selection field to this form.
+
+    Widget depends on whether we're editing or displaying the survey taking UI.
+    """
+    if self.editing:
+      kind = schema[field]["type"]
+      render = schema[field]["render"]
+      widget = UniversalChoiceEditor(kind, render)
+    else:
+      widget = WIDGETS[schema[field]['render']](attrs=attrs)
+    these_choices = []
+    # add all properties, but select chosen one
+    options = getattr(self.survey_content, field)
+    has_record = not self.editing and self.survey_record
+    if has_record and hasattr(self.survey_record, field):
+      these_choices.append((value, value))
+      if value in options:
+        options.remove(value)
+    for option in options:
+      these_choices.append((option, option))
+    if not tip:
+      tip = 'Testing Tooltip!'
+    question = PickOneField(help_text=tip, required=req, label=label,
+                            choices=tuple(these_choices), widget=widget)
+    self.survey_fields[field] = question
+
+  def addMultiField(self, field, value, attrs, schema, req=False, label='',
+                    tip=''):
+    """Add a pick_multi field to this form.
+
+    Widget depends on whether we're editing or displaying the survey taking UI.
+    """
+
+    if self.editing:
+      kind = schema[field]["type"]
+      render = schema[field]["render"]
+      widget = UniversalChoiceEditor(kind, render)
+    else:
+      widget = WIDGETS[schema[field]['render']](attrs=attrs)
+    if self.survey_record and isinstance(value, basestring):
+      #TODO(ajaksu) Need to allow checking checkboxes by default
+      # Pass as 'initial' so MultipleChoiceField can render checked boxes
+      value = value.split(',')
+    else:
+      value = None
+    these_choices = [(v,v) for v in getattr(self.survey_content, field)]
+    if not tip:
+      tip = 'Testing Tooltip for Multiple Choices!'
+    question = PickManyField(help_text=tip, required=req, label=label,
+                             choices=tuple(these_choices), widget=widget,
+                             initial=value)
+    self.survey_fields[field] = question
 
   class Meta(object):
     model = SurveyContent
@@ -177,6 +217,12 @@ class SurveyForm(djangoforms.ModelForm):
 
 
 class UniversalChoiceEditor(widgets.Widget):
+  """Edit interface for choice questions.
+
+  Allows adding and removing options, re-ordering and editing option text.
+  """
+
+  # Template for each option
   CHOICE_TPL = u'''
     <li id="id-li-%(name)s_%(i)s" class="ui-state-default sortable_li">
       <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
@@ -187,7 +233,7 @@ class UniversalChoiceEditor(widgets.Widget):
        name="%(id_)s__field" value="%(o_val)s"/>
     </li>
   '''
-
+  # Question type drop-down
   TYPE_TPL = '''
   <label for="type_for_%(name)s">Question Type</label>
   <select id="type_for_%(name)s" name="type_for_%(name)s">
@@ -195,7 +241,7 @@ class UniversalChoiceEditor(widgets.Widget):
     <option value="pick_multi" %(is_pick_multi)s>pick_multi</option>
   </select>
   '''
-
+  # Render widget drop-down
   RENDER_TPL = '''
   <label for="render_for_%(name)s">Render as</label>
   <select id="render_for_%(name)s" name="render_for_%(name)s">
@@ -203,13 +249,14 @@ class UniversalChoiceEditor(widgets.Widget):
     <option value="checkboxes" %(is_checkboxes)s>checkboxes</option>
   </select>
   '''
-
+  # Each choice field has a hidden input where its 'question' is stored.
+  # Open the ordered list.
   HEADER_TPL = '''
   <input type="hidden" id="order_for_%(name)s"
   name="order_for_%(name)s" value=""/>
   <ol id="%(name)s" class="sortable">
   '''
-
+  # Close the ordered list and add the 'add option' button.
   BUTTON_FOOTER = '''
   </ol>
   <button name="create-option-button" id="create-option-button__%(name)s"
@@ -228,9 +275,11 @@ class UniversalChoiceEditor(widgets.Widget):
     self.render_as = render
 
   def render(self, name, value, attrs=None, choices=()):
-    if value is None: value = ''
+    if value is None:
+      value = ''
     final_attrs = self.build_attrs(attrs, name=name)
     selected = 'selected="selected"'
+    # Find out which options should be selected in type and render drop-downs.
     render_kind =  dict(
         name=name,
         is_selection=selected * (self.kind == 'selection'),
@@ -254,47 +303,69 @@ class UniversalChoiceEditor(widgets.Widget):
     return u'\n'.join(output)
 
 class PickOneField(forms.ChoiceField):
+  """Stub for customizing the single choice field.
+  """
 
   def __init__(self, *args, **kwargs):
     super(PickOneField, self).__init__(*args, **kwargs)
 
 
 class PickManyField(forms.MultipleChoiceField):
+  """Stub for customizing the multiple choice field.
+  """
 
   def __init__(self, *args, **kwargs):
     super(PickManyField, self).__init__(*args, **kwargs)
 
 
 class PickOneSelect(forms.Select):
+  """Stub for customizing the single choice select widget.
+  """
 
   def __init__(self, *args, **kwargs):
     super(PickOneSelect, self).__init__(*args, **kwargs)
 
 
 class PickManyCheckbox(forms.CheckboxSelectMultiple):
+  """Customized multiple choice checkbox widget.
+  """
 
   def __init__(self, *args, **kwargs):
     super(PickManyCheckbox, self).__init__(*args, **kwargs)
 
   def render(self, name, value, attrs=None, choices=()):
-    if value is None: value = []
+    """Render checkboxes as list items grouped in a fieldset.
+
+    This is the pick_multi widget for survey taking
+    """
+
+    if value is None:
+      value = []
     has_id = attrs and attrs.has_key('id')
     final_attrs = self.build_attrs(attrs, name=name)
-    output = [u'<fieldset id="id_%s">\n  <ul class="pick_multi">' % name]
     # Normalize to strings.
     str_values = set([forms.util.smart_unicode(v) for v in value])
+    is_checked = lambda value: value in str_values
+    smart_unicode = forms.util.smart_unicode
+
+    # Set container fieldset and list
+    output = [u'<fieldset id="id_%s">\n  <ul class="pick_multi">' % name]
+
+    # Add numbered checkboxes wrapped in list items
     chained_choices = enumerate(chain(self.choices, choices))
     for i, (option_value, option_label) in chained_choices:
+      option_label = escape(smart_unicode(option_label))
       # If an ID attribute was given, add a numeric index as a suffix,
       # so that the checkboxes don't all have the same ID attribute.
       if has_id:
         final_attrs = dict(final_attrs, id='%s_%s' % (attrs['id'], i))
-      cb = widgets.CheckboxInput(final_attrs,
-                                 check_test=lambda value: value in str_values)
-      option_value = forms.util.smart_unicode(option_value)
+
+      cb = widgets.CheckboxInput(final_attrs, check_test=is_checked)
       rendered_cb = cb.render(name, option_value)
-      cb_label = (rendered_cb, escape(forms.util.smart_unicode(option_label)))
+      cb_label = (rendered_cb, option_label)
+
       output.append(u'    <li><label>%s %s</label></li>' % cb_label)
+
     output.append(u'  </ul>\n</fieldset>')
     return u'\n'.join(output)
 
@@ -306,6 +377,7 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
   id_for_label = classmethod(id_for_label)
 
 
+# In the future, we'll have more widget types here
 WIDGETS = {'multi_checkbox': PickManyCheckbox,
            'single_select': PickOneSelect}
 
@@ -322,7 +394,6 @@ class SurveyResults(widgets.Widget):
                               order=order)
 
     params['name'] = "Survey Results"
-
     content = {
       'idx': idx,
       'data': data,
@@ -338,6 +409,7 @@ class SurveyResults(widgets.Widget):
 
     context['list'] = Lists(contents)
 
+    #TODO(ajaksu) Is this the best way to build the results list?
     for list_ in context['list']._contents:
       if len(list_['data']) < 1:
         return "<p>No Survey Results Have Been Submitted</p>"
