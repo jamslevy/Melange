@@ -54,7 +54,8 @@ from soc.models.site import Site
 from soc.models.student import Student
 from soc.models.student_project import StudentProject
 from soc.models.student_proposal import StudentProposal
-from soc.models.survey import Survey, SurveyContent, SurveyRecord
+from soc.models.survey import Survey, SurveyContent
+from soc.models.survey_record import SurveyRecord
 from soc.models.sponsor import Sponsor
 from soc.models.timeline import Timeline
 from soc.models.user import User
@@ -553,10 +554,20 @@ def seed(request, *args, **kwargs):
 
   melange_student = Student(**student_properties)
   melange_student.put()
-                               
+
+  student_id = 'test2'
+  student_properties.update({
+      'key_name': gsoc2009.key().name() + "/" + student_id,
+      'link_id': student_id
+      })
+
+  melange_student2 = Student(**student_properties)
+  melange_student2.put()
+                                       
+  project_id = 'test_project'
   project_properties = {
-      'key_name': 'site/site/home',
-      'link_id': 'test', 
+      'key_name':  gsoc2009.key().name() + "/" + project_id,
+      'link_id': project_id, 
       'scope_path': gsoc2009.key().name(),
       'scope': gsoc2009,
 
@@ -570,7 +581,18 @@ def seed(request, *args, **kwargs):
 
   melange_project = StudentProject(**project_properties)
   melange_project.put()
-  
+
+  project_id = 'test_project2'
+  project_properties.update({
+      'key_name':  gsoc2009.key().name() + "/" + project_id,
+      'link_id': project_id,
+      'student': melange_student2,
+      'title': 'test project2'
+      })
+      
+  melange_project2 = StudentProject(**project_properties)
+  melange_project2.put()
+    
   document_properties = {
       'key_name': 'site/site/home',
       'link_id': 'home',
