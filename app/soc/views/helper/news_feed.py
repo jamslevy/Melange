@@ -71,3 +71,5 @@ class NewsFeed():
     # return formatted link
     return "/%s/subscribe/%s" % (url_name, self.entity.key().name() )
     
+
+

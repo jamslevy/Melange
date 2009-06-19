@@ -49,6 +49,9 @@ from soc.views.models import timeline
 from soc.views.models import user
 from soc.views.models import user_self
 
+# Task Queue URLs
+from soc.logic.models.news_feed import logic as news_feed_logic
+
 
 class Callback(object):
   """Callback object that handles interaction between the core.
@@ -98,6 +101,17 @@ class Callback(object):
     self.core.registerSitemapEntry(timeline.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user_self.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user.view.getDjangoURLPatterns())
+    self.core.registerSitemapEntry(self.getMiscPatterns())
+
+    
+  def getMiscPatterns(self):    
+    """ Miscellanious URL patterns
+     for task queue URLs, etc. 
+    """
+    patterns = [
+    ('^addToFeedTask', news_feed_logic.addToFeedTask) 
+    ]
+    return patterns
 
   def registerWithSidebar(self):
     """Called by the server when sidebar entries should be registered.
