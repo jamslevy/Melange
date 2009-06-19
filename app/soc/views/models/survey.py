@@ -55,29 +55,24 @@ from soc.views.models import base
 CHOICE_TYPES = set(('selection', 'pick_multi', 'choice'))
 TEXT_TYPES = set(('long_answer', 'short_answer'))
 PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
-QUESTION_TYPES = {"short_answer": ("Short Answer",
-                                   "Less than 40 characters. "
-                                   "Rendered as a text input. "
-                                   "It's possible to add a free form question"
-                                   " (Content) and a in-input propmt/example"
-                                   " text."),
-                  "choice": ("Selection",
-                             "Can be set as a single choice (selection) or "
-                             "multiple choice (pick_multi) question. "
-                             "Rendered as a select (single choice) or a group "
-                             "of checkboxes (multiple choice). "
-                            "It's possible to add a free form question"
-                            " (Content) and as many free form options as "
-                            "wanted. Each option can be edited (double-click), "
-                            "deleted (click on (-) button) or reordered (drag "
-                            "and drop)."),
-                  "long_answer": ("Long Answer",
-                                  "Unlimited length, auto-growing field. "
-                                  "Rendered as a textarea. "
-                                   "It's possible to add a free form question"
-                                   " (Content) and a in-input propmt/example"
-                                   " text.")
-                  }
+_short_answer = ("Short Answer",
+                "Less than 40 characters. Rendered as a text input. "
+                "It's possible to add a free form question (Content) "
+                "and a in-input propmt/example text."),
+_choice = ("Selection",
+           "Can be set as a single choice (selection) or multiple choice "
+           "(pick_multi) question. Rendered as a select (single choice) "
+           "or a group of checkboxes (multiple choice). It's possible to "
+           "add a free form question (Content) and as many free form options "
+           "as wanted. Each option can be edited (double-click), deleted "
+           "(click on (-) button) or reordered (drag and drop).")
+_long_answer = ("Long Answer",
+                "Unlimited length, auto-growing field. endered as a textarea. "
+                 "It's possible to add a free form question (Content) and "
+                 "an in-input propmt/example text.")
+QUESTION_TYPES = dict(short_answer=_short_answer, long_answer=_long_answer,
+                      choice=_choice)
+
 
 class View(base.View):
   """View methods for the Survey model.
@@ -523,7 +518,7 @@ class View(base.View):
 
     #XXX:ajaksu shoudn't CHOOSE_A_PROJECT_FIELD and CHOOSE_A_GRADE_FIELD
     # go into a template? Then permission flags on context control display?
-    
+
     # jamtoday: template would work, but isn't necessary.
     # don't understand what you're saying about permissions
     CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
@@ -614,7 +609,7 @@ class View(base.View):
         user = user.replace(prefix, '').replace(suffix, '')
       else:
         continue
-      # one alternative would be to store the user key as an id attr 
+      # one alternative would be to store the user key as an id attr
       # and send it in the request instead of the link_id
       user = User.gql("WHERE link_id = :1", user).get()
       survey_record = SurveyRecord.gql(
@@ -700,31 +695,6 @@ def to_csv(survey):
   writer.writerow(properties)
   writer.writerows(recs)
   return header + output.getvalue(), survey.link_id
-
-
-def notify_students(survey):
-  """POC for notification, pending mentor-project linking.
-  """
-
-  from soc.models.student import Student
-  from soc.models.program import Program
-  from soc.logic.helper import notifications
-  notify = notifications.sendNotification
-  scope = Program.get_by_key_name(survey.scope_path)
-  students = Student.gql("WHERE scope = :1", scope).run()
-  have_answered = set([rec.user.key() for rec in survey.survey_records.run()])
-  creator = survey.author
-  path = (survey.entity_type().lower(), survey.prefix,
-          survey.scope_path, survey.link_id)
-  url = "/%s/show/%s/%s/%s" % path
-  props = dict(survey_url=url, survey_title=survey.title)
-  tpl = 'soc/survey/messages/new_survey.html'
-  subject = 'New Survey: "%s"' % survey.title
-  for student in students:
-    if student.user.key() not in have_answered:
-      notify(student.user, creator, props, subject, tpl)
-
-
 
 
 view = View()

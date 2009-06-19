@@ -311,3 +311,27 @@ class ResultsLogic(work.Logic):
 
 
 results_logic = ResultsLogic()
+
+
+def notifyStudents(survey):
+  """POC for notification, pending mentor-project linking.
+  """
+
+  from soc.models.student import Student
+  from soc.models.program import Program
+  from soc.logic.helper import notifications
+  notify = notifications.sendNotification
+  scope = Program.get_by_key_name(survey.scope_path)
+  students = Student.gql("WHERE scope = :1", scope).run()
+  have_answered = set([rec.user.key() for rec in survey.survey_records.run()])
+  creator = survey.author
+  path = (survey.entity_type().lower(), survey.prefix,
+          survey.scope_path, survey.link_id)
+  url = "/%s/show/%s/%s/%s" % path
+  props = dict(survey_url=url, survey_title=survey.title)
+  tpl = 'soc/survey/messages/new_survey.html'
+  subject = 'New Survey: "%s"' % survey.title
+  for student in students:
+    if student.user.key() not in have_answered:
+      notify(student.user, creator, props, subject, tpl)
+
