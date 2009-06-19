@@ -601,6 +601,7 @@ class View(base.View):
   def grade(self, request, **kwargs):
     """Updates SurveyRecord's grades for a given Survey.
     """
+
     #XXX Needs ACL checks
     #TODO: Move to the survey results page
     prefix = 'id_survey__'
