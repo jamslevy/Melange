@@ -87,7 +87,7 @@ class Logic():
   def addToFeedTask(self):
     """TaskQueue method to add item to newsfeed
     """
-    logging.warn("im in your queue! feeding your task!")
+    pass
 
 
   def retrieveFeed(self, entity, count=10):
