@@ -95,6 +95,11 @@ class Logic(work.Logic):
     db.put(survey_record)
     return survey_record
 
+  def getKeyNameFromPath(self, path):
+    """ Gets survey key name from a request path
+    """
+    return '/'.join(path.split('/')[-4:]).split('?')[0]
+
 
   def getProjects(self, survey, user, debug=False):
     """
