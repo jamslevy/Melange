@@ -16,6 +16,22 @@
 
 $(function () {
 
+var DEFAULT_PROJECT_TEXT = "Choose a Project"; 
+var DEFAULT_GRADE_TEXT = "Choose a Grade"; 
+
+// add initial value to project and grade choice fields
+$('select#id_project').prepend(
+'<option selected="true">' 
++ DEFAULT_PROJECT_TEXT + 
+'</option>');
+
+$('select#id_grade').prepend(
+'<option selected="true">' 
++ DEFAULT_GRADE_TEXT + 
+'</option>');
+
+
+
   /*
   * == Setup Survey on Page Load ==
   *
@@ -57,9 +73,27 @@ $(function () {
   *
   */
 
+// validate form 
+  $('input[type=submit]').bind('click', function(e) {
+    
+    e.preventDefault();
+    // validate project and grade choice fields
+    if ($('select#id_project') && $('select#id_project').val() == DEFAULT_PROJECT_TEXT)
+    return alert('Please Choose a Project');
+    if ($('select#id_grade') && $('select#id_grade').val() == DEFAULT_GRADE_TEXT)
+    return alert('Please Choose a Grade');
+   
+    $('form').trigger('submit');
+    
+  });
+  
+
+    
+    
   $('form').bind('submit', function () {
+
     $('input#id_s_html').val(
-      widget.find('div#survey_options').remove().end().html()
+    widget.find('div#survey_options').remove().end().html()
     );
   });
 });

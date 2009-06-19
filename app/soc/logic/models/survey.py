@@ -244,6 +244,7 @@ def getRoleSpecificFields(survey, user, survey_form):
     survey_form.fields.insert(0, 'project',
                             forms.fields.ChoiceField(
                                 choices=tuple(project_pairs),
+                                required=True, 
                                 widget=forms.Select())
                             )
   if survey.taking_access == "mentor":
@@ -251,8 +252,9 @@ def getRoleSpecificFields(survey, user, survey_form):
     # determining if student passes or fails
     # Activate grades handler should determine whether new status
     # is midterm_passed, final_passed, etc.
-    choices = (('pass', 'pass'), ('fail', 'fail'))
+    choices = (('pass', 'Pass'), ('fail', 'Fail'))
     grade_field = forms.fields.ChoiceField(choices=choices,
+                                           required=True,
                                            widget=forms.Select())
     survey_form.fields.insert(field_count + 1, 'grade', grade_field)
 

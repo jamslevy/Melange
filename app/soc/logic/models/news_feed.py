@@ -51,10 +51,13 @@ class Logic():
     """
     pass
 
-  # this should be a background task
+
   def addToFeed(self, sender, receivers, update_type, payload=None):
-    """Sends out a message if there is only one unread notification.
+    """ Adds new item to feed for sender, given a list of receievers 
     """
+
+    from google.appengine.api.labs import taskqueue
+    taskqueue.add(url='/addToFeedTask', params={})
 
     save_items = []
     user = user_logic.getForCurrentAccount()
@@ -80,7 +83,12 @@ class Logic():
       save_items.append(new_feed_item)
     db.put(save_items)  
     
-    
+
+  def addToFeedTask(self):
+    """TaskQueue method to add item to newsfeed
+    """
+    pass
+
 
   def retrieveFeed(self, entity, count=10):
     """ Retrieves feed for a given entity 
