@@ -660,6 +660,11 @@ div #survey_widget.survey_admin {
 /*margin-left:-100px;*/
 }
 
+div #survey_widget tr {
+float:left;
+clear:both;
+}
+
 div #survey_widget th, div #survey_widget td {
 padding-top:15px;
 }
