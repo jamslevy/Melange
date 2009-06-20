@@ -46,14 +46,17 @@ $(function () {
       .growfield();
     });
 
-    widget.find('select').change(function () {});
-
   }
 
-  else {
+  else { // survey has saved results
     widget.find('textarea').each(function () {
       $(this).attr('overflow', 'auto').growfield();
-    });
+    }).end()
+   .find('.pick_multi').each(function() {
+      $(this).find('input').each(function(){
+       // if $(this).attr('checked', 'true');});
+         });
+      
   }
   /*
   * == Survey Submission Handler ==
