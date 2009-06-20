@@ -1,6 +1,6 @@
 #!/usr/bin/python2.5
 #
-# Copyright 2008 the Melange authors.
+# Copyright 2009 the Melange authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ __authors__ = [
 
 import csv
 import datetime
-
 import re
 import StringIO
+
 from django import forms
 from django import http
 
@@ -35,14 +35,11 @@ from google.appengine.ext import db
 from soc.cache import home
 from soc.logic import cleaning
 from soc.logic import dicts
-
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.survey import GRADES
 from soc.logic.models.user import logic as user_logic
-
 from soc.models.survey import Survey
 from soc.models.survey_record import SurveyRecord
-
 from soc.models.user import User
 from soc.views.helper import access
 from soc.views.helper import decorators
@@ -58,7 +55,7 @@ PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
 _short_answer = ("Short Answer",
                 "Less than 40 characters. Rendered as a text input. "
                 "It's possible to add a free form question (Content) "
-                "and a in-input propmt/example text."),
+                "and a in-input propmt/example text.")
 _choice = ("Selection",
            "Can be set as a single choice (selection) or multiple choice "
            "(pick_multi) question. Rendered as a select (single choice) "
@@ -69,7 +66,7 @@ _choice = ("Selection",
 _long_answer = ("Long Answer",
                 "Unlimited length, auto-growing field. endered as a textarea. "
                  "It's possible to add a free form question (Content) and "
-                 "an in-input propmt/example text.")
+                 "an in-input prompt/example text.")
 QUESTION_TYPES = dict(short_answer=_short_answer, long_answer=_long_answer,
                       choice=_choice)
 
@@ -84,10 +81,10 @@ class View(base.View):
 
     Params:
       params: a dict with params for this View
-
-    TODO: Read/Write Access Needs to Match Survey
-    Usage Requirements
     """
+
+    # TODO: read/write access needs to match survey
+    # TODO: usage requirements
 
     rights = access.Checker(params)
     rights['any_access'] = ['allow']
@@ -126,7 +123,7 @@ class View(base.View):
     new_params['edit_template'] = 'soc/survey/edit.html'
     new_params['create_template'] = 'soc/survey/edit.html'
 
-    # which one of these are leftovers from Document?
+    # TODO which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
     new_params['no_create_with_scope'] = True
     new_params['no_create_with_key_fields'] = True
@@ -141,13 +138,10 @@ class View(base.View):
          },
         ]
 
+    # survey_html: save survey content when the POST fails, so fields remain in UI
     new_params['create_extra_dynaproperties'] = {
         #'survey_content': forms.fields.CharField(widget=surveys.EditSurvey(),
                                                  #required=False),
-        # TODO: save survey content when the POST fails
-        # Is there a better way to do this besides a hidden field?
-        # ajaksu: I think we should be adding questions/fields via AJAX,
-        # so saving the whole form wouldn't be necessary.
         'survey_html': forms.fields.CharField(widget=forms.HiddenInput,
                                               required=False),
         'scope_path': forms.fields.CharField(widget=forms.HiddenInput,
@@ -159,9 +153,11 @@ class View(base.View):
         'clean_scope_path': cleaning.clean_scope_path('scope_path'),
         'clean': cleaning.validate_document_acl(self, True),
         }
+
     new_params['extra_dynaexclude'] = ['author', 'created', 'content',
                                        'home_for', 'modified_by', 'modified',
                                        'take_survey', 'survey_content']
+
     new_params['edit_extra_dynaproperties'] = {
         'doc_key_name': forms.fields.CharField(widget=forms.HiddenInput),
         'created_by': forms.fields.CharField(widget=widgets.ReadOnlyInput(),
@@ -170,6 +166,7 @@ class View(base.View):
                                 widget=widgets.ReadOnlyInput(), required=False),
         'clean': cleaning.validate_document_acl(self),
         }
+
     params = dicts.merge(params, new_params)
     super(View, self).__init__(params=params)
 
@@ -204,7 +201,7 @@ class View(base.View):
     Passing read_only=True here allows one to fetch the read_only view.
     """
 
-    # this won't work -- there's *always* a survey entity. We want to
+    # This won't work -- there's *always* a survey entity. We want to
     # check if there is a survey record from this user.
     survey = entity
     user = user_logic.getForCurrentAccount()
@@ -233,8 +230,9 @@ class View(base.View):
                                      user, survey).get()
 
     if not survey_record and read_only:
-      # No recorded answers, we're either past deadline or want to see answers
+      # no recorded answers, we're either past deadline or want to see answers
       is_same_user = user.key() == user_logic.getForCurrentAccount().key()
+
       if not can_write or not is_same_user:
         # If user who can edit looks at her own taking page, show the default
         # form as readonly. Otherwise, below, show nothing.
@@ -250,10 +248,10 @@ class View(base.View):
     if survey.taking_access != "everyone":
       # midterm survey
       # should this be context['survey_form'] ?
-      survey_form = surveys.getRoleSpecificFields(survey, user, survey_form, survey_record)
-      
+      survey_form = surveys.getRoleSpecificFields(survey, user, survey_form,
+                                                  survey_record)
 
-    # Set help and status text
+    # set help and status text
     self.setHelpStatus(context, read_only, survey_record, survey_form, survey)
 
     if not context['survey_form']:
@@ -273,23 +271,26 @@ class View(base.View):
                  )
     now = datetime.datetime.now()
 
-    # Check deadline, see check for opening below
+    # check deadline, see check for opening below
     if survey.deadline and now > survey.deadline:
-      # Are we already passed the deadline?
+      # are we already passed the deadline?
       context["notice"] = "The Deadline For This Survey Has Passed"
       read_only = True
 
-    # Check if user can edit this survey
+    # check if user can edit this survey
     params = dict(prefix=survey.prefix, scope_path=survey.scope_path)
     checker = access.rights_logic.Checker(survey.prefix)
     roles = checker.getMembership(survey.write_access)
     rights = self._params['rights']
     can_write = access.Checker.hasMembership(rights, roles, params)
 
-    # Check if we're past the opening date
+
     not_ready = False
+    # check if we're past the opening date
     if survey.opening and now < survey.opening:
       not_ready = True
+
+      # only users that can edit a survey should see it before opening
       if not can_write:
         context["notice"] = "There is no such survey available."
         return False
@@ -304,18 +305,23 @@ class View(base.View):
     """
 
     if not read_only:
-      if not survey.deadline: deadline_text = ""
-      else: deadline_text = " by " + str(
+      if not survey.deadline:
+        deadline_text = ""
+      else:
+        deadline_text = " by " + str(
       survey.deadline.strftime("%A, %d. %B %Y %I:%M%p"))
+
       if survey_record:
         help_text = "Edit and re-submit this survey" + deadline_text + "."
         status = "edit"
       else:
         help_text = "Please complete this survey" + deadline_text + "."
         status = "create"
+
     else:
       help_text = "Read-only view."
       status = "view"
+
     survey_data = dict(survey_form=survey_form, status=status,
                                      help_text=help_text)
     context.update(survey_data)
@@ -332,7 +338,9 @@ class View(base.View):
       See surveys.SurveyResults for details.
     """
 
-    if not getattr(self, '_entity', None): return
+    if not getattr(self, '_entity', None):
+      return
+
     results = surveys.SurveyResults()
 
     context['survey_records'] = results.render(self._entity, self._params,
@@ -352,29 +360,31 @@ class View(base.View):
     survey_fields = {}
 
     if not entity:
-      # New Survey
+      # new Survey
       fields['author'] = user
     else:
       fields['author'] = entity.author
       schema = self.loadSurveyContent(schema, survey_fields, entity)
 
-    # Remove deleted properties from the model
+    # remove deleted properties from the model
     self.deleteQuestions(schema, survey_fields, request.POST)
 
-    # Add new text questions and re-build choice questions
+    # add new text questions and re-build choice questions
     self.getRequestQuestions(schema, survey_fields, request.POST)
 
-    # Get schema options for choice questions
+    # get schema options for choice questions
     self.getSchemaOptions(schema, survey_fields, request.POST)
 
     survey_content = getattr(entity,'survey_content', None)
-    # Create or update a SurveyContent for this Survey
+    # create or update a SurveyContent for this Survey
     survey_content = survey_logic.createSurvey(survey_fields, schema,
                                                 survey_content=survey_content)
 
-    # Enable grading
+    # enable grading
     if "has_grades" in request.POST and request.POST["has_grades"] == "on":
       survey_content.has_grades = True
+
+    # save survey_content for existent survey or pass for creating a new one
     if entity:
       entity.survey_content = survey_content
       db.put(entity)
@@ -389,18 +399,23 @@ class View(base.View):
     """
 
     if hasattr(entity, 'survey_content'):
-      # There is a SurveyContent already
+
+      # there is a SurveyContent already
       survey_content = entity.survey_content
       schema = eval(survey_content.schema)
+
       for question_name in survey_content.dynamic_properties():
-        # Get the current questions from the SurveyContent
+
+        # get the current questions from the SurveyContent
         if question_name not in schema:
           continue
+
         if schema[question_name]['type'] not in CHOICE_TYPES:
           # Choice questions are always regenerated from request, see
           # self.get_request_questions()
           question = getattr(survey_content, question_name)
           survey_fields[question_name] = question
+
     return schema
 
   def deleteQuestions(self, schema, survey_fields, POST):
@@ -408,13 +423,16 @@ class View(base.View):
     """
 
     deleted = POST.get('__deleted__', '')
+
     if deleted:
       deleted = deleted.split(',')
-      for d in deleted:
-        if d in schema:
-          del schema[d]
-        if d in survey_fields:
-          del survey_fields[d]
+      for field in deleted:
+
+        if field in schema:
+          del schema[field]
+
+        if field in survey_fields:
+          del survey_fields[field]
 
   def getRequestQuestions(self, schema, survey_fields, POST):
     """Get fields from request.
@@ -428,34 +446,39 @@ class View(base.View):
     """
 
     for key, value in POST.items():
+
       if key.startswith('id_'):
         # Choice question fields, they are always generated from POST contents,
         # as their 'content' is editable and they're reorderable.
         # Also get its field index for handling reordering.
         name, number = key[3:].replace('__field', '').rsplit('_', 1)
+
         if name not in schema:
           if 'NEW_' + name in POST:
-            # New Choice question, set generic type and get its index
+            # new Choice question, set generic type and get its index
             schema[name] = {'type': 'choice'}
             schema[name]['index'] = int(POST['index_for_' + name])
+
         if name in schema and schema[name]['type'] in CHOICE_TYPES:
-          # Build an index:content dictionary
+          # build an index:content dictionary
           if name in survey_fields:
             if value not in survey_fields[name]:
               survey_fields[name][int(number)] = value
           else:
             survey_fields[name] = {int(number): value}
 
-      elif key.startswith('survey__'):
-        # New Text question
+      elif key.startswith('survey__'): # new Text question
         # This is super ugly but unless data is serialized the regex
         # is needed
         prefix = re.compile('survey__([0-9]{1,3})__')
         prefix_match = re.match(prefix, key)
+
         index = prefix_match.group(0).replace('survey', '').replace('__','')
         index = int(index)
+
         field_name = prefix.sub('', key)
         field = 'id_' + key
+
         for ptype in PROPERTY_TYPES:
           # should only match one
           if ptype + "__" in field_name:
@@ -463,6 +486,7 @@ class View(base.View):
             schema[field_name] = {}
             schema[field_name]["index"] = index
             schema[field_name]["type"] = ptype
+
         survey_fields[field_name] = value
 
   def getSchemaOptions(self, schema, survey_fields, POST):
@@ -470,34 +494,44 @@ class View(base.View):
     """
 
     RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
+
     for key in schema:
       if schema[key]['type'] in CHOICE_TYPES and key in survey_fields:
-        # Handle reordering fields
-        ordered = False
+
+        # get choice type
         type_for = 'type_for_' + key
         if type_for in POST:
           schema[key]['type'] = POST[type_for]
+
+        # get choice render
         render_for = 'render_for_' + key
         if render_for in POST:
           schema[key]['render'] = RENDER[POST[render_for]]
+
+        # handle reordering fields
+        ordered = False
         order = 'order_for_' + key
         if order in POST and isinstance(survey_fields[key], dict):
+          order = POST[order]
+
           # 'order_for_name' is jquery serialized from a sortable, so it's in
           # a 'name[]=1&name[]=2&name[]=0' format ('id-li-' is set in our JS)
-          order = POST[order]
           order = order.replace('id-li-%s[]=' % key, '')
           order = order.split('&')
+
           if len(order) == len(survey_fields[key]) and order[0]:
             order = [int(number) for number in order]
+
             if set(order) == set(survey_fields[key]):
               survey_fields[key] = [survey_fields[key][i] for i in order]
               ordered = True
+
           if not ordered:
-            # We don't have a good ordering to use
+            # we don't have a good ordering to use
             ordered = sorted(survey_fields[key].items())
             survey_fields[key] = [value for index, value in ordered]
 
-      # Set 'question' entry (free text label for question) in schema
+      # set 'question' entry (free text label for question) in schema
       question_for = 'NEW_' + key
       if question_for in POST:
         schema[key]["question"] = POST[question_for]
@@ -507,7 +541,8 @@ class View(base.View):
     """
 
     context['question_types'] = QUESTION_TYPES
-    # Avoid spurious results from showing on creation
+
+    # avoid spurious results from showing on creation
     context['new_survey'] = True
     return super(View, self).createGet(request, context, params, seed)
 
@@ -517,11 +552,9 @@ class View(base.View):
     Builds the SurveyForm that represents the Survey question contents.
     """
 
-    #XXX:ajaksu shoudn't CHOOSE_A_PROJECT_FIELD and CHOOSE_A_GRADE_FIELD
-    # go into a template? Then permission flags on context control display?
+    # TODO(ajaksu) Move CHOOSE_A_PROJECT_FIELD and CHOOSE_A_GRADE_FIELD
+    # to template.
 
-    # jamtoday: template would work, but isn't necessary.
-    # don't understand what you're saying about permissions
     CHOOSE_A_PROJECT_FIELD = """<tr class="role-specific">
     <th><label>Choose Project:</label></th>
     <td>
@@ -530,6 +563,7 @@ class View(base.View):
           <option>Survey Taker's Projects For This Program</option></select>
      </td></tr>
      """
+
     CHOOSE_A_GRADE_FIELD = """<tr class="role-specific">
     <th><label>Assign Grade:</label></th>
     <td>
@@ -542,21 +576,27 @@ class View(base.View):
     self._entity = entity
     survey_content = entity.survey_content
     user = user_logic.getForCurrentAccount()
+
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user, survey_record=None,
                                      editing=True, read_only=False)
     survey_form.getFields()
+
+    # are grades enabled?
     grades = False
     if survey_content:
       grades = survey_content.survey_parent.get().has_grades
+
     local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
                 grades=grades, survey_h=entity.survey_content)
     context.update(local)
 
     params['edit_form'] = HelperForm(params['edit_form'])
+
     # activate grades flag
     if request._get.get('activate'):
       self.grade(request)
+
     return super(View, self).editGet(request, entity, context, params=params)
 
   def getMenusForScope(self, entity, params):
@@ -571,17 +611,21 @@ class View(base.View):
 
     entities = self._logic.getForFields(filter)
     submenus = []
-    # add a link to all featured documents
     now = datetime.datetime.now()
+
+    # add a link to all featured documents
     for entity in entities:
-      # Omit if either before opening or after deadline
+      # omit if either before opening or after deadline
       if entity.opening and entity.opening > now:
         continue
+
       if entity.deadline and entity.deadline < now:
         continue
+
       #TODO only if a document is readable it might be added
       submenu = (redirects.getPublicRedirect(entity, self._params),
                  entity.short_name, 'show')
+
       submenus.append(submenu)
     return submenus
 
@@ -589,36 +633,42 @@ class View(base.View):
     """This is a hack to support the 'Enable grades' button.
     """
 
-    #XXX Should be removed, as the POST/checkbox way works better and
+    # TODO(ajaksu) Should be removed, as the POST/checkbox way works better and
     # we want to separate grading from non-grading surveys
     path = request.path.replace('/activate/', '/edit/')
+
     return http.HttpResponseRedirect(path + '?activate=1')
 
   def grade(self, request, **kwargs):
     """Updates SurveyRecord's grades for a given Survey.
     """
 
-    #XXX Needs ACL checks
-    #TODO: Move to the survey results page
+    # TODO(ajaksu) needs ACL checks
+    # TODO(ajaksu) move to the survey results page
     prefix = 'id_survey__'
     suffix = '__selection__grade'
+
     survey_key_name = survey_logic.getKeyNameFromPath(request.path)
     survey = Survey.get_by_key_name(survey_key_name)
     return
     for user, grade in request.POST.items():
+
       if user.startswith(prefix):
         user = user.replace(prefix, '').replace(suffix, '')
       else:
         continue
-      # one alternative would be to store the user key as an id attr
+
+      # TODO(ajaksu) One alternative would be to store the user key as an id attr
       # and send it in the request instead of the link_id
       user = User.gql("WHERE link_id = :1", user).get()
       survey_record = SurveyRecord.gql(
           "WHERE user = :1 AND survey = :2", user, survey).get()
+
       if survey_record:
         survey_record.grade = GRADES[grade]
         survey_record.put()
-    #XXX Ditto for this redirect
+
+    #TODO(ajaksu) find elegant alternative for redirect if code gets alive again
     return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
 
 
@@ -652,15 +702,20 @@ def _get_csv_header(sur):
   """
 
   tpl = '# %s: %s\n'
+
+  # add properties
   fields = ['# Melange Survey export for \n#  %s\n#\n' % sur.title]
   fields += [tpl % (k,v) for k,v in sur.toDict().items()]
   fields += [tpl % (f, str(getattr(sur, f))) for f in PLAIN.split()]
   fields += [tpl % (f, str(getattr(sur, f).link_id)) for f in FIELDS.split()]
   fields.sort()
+
+  # add schema
   fields += ['#\n#---\n#\n']
   schema =  sur.survey_content.schema
   indent = '},\n#' + ' ' * 9
   fields += [tpl % ('Schema', schema.replace('},', indent)) + '#\n']
+
   return ''.join(fields).replace('\n', '\r\n')
 
 
@@ -686,15 +741,22 @@ def to_csv(survey):
   except StopIteration:
     # Bail out early if survey_records.run() is empty
     return '', survey.link_id
+
+  # get header and properties
   header = _get_csv_header(survey)
   leading = ['user', 'created', 'modified']
   properties = leading + survey.survey_content.orderedProperties()
+
+  # generate results list
   recs = survey.survey_records.run()
   recs = _get_records(recs, properties)
+
+  # write results to CSV
   output = StringIO.StringIO()
   writer = csv.writer(output)
   writer.writerow(properties)
   writer.writerows(recs)
+
   return header + output.getvalue(), survey.link_id
 
 
