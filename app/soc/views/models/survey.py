@@ -37,7 +37,7 @@ from soc.logic import cleaning
 from soc.logic import dicts
 
 from soc.logic.models.survey import logic as survey_logic
-from soc.logic.models.survey import getRoleSpecificFields, GRADES
+from soc.logic.models.survey import GRADES
 from soc.logic.models.user import logic as user_logic
 
 from soc.models.survey import Survey
@@ -255,7 +255,8 @@ class View(base.View):
     if survey.taking_access != "everyone":
       # midterm survey
       # should this be context['survey_form'] ?
-      survey_form = getRoleSpecificFields(survey, user, survey_form)
+      survey_form = surveys.getRoleSpecificFields(survey, user, survey_form, survey_record)
+      
 
     # Set help and status text
     self.setHelpStatus(context, read_only, survey_record, survey_form, survey)

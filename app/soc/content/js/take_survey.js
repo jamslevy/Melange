@@ -16,20 +16,6 @@
 
 $(function () {
 
-var DEFAULT_PROJECT_TEXT = "Choose a Project"; 
-var DEFAULT_GRADE_TEXT = "Choose a Grade"; 
-
-// add initial value to project and grade choice fields
-$('select#id_project').prepend(
-'<option selected="true">' 
-+ DEFAULT_PROJECT_TEXT + 
-'</option>');
-
-$('select#id_grade').prepend(
-'<option selected="true">' 
-+ DEFAULT_GRADE_TEXT + 
-'</option>');
-
 
 
   /*
@@ -55,7 +41,8 @@ $('select#id_grade').prepend(
     });
 
     widget.find('textarea').each(function () {
-      $(this).preserveDefaultText($(this).val()).attr('overflow', 'auto')
+      $(this)
+      .preserveDefaultText($(this).val()).attr('overflow', 'auto')
       .growfield();
     });
 
@@ -75,12 +62,13 @@ $('select#id_grade').prepend(
 
 // validate form 
   $('input[type=submit]').bind('click', function(e) {
-    
-    e.preventDefault();
+    e.preventDefault(); 
     // validate project and grade choice fields
-    if ($('select#id_project') && $('select#id_project').val() == DEFAULT_PROJECT_TEXT)
+    if ($('select#id_project') && 
+    $('select#id_project').val() == 'None')
     return alert('Please Choose a Project');
-    if ($('select#id_grade') && $('select#id_grade').val() == DEFAULT_GRADE_TEXT)
+    if ($('select#id_grade') && 
+    $('select#id_grade').val() == 'None')
     return alert('Please Choose a Grade');
    
     $('form').trigger('submit');
