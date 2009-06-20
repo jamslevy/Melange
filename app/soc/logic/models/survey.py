@@ -228,37 +228,6 @@ class Logic(work.Logic):
 logic = Logic()
 
 
-def getRoleSpecificFields(survey, user, survey_form):
-  # Serves as both access handler and retrieves projects for selection
-  from django import forms
-  field_count = len(eval(survey.survey_content.schema).items())
-  these_projects = logic.getProjects(survey, user)
-  if not these_projects: return False # no projects found
-
-  project_pairs = []
-  #insert a select field with options for each project
-  for project in these_projects:
-    project_pairs.append((project.key(), project.title))
-  if project_pairs:
-    # add select field containing list of projects
-    survey_form.fields.insert(0, 'project',
-                            forms.fields.ChoiceField(
-                                choices=tuple(project_pairs),
-                                required=True, 
-                                widget=forms.Select())
-                            )
-  if survey.taking_access == "mentor":
-    # if this is a mentor, add a field
-    # determining if student passes or fails
-    # Activate grades handler should determine whether new status
-    # is midterm_passed, final_passed, etc.
-    choices = (('pass', 'Pass'), ('fail', 'Fail'))
-    grade_field = forms.fields.ChoiceField(choices=choices,
-                                           required=True,
-                                           widget=forms.Select())
-    survey_form.fields.insert(field_count + 1, 'grade', grade_field)
-
-  return survey_form
 
 
 class ResultsLogic(work.Logic):

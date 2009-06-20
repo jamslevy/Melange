@@ -36,7 +36,7 @@ from google.appengine.ext.db import djangoforms
 
 from soc.logic import dicts
 from soc.logic.lists import Lists
-from soc.logic.models.survey import results_logic
+from soc.logic.models.survey import logic as survey_logic, results_logic
 from soc.models.survey import SurveyContent
 
 
@@ -428,3 +428,62 @@ class SurveyResults(widgets.Widget):
     markup = loader.render_to_string('soc/survey/results.html',
                                      dictionary=context).strip('\n')
     return markup
+
+
+
+
+
+
+
+def getRoleSpecificFields(survey, user, survey_form, survey_record):
+  # Serves as both access handler and retrieves projects for selection
+  from django import forms
+  field_count = len(eval(survey.survey_content.schema).items())
+  these_projects = survey_logic.getProjects(survey, user)
+  if not these_projects: return False # no projects found
+
+  project_pairs = []
+  #insert a select field with options for each project
+  for project in these_projects:
+    project_pairs.append((project.key(), project.title))
+  if project_pairs:
+    project_tuples = tuple(project_pairs)
+    # add select field containing list of projects
+    projectField =  forms.fields.ChoiceField(
+                              choices=project_tuples,
+                              required=True, 
+                              widget=forms.Select())
+    projectField.choices.insert(0, (None, "Choose a Project")  )
+    if survey_record: 
+      for tup in project_tuples: 
+        if tup[1] == survey_record.project.title:
+          projectField.choices.insert(0, (tup[0],tup[1] + " (Saved)")  )
+          projectField.choices.remove(tup)
+          break;
+
+      
+    survey_form.fields.insert(0, 'project', projectField )
+
+  if survey.taking_access == "mentor":
+    # if this is a mentor, add a field
+    # determining if student passes or fails
+    # Activate grades handler should determine whether new status
+    # is midterm_passed, final_passed, etc.
+    grade_choices = (('pass', 'Pass'), ('fail', 'Fail'))
+    grade_vals = { 'pass': True, 'fail': False }
+    gradeField = forms.fields.ChoiceField(choices=grade_choices,
+                                           required=True,
+                                           widget=forms.Select())
+
+    gradeField.choices.insert(0, (None, "Choose a Grade")  )
+    if survey_record: 
+      for g in grade_choices: 
+        if grade_vals[g[0]] == survey_record.grade:
+          gradeField.choices.insert(0, (g[0],g[1] + " (Saved)")   )
+          gradeField.choices.remove(g)
+          break;
+      gradeField.show_hidden_initial = True
+      
+    survey_form.fields.insert(field_count + 1, 'grade', gradeField)
+
+  return survey_form
