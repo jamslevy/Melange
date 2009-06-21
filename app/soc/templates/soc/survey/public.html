@@ -15,9 +15,11 @@ limitations under the License.
 
 {% block scripts %}
 {{ block.super }}
+
 <script type="text/javascript" src="/soc/content/js/take_survey.js"></script>
 <script type="text/javascript" src="/soc/content/js/default-text.js"></script>
 <script type="text/javascript" src="/soc/content/js/jquery.growfield.packed-trunk.js"></script>
+
 {% endblock %}
 
 {% block page_title %}
@@ -33,36 +35,41 @@ limitations under the License.
 
 {% if survey_form %}
 
-{% load forms_helpers %}
+  {% load forms_helpers %}
 
-{% if not read_only %}
-<form method="post">
+  {% if not read_only %}
+    <form method="post">
+  {% endif %}
+
+  {% if read_only %}
+    <form method="get" onsubmit="javascript:return false">
+  {% endif %}
+
+  {{ help_text }}
+
+  <div class="{{ status }}" id="survey_widget">
+    <table>
+
+      {% block form_table %}
+        {% as_table survey_form %}
+      {% endblock %}
+
+    </table>
+  </div>
+
+  <table>
+    <tbody>
+      <tr>
+        <td>
+          {% if not read_only %}
+            <input type="submit" value="Submit" style="font-weight: bold;"/>
+          {% endif %}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+    </form>
 {% endif %}
 
-{% if read_only %}
-<form method="get" onsubmit="javascript:return false">
-{% endif %}
-{{ help_text }}
-<div class="{{ status }}" id="survey_widget">
-<table>
-{% block form_table %}
-
-{% as_table survey_form %}
-
-{% endblock %}
-</table>
- </div>
-<table>
-<tbody>
-<tr> <td>
-{% if not read_only %}
-<input type="submit" value="Submit" style="font-weight: bold;"/>
-{% endif %}
-</td>
-</tr>
-</tbody>
-</table>
-
-</form>
-{% endif %}
 {% endblock %}
