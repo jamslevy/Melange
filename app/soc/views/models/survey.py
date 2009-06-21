@@ -603,6 +603,11 @@ class View(base.View):
     """List featured surveys iff after the opening date and before deadline.
     """
 
+    # only list surveys for registered users
+    user = user_logic.getForCurrentAccount()
+    if not user:
+      return []
+
     filter = {
         'prefix' : params['url_name'],
         'scope_path': entity.key().id_or_name(),
@@ -613,8 +618,33 @@ class View(base.View):
     submenus = []
     now = datetime.datetime.now()
 
+    # cache ACL
+    survey_rights = {}
+
     # add a link to all featured documents
     for entity in entities:
+
+      # only list those surveys the user can read
+      if entity.read_access not in survey_rights:
+
+        params = dict(prefix=entity.prefix, scope_path=entity.scope_path,
+                      link_id=entity.link_id, user=user)
+
+        # TODO(ajaksu) use access.Checker.checkIsSurveyReadable
+        checker = access.rights_logic.Checker(entity.prefix)
+        roles = checker.getMembership(entity.read_access)
+        rights = self._params['rights']
+        can_read = access.Checker.hasMembership(rights, roles, params)
+
+        # cache ACL for a give entity.read_access
+        survey_rights[entity.read_access] = can_read
+
+        if not can_read:
+          continue
+
+      elif not survey_rights[entity.read_access]:
+        continue
+
       # omit if either before opening or after deadline
       if entity.opening and entity.opening > now:
         continue

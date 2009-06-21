@@ -71,23 +71,18 @@ class Logic():
       
       url_name = CUSTOM_URL_NAMES.get(sender.kind().lower())
       if not url_name: url_name = sender.kind().lower()
-      
-      new_feed_item = soc.models.news_feed.FeedItem( 
-      sender_key= str(sender.key()),      # .should this just be key or key_name?
-      receiver_key = str(receiver.key()),
-      user = user,
-      update_type = update_type,
-      link = "/%s/show/%s" % (url_name, sender.key().name() ) 
-      )
-      if payload: new_feed_item.payload = payload
-      save_items.append(new_feed_item)
-    db.put(save_items)  
-    
 
-  def addToFeedTask(self):
-    """TaskQueue method to add item to newsfeed
-    """
-    pass
+      #new_feed_item = soc.models.news_feed.FeedItem(
+      #sender_key= str(sender.key()),      # .should this just be key or key_name?
+      #receiver_key = str(receiver.key()),
+      #user = user,
+      #update_type = update_type,
+      #link = "/%s/show/%s" % (url_name, sender.key().name() )
+      #)
+      #if payload: new_feed_item.payload = payload
+      #save_items.append(new_feed_item)
+    db.put(save_items)
+
 
 
   def retrieveFeed(self, entity, count=10):

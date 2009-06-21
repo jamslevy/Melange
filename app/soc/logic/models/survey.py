@@ -174,7 +174,7 @@ class Logic(work.Logic):
     """See base.Logic.isDeletable.
     """
 
-    return not entity.home_for
+    return True
 
   def _updateField(self, entity, entity_properties, name):
     """Special logic for role.
