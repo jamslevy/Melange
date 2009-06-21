@@ -30,7 +30,9 @@ from django import forms
 from django.forms import widgets
 from django.forms.fields import CharField
 from django.template import loader
+from django.utils.encoding import force_unicode
 from django.utils.html import escape
+from django.utils.safestring import mark_safe
 
 from google.appengine.ext.db import djangoforms
 
@@ -101,16 +103,19 @@ class SurveyForm(djangoforms.ModelForm):
 
     # Add unordered fields to self.survey_fields
     for field in self.survey_content.dynamic_properties():
+
       if has_record and hasattr(self.survey_record, field):
         # previously entered value
         value = getattr(self.survey_record, field)
       else:
         # use prompts set by survey creator
         value = getattr(self.survey_content, field)
+
       if field not in schema:
         continue #XXX Should we error here?
       elif 'question' in schema[field]:
         label = schema[field].get('question', None) or field
+
       # Dispatch to field-specific methods
       if schema[field]["type"] == "long_answer":
         self.addLongField(field, value, extra_attrs, label=label)
@@ -120,6 +125,9 @@ class SurveyForm(djangoforms.ModelForm):
         self.addSingleField(field, value, extra_attrs, schema, label=label)
       elif schema[field]["type"] == "pick_multi":
         self.addMultiField(field, value, extra_attrs, schema, label=label)
+      elif schema[field]["type"] == "pick_quant":
+        self.addQuantField(field, value, extra_attrs, schema, label=label)
+
     return self.insertFields()
 
   def insertFields(self):
@@ -211,6 +219,31 @@ class SurveyForm(djangoforms.ModelForm):
                              initial=value)
     self.survey_fields[field] = question
 
+  def addQuantField(self, field, value, attrs, schema, req=False, label='',
+                    tip=''):
+    """Add a pick_quant field to this form.
+
+    Widget depends on whether we're editing or displaying the survey taking UI.
+    """
+
+    if self.editing:
+      kind = schema[field]["type"]
+      render = schema[field]["render"]
+      widget = UniversalChoiceEditor(kind, render)
+    else:
+      widget = WIDGETS[schema[field]['render']](attrs=attrs)
+    if self.survey_record:
+      value = value
+    else:
+      value = None
+    these_choices = [(v,v) for v in getattr(self.survey_content, field)]
+    if not tip:
+      tip = 'Testing Tooltip for Multiple Choices!'
+    question = PickQuantField(help_text=tip, required=req, label=label,
+                             choices=tuple(these_choices), widget=widget,
+                             initial=value)
+    self.survey_fields[field] = question
+
   class Meta(object):
     model = SurveyContent
     exclude = ['schema']
@@ -221,49 +254,6 @@ class UniversalChoiceEditor(widgets.Widget):
 
   Allows adding and removing options, re-ordering and editing option text.
   """
-
-  # Template for each option
-  CHOICE_TPL = u'''
-    <li id="id-li-%(name)s_%(i)s" class="ui-state-default sortable_li">
-      <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
-      <span id="%(id_)s" class="editable_option" name="(id_)s__field">
-        %(o_val)s
-      </span>
-      <input type="hidden" id="%(id_)s__field"
-       name="%(id_)s__field" value="%(o_val)s"/>
-    </li>
-  '''
-  # Question type drop-down
-  TYPE_TPL = '''
-  <label for="type_for_%(name)s">Question Type</label>
-  <select id="type_for_%(name)s" name="type_for_%(name)s">
-    <option value="selection" %(is_selection)s>selection</option>
-    <option value="pick_multi" %(is_pick_multi)s>pick_multi</option>
-  </select>
-  '''
-  # Render widget drop-down
-  RENDER_TPL = '''
-  <label for="render_for_%(name)s">Render as</label>
-  <select id="render_for_%(name)s" name="render_for_%(name)s">
-    <option value="select" %(is_select)s>select</option>
-    <option value="checkboxes" %(is_checkboxes)s>checkboxes</option>
-  </select>
-  '''
-  # Each choice field has a hidden input where its 'question' is stored.
-  # Open the ordered list.
-  HEADER_TPL = '''
-  <input type="hidden" id="order_for_%(name)s"
-  name="order_for_%(name)s" value=""/>
-  <ol id="%(name)s" class="sortable">
-  '''
-  # Close the ordered list and add the 'add option' button.
-  BUTTON_FOOTER = '''
-  </ol>
-  <button name="create-option-button" id="create-option-button__%(name)s"
-   class="ui-button ui-state-default ui-corner-all" value="%(name)s"
-   onClick="return false;">Create new option</button>
-   \n</fieldset>
-  '''
 
   def __init__(self, kind, render, attrs=None, choices=()):
     self.attrs = attrs or {}
@@ -280,27 +270,24 @@ class UniversalChoiceEditor(widgets.Widget):
     final_attrs = self.build_attrs(attrs, name=name)
     selected = 'selected="selected"'
     # Find out which options should be selected in type and render drop-downs.
-    render_kind =  dict(
+    context =  dict(
         name=name,
         is_selection=selected * (self.kind == 'selection'),
         is_pick_multi=selected * (self.kind == 'pick_multi'),
+        is_pick_quant=selected * (self.kind == 'pick_quant'),
         is_select=selected * (self.render_as == 'single_select'),
         is_checkboxes=selected * (self.render_as == 'multi_checkbox'),
+        is_radio_buttons=selected * (self.render_as == 'quant_radio'),
         )
-    output = [u'<fieldset>']
-    output.append(self.TYPE_TPL %  render_kind)
-    output.append(self.RENDER_TPL % render_kind)
-    output.append(self.HEADER_TPL % render_kind)
     str_value = forms.util.smart_unicode(value) # Normalize to string.
     chained_choices = enumerate(chain(self.choices, choices))
-    id_ = 'id_%s_%s'
+    choices = {}
     for i, (option_value, option_label) in chained_choices:
-      tmp = []
       option_value = escape(forms.util.smart_unicode(option_value))
-      vals = dict(id_= id_ % (name, i), name=name, i=i, o_val=option_value)
-      output.append(self.CHOICE_TPL % vals)
-    output.append(self.BUTTON_FOOTER % render_kind)
-    return u'\n'.join(output)
+      choices[i] = option_value
+    context['choices'] = choices
+    template = 'soc/survey/universal_choice_editor.html'
+    return loader.render_to_string(template, context)
 
 class PickOneField(forms.ChoiceField):
   """Stub for customizing the single choice field.
@@ -316,6 +303,14 @@ class PickManyField(forms.MultipleChoiceField):
 
   def __init__(self, *args, **kwargs):
     super(PickManyField, self).__init__(*args, **kwargs)
+
+
+class PickQuantField(forms.MultipleChoiceField):
+  """Stub for customizing the multiple choice field.
+  """
+
+  def __init__(self, *args, **kwargs):
+    super(PickQuantField, self).__init__(*args, **kwargs)
 
 
 class PickOneSelect(forms.Select):
@@ -377,9 +372,33 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
   id_for_label = classmethod(id_for_label)
 
 
+class PickQuantRadioRenderer(widgets.RadioFieldRenderer):
+  """Used by PickQuantRadio to enable customization of radio widgets.
+  """
+
+  def __init__(self, *args, **kwargs):
+    super(PickQuantRadioRenderer, self).__init__(*args, **kwargs)
+
+  def render(self):
+    """Outputs set of radio fields in a div.
+    """
+
+    return mark_safe(u'<div class="quant_radio">\n%s\n</div>'
+                     % u'\n'.join([u'%s' % force_unicode(w) for w in self]))
+
+
+class PickQuantRadio(forms.RadioSelect):
+
+  renderer = PickQuantRadioRenderer
+
+  def __init__(self, *args, **kwargs):
+    super(PickQuantRadio, self).__init__(*args, **kwargs)
+
+
 # In the future, we'll have more widget types here
 WIDGETS = {'multi_checkbox': PickManyCheckbox,
-           'single_select': PickOneSelect}
+           'single_select': PickOneSelect,
+           'quant_radio': PickQuantRadio}
 
 
 class SurveyResults(widgets.Widget):
@@ -451,17 +470,17 @@ def getRoleSpecificFields(survey, user, survey_form, survey_record):
     # add select field containing list of projects
     projectField =  forms.fields.ChoiceField(
                               choices=project_tuples,
-                              required=True, 
+                              required=True,
                               widget=forms.Select())
     projectField.choices.insert(0, (None, "Choose a Project")  )
-    if survey_record: 
-      for tup in project_tuples: 
+    if survey_record:
+      for tup in project_tuples:
         if tup[1] == survey_record.project.title:
           projectField.choices.insert(0, (tup[0],tup[1] + " (Saved)")  )
           projectField.choices.remove(tup)
           break;
 
-      
+
     survey_form.fields.insert(0, 'project', projectField )
 
   if survey.taking_access == "mentor":
@@ -476,14 +495,14 @@ def getRoleSpecificFields(survey, user, survey_form, survey_record):
                                            widget=forms.Select())
 
     gradeField.choices.insert(0, (None, "Choose a Grade")  )
-    if survey_record: 
-      for g in grade_choices: 
+    if survey_record:
+      for g in grade_choices:
         if grade_vals[g[0]] == survey_record.grade:
           gradeField.choices.insert(0, (g[0],g[1] + " (Saved)")   )
           gradeField.choices.remove(g)
           break;
       gradeField.show_hidden_initial = True
-      
+
     survey_form.fields.insert(field_count + 1, 'grade', gradeField)
 
   return survey_form
