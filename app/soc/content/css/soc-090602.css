@@ -684,6 +684,14 @@ div #survey_widget  td.formfieldlabel {
 font-size:medium;
 }
 
+#survey_widget.view input[disabled="disabled"],
+#survey_widget.view textarea[disabled="disabled"],
+#survey_widget.view select[disabled="disabled"],
+#survey_widget.view option {
+  color: black;
+}
+
+
 /* options */
 
 div #survey_options button {

@@ -174,8 +174,11 @@ $(function () {
     // Add list/choice-field item to survey
     $('[name=create-option-button]').each(function () {
       $(this).click(function () {
-        $('#new_item_field_ul_id').val($(this).parent('fieldset').children('ol').attr('id'));
-        $("#new_item_dialog").dialog('open').find('input').focus();
+      var new_option_val = $('#new_item_field_ul_id');
+      var new_option_dialog = $("#new_item_dialog");
+
+      new_option_val.val($(this).parents('fieldset').children('ol').attr('id'));
+      new_option_dialog.dialog('open').find('input:first').focus();
       })
     .hover(function () {
         $(this).addClass("ui-state-hover");
@@ -376,8 +379,8 @@ $(function () {
             '__field">' + name + '</span>' + '<input type="hidden" id="' +
             id_ + '__field" name="' + id_ + '__field" value="' + name +
             '" >' + '</li>')
-        ol.append(option_html.prepend(del_li.join(option_html.attr('id')))); 
-        ol.sortable().disableSelection(); 
+        ol.append(option_html.prepend(del_li.join(option_html.attr('id'))));
+        ol.sortable().disableSelection();
         $('#new_item_name').val('');
         $('#new_item_field_ol_id').val('');
         $(this).dialog('close');
