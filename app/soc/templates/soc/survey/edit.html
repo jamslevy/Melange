@@ -168,13 +168,20 @@ Please use this form to edit the {{ entity_type }}.
   <form>
     <fieldset style="width: 50px;">
 
-      <label for="new_question_name">Name (link_id-like)</label>
+      <label for="new_question_name">ID (link_id-like)</label>
       <input type="text" name="new_question_name" id="new_question_name"
        class="text ui-widget-content ui-corner-all" value="" />
 
-      <label for="new_question_name">Content</label>
+      <label for="new_question_content">Title</label>
       <input type="text" name="new_question_content" id="new_question_content"
        class="text ui-widget-content ui-corner-all" value="" />
+
+      <div id='question_options_div'>
+        <label for="new_question_options">Options</label>
+        <textarea name="new_question_options"
+         id="new_question_options" class="text ui-widget-content ui-corner-all"
+         rows="10" cols="20"></textarea>
+      </div>
 
      </fieldset>
   </form>

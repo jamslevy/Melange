@@ -692,6 +692,10 @@ font-size:medium;
 }
 
 
+#survey_widget .quant_radio input, #survey_widget .quant_radio label {
+  display: inline;
+}
+
 /* options */
 
 div #survey_options button {

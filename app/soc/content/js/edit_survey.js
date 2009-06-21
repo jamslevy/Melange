@@ -57,7 +57,7 @@ $(function () {
   if (survey_html && survey_html.length > 1) {
     widget.html(survey_html); // we don't need to re-render HTML
 
-    widget.find('textarea,input').each(function () {
+    widget.find('.long_answer,input').each(function () {
       $(this).val($(this).attr('val'));
     });
   }
@@ -133,7 +133,7 @@ $(function () {
       }
     });
 
-    widget.find('textarea').each(function () {
+    widget.find('.long_answer').each(function () {
       if ($(this).val().length < 1 || $(this).val() === DEFAULT_LONG_ANSWER_TEXT) {
         $(this).preserveDefaultText(DEFAULT_LONG_ANSWER_TEXT);
       }
@@ -197,7 +197,15 @@ $(function () {
     options.find('.AddQuestion').click(function (e) {
       // Choose a field type
       $("#new_question_button_id").val($(this).attr('id'));
-      $("#new_question_dialog").dialog('open').find('input').focus();
+      var question_options_div = $('#question_options_div');
+      if ($(this).attr('id') === 'choice')  {
+        question_options_div.show();
+      }
+      else {
+        question_options_div.hide();
+      }
+
+      $("#new_question_dialog").dialog('open').find('input:first').focus();
     });
   }).trigger('init');
 
@@ -255,7 +263,7 @@ $(function () {
     */
 
     // save field vals
-    widget.find('textarea,input').each(function () {
+    widget.find('.long_answer,input').each(function () {
       $(this).attr('val', $(this).val());
     });
 
@@ -269,7 +277,7 @@ $(function () {
     });
 
     // don't save default value
-    widget.find('textarea').each(function () {
+    widget.find('.long_answer').each(function () {
       if ($(this).val() === DEFAULT_LONG_ANSWER_TEXT) {
         $(this).val('');
       }
@@ -400,7 +408,7 @@ $(function () {
   $("#new_question_dialog").dialog({
     bgiframe: true,
     autoOpen: false,
-    height: 300,
+    height: 400,
     modal: true,
     buttons: {
       'Add question': function () {
@@ -410,9 +418,11 @@ $(function () {
         var field_template =  $("<tr><th><label>" + del_el + "</label></th><td>  </td></tr>");
         var field_name = $("#new_question_name").val();
         var question_content = $("#new_question_content").val();
+        var question_options = $("#new_question_options").val();
         if (field_name !== '') {
           $("#new_question_name").val('');
           $("#new_question_content").val('');
+          $("#new_question_options").val('');
           var new_field = false;
           var type = button_id + "__";
           var field_count = survey_table.find('tr').length;
@@ -469,9 +479,35 @@ $(function () {
               $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
               field_template.find('label').attr('for', 'NEW_' + name)
               .append(question_content + ":").end().find('td').append(new_field);
-              survey_table.append(field_template).trigger('init');
+              survey_table.append(field_template).trigger('init').end();
 
+              if (question_options) {
+
+
+                var options_array = question_options.split('\n');
+                var ol = $('#' + name);
+                var length = options_array.length;
+                var oname = '';
+                var id_ = '';
+                var option_html = '';
+
+                for (var i = 0; i < length; i = i + 1) {
+                  id_ = 'id_' + name + '_' + i;
+                  oname = options_array[i];
+                  option_html = $('<li id="id-li-' + name + '_' + i +
+                  '" class="ui-state-defaolt sortable_li">' +
+                  '<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>' +
+                  '<span id="' + id_ + '" class="editable_option" name="' + id_ +
+                  '__field">' + oname + '</span>' + '<input type="hidden" id="' +
+                  id_ + '__field" name="' + id_ + '__field" value="' + oname +
+                  '" >' + '</li>')
+                  ol.append(option_html.prepend(
+                    del_li.join(option_html.attr('id'))));
+                  ol.sortable().disableSelection();
+                }
+              }
             }
+
             else {
               new_field = $(new_field);
               // maybe the name should be serialized in a more common format
@@ -486,12 +522,14 @@ $(function () {
         }
         $("#new_question_name").val('');
         $("#new_question_content").val('');
+        $("#new_question_options").val('');
         $(this).dialog('close');
       },
       Cancel: function () {
         $('#new_question_name').val('');
         $("#new_question_button_id").val('');
         $("#new_question_content").val('');
+        $("#new_question_options").val('');
         $(this).dialog('close');
       }
     }

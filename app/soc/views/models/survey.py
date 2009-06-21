@@ -49,7 +49,7 @@ from soc.views.helper import widgets
 from soc.views.models import base
 
 
-CHOICE_TYPES = set(('selection', 'pick_multi', 'choice'))
+CHOICE_TYPES = set(('selection', 'pick_multi', 'choice', 'pick_quant'))
 TEXT_TYPES = set(('long_answer', 'short_answer'))
 PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
 _short_answer = ("Short Answer",
@@ -493,7 +493,8 @@ class View(base.View):
     """Get question, type, rendering and option order for choice questions.
     """
 
-    RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select'}
+    RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select',
+              'radio_buttons': 'quant_radio'}
 
     for key in schema:
       if schema[key]['type'] in CHOICE_TYPES and key in survey_fields:
