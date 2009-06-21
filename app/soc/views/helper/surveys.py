@@ -255,51 +255,6 @@ class UniversalChoiceEditor(widgets.Widget):
   Allows adding and removing options, re-ordering and editing option text.
   """
 
-  # Template for each option
-  CHOICE_TPL = u'''
-    <li id="id-li-%(name)s_%(i)s" class="ui-state-default sortable_li">
-      <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
-      <span id="%(id_)s" class="editable_option" name="(id_)s__field">
-        %(o_val)s
-      </span>
-      <input type="hidden" id="%(id_)s__field"
-       name="%(id_)s__field" value="%(o_val)s"/>
-    </li>
-  '''
-  # Question type drop-down
-  TYPE_TPL = '''
-  <label for="type_for_%(name)s">Question Type</label>
-  <select id="type_for_%(name)s" name="type_for_%(name)s">
-    <option value="selection" %(is_selection)s>selection</option>
-    <option value="pick_multi" %(is_pick_multi)s>pick_multi</option>
-    <option value="pick_quant" %(is_pick_quant)s>pick_quant</option>
-  </select>
-  '''
-  # Render widget drop-down
-  RENDER_TPL = '''
-  <label for="render_for_%(name)s">Render as</label>
-  <select id="render_for_%(name)s" name="render_for_%(name)s">
-    <option value="select" %(is_select)s>select</option>
-    <option value="checkboxes" %(is_checkboxes)s>checkboxes</option>
-    <option value="radio_buttons" %(is_radio_buttons)s>radio_buttons</option>
-  </select>
-  '''
-  # Each choice field has a hidden input where its 'question' is stored.
-  # Open the ordered list.
-  HEADER_TPL = '''
-  <input type="hidden" id="order_for_%(name)s"
-  name="order_for_%(name)s" value=""/>
-  <ol id="%(name)s" class="sortable">
-  '''
-  # Close the ordered list and add the 'add option' button.
-  BUTTON_FOOTER = '''
-  </ol>
-  <button name="create-option-button" id="create-option-button__%(name)s"
-   class="ui-button ui-state-default ui-corner-all" value="%(name)s"
-   onClick="return false;">Create new option</button>
-   \n</fieldset>
-  '''
-
   def __init__(self, kind, render, attrs=None, choices=()):
     self.attrs = attrs or {}
     # choices can be any iterable, but we may need to render this widget
@@ -315,7 +270,7 @@ class UniversalChoiceEditor(widgets.Widget):
     final_attrs = self.build_attrs(attrs, name=name)
     selected = 'selected="selected"'
     # Find out which options should be selected in type and render drop-downs.
-    render_kind =  dict(
+    context =  dict(
         name=name,
         is_selection=selected * (self.kind == 'selection'),
         is_pick_multi=selected * (self.kind == 'pick_multi'),
@@ -324,20 +279,15 @@ class UniversalChoiceEditor(widgets.Widget):
         is_checkboxes=selected * (self.render_as == 'multi_checkbox'),
         is_radio_buttons=selected * (self.render_as == 'quant_radio'),
         )
-    output = [u'<fieldset>']
-    output.append(self.TYPE_TPL %  render_kind)
-    output.append(self.RENDER_TPL % render_kind)
-    output.append(self.HEADER_TPL % render_kind)
     str_value = forms.util.smart_unicode(value) # Normalize to string.
     chained_choices = enumerate(chain(self.choices, choices))
-    id_ = 'id_%s_%s'
+    choices = {}
     for i, (option_value, option_label) in chained_choices:
-      tmp = []
       option_value = escape(forms.util.smart_unicode(option_value))
-      vals = dict(id_= id_ % (name, i), name=name, i=i, o_val=option_value)
-      output.append(self.CHOICE_TPL % vals)
-    output.append(self.BUTTON_FOOTER % render_kind)
-    return u'\n'.join(output)
+      choices[i] = option_value
+    context['choices'] = choices
+    template = 'soc/survey/universal_choice_editor.html'
+    return loader.render_to_string(template, context)
 
 class PickOneField(forms.ChoiceField):
   """Stub for customizing the single choice field.
@@ -430,7 +380,7 @@ class PickQuantRadioRenderer(widgets.RadioFieldRenderer):
     super(PickQuantRadioRenderer, self).__init__(*args, **kwargs)
 
   def render(self):
-    """Outputs a <ul> for this set of radio fields.
+    """Outputs set of radio fields in a div.
     """
 
     return mark_safe(u'<div class="quant_radio">\n%s\n</div>'
