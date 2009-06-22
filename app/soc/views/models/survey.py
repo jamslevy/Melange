@@ -138,7 +138,7 @@ class View(base.View):
          },
         ]
 
-    # survey_html: save survey content when the POST fails, so fields remain in UI
+    # survey_html: save form content if POST fails, so fields remain in UI
     new_params['create_extra_dynaproperties'] = {
         #'survey_content': forms.fields.CharField(widget=surveys.EditSurvey(),
                                                  #required=False),
@@ -449,8 +449,8 @@ class View(base.View):
 
       if key.startswith('id_'):
         # Choice question fields, they are always generated from POST contents,
-        # as their 'content' is editable and they're reorderable.
-        # Also get its field index for handling reordering.
+        # as their 'content' is editable and they're reorderable. Also get
+        # its field index for handling reordering fields later.
         name, number = key[3:].replace('__field', '').rsplit('_', 1)
 
         if name not in schema:
@@ -468,8 +468,7 @@ class View(base.View):
             survey_fields[name] = {int(number): value}
 
       elif key.startswith('survey__'): # new Text question
-        # This is super ugly but unless data is serialized the regex
-        # is needed
+        # this is super ugly but unless data is serialized the regex is needed
         prefix = re.compile('survey__([0-9]{1,3})__')
         prefix_match = re.match(prefix, key)
 
@@ -689,8 +688,8 @@ class View(base.View):
       else:
         continue
 
-      # TODO(ajaksu) One alternative would be to store the user key as an id attr
-      # and send it in the request instead of the link_id
+      # TODO(ajaksu) One alternative would be to store the user key as an id
+      # attr and send it in the request instead of the link_id
       user = User.gql("WHERE link_id = :1", user).get()
       survey_record = SurveyRecord.gql(
           "WHERE user = :1 AND survey = :2", user, survey).get()
@@ -770,7 +769,7 @@ def to_csv(survey):
   try:
     first = survey.survey_records.run().next()
   except StopIteration:
-    # Bail out early if survey_records.run() is empty
+    # bail out early if survey_records.run() is empty
     return '', survey.link_id
 
   # get header and properties
