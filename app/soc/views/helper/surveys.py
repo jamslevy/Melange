@@ -52,7 +52,7 @@ class SurveyForm(djangoforms.ModelForm):
     - User updating already taken survey
 
   Using dynamic properties of the survey model (if passed as an arg) the
-  survey form is dynamically formed
+  survey form is dynamically formed.
   """
 
   def __init__(self, *args, **kwargs):
@@ -66,12 +66,15 @@ class SurveyForm(djangoforms.ModelForm):
     self.survey_content = self.kwargs.get('survey_content', None)
     self.this_user = self.kwargs.get('this_user', None)
     self.survey_record = self.kwargs.get('survey_record', None)
+
     del self.kwargs['survey_content']
     del self.kwargs['this_user']
     del self.kwargs['survey_record']
+
     self.read_only = self.kwargs.get('read_only', None)
     if 'read_only' in self.kwargs:
       del self.kwargs['read_only']
+
     self.editing = self.kwargs.get('editing', None)
     if 'editing' in self.kwargs:
       del self.kwargs['editing']
@@ -86,22 +89,24 @@ class SurveyForm(djangoforms.ModelForm):
 
     if not self.survey_content:
       return
+
     self.survey_fields = {}
     schema = eval(self.survey_content.schema)
     has_record = (not self.editing) and self.survey_record
     extra_attrs = {}
 
-    # Figure out whether we want a read-only view
+    # figure out whether we want a read-only view
     if not self.editing:
-      # Only survey taking can be read-only
+      # only survey taking can be read-only
       read_only = self.read_only
+
       if not read_only:
         deadline = self.survey_content.survey_parent.get().deadline
         read_only =  deadline and (datetime.datetime.now() > deadline)
-      if read_only:
+      else:
         extra_attrs['disabled'] = 'disabled'
 
-    # Add unordered fields to self.survey_fields
+    # add unordered fields to self.survey_fields
     for field in self.survey_content.dynamic_properties():
 
       if has_record and hasattr(self.survey_record, field):
@@ -112,11 +117,11 @@ class SurveyForm(djangoforms.ModelForm):
         value = getattr(self.survey_content, field)
 
       if field not in schema:
-        continue #XXX Should we error here?
+        continue # TODO(ajaksu) should we error here?
       elif 'question' in schema[field]:
         label = schema[field].get('question', None) or field
 
-      # Dispatch to field-specific methods
+      # dispatch to field-specific methods
       if schema[field]["type"] == "long_answer":
         self.addLongField(field, value, extra_attrs, label=label)
       elif schema[field]["type"] == "short_answer":
@@ -135,6 +140,7 @@ class SurveyForm(djangoforms.ModelForm):
     """
 
     survey_order = self.survey_content.getSurveyOrder()
+
     # first, insert dynamic survey fields
     for position, property in survey_order.items():
       self.fields.insert(position, property, self.survey_fields[property])
@@ -145,8 +151,10 @@ class SurveyForm(djangoforms.ModelForm):
     """
 
     widget = widgets.Textarea(attrs=attrs)
+
     if not tip:
       tip = 'Testing Tooltip!'
+
     question = CharField(help_text=tip, required=req, label=label,
                          widget=widget, initial=value)
     self.survey_fields[field] = question
@@ -157,8 +165,10 @@ class SurveyForm(djangoforms.ModelForm):
 
     attrs['class'] = "text_question"
     widget = widgets.TextInput(attrs=attrs)
+
     if not tip:
       tip = 'Testing Tooltip!'
+
     #TODO(ajaksu) max_length should be configurable
     question = CharField(help_text=tip, required=req, label=label,
                          widget=widget, max_length=40, initial=value)
@@ -170,12 +180,14 @@ class SurveyForm(djangoforms.ModelForm):
 
     Widget depends on whether we're editing or displaying the survey taking UI.
     """
+
     if self.editing:
       kind = schema[field]["type"]
       render = schema[field]["render"]
       widget = UniversalChoiceEditor(kind, render)
     else:
       widget = WIDGETS[schema[field]['render']](attrs=attrs)
+
     these_choices = []
     # add all properties, but select chosen one
     options = getattr(self.survey_content, field)
@@ -184,10 +196,12 @@ class SurveyForm(djangoforms.ModelForm):
       these_choices.append((value, value))
       if value in options:
         options.remove(value)
+
     for option in options:
       these_choices.append((option, option))
     if not tip:
       tip = 'Testing Tooltip!'
+
     question = PickOneField(help_text=tip, required=req, label=label,
                             choices=tuple(these_choices), widget=widget)
     self.survey_fields[field] = question
@@ -205,15 +219,18 @@ class SurveyForm(djangoforms.ModelForm):
       widget = UniversalChoiceEditor(kind, render)
     else:
       widget = WIDGETS[schema[field]['render']](attrs=attrs)
+
+    # TODO(ajaksu) need to allow checking checkboxes by default
     if self.survey_record and isinstance(value, basestring):
-      #TODO(ajaksu) Need to allow checking checkboxes by default
-      # Pass as 'initial' so MultipleChoiceField can render checked boxes
+      # pass value as 'initial' so MultipleChoiceField renders checked boxes
       value = value.split(',')
     else:
       value = None
+
     these_choices = [(v,v) for v in getattr(self.survey_content, field)]
     if not tip:
       tip = 'Testing Tooltip for Multiple Choices!'
+
     question = PickManyField(help_text=tip, required=req, label=label,
                              choices=tuple(these_choices), widget=widget,
                              initial=value)
@@ -232,13 +249,16 @@ class SurveyForm(djangoforms.ModelForm):
       widget = UniversalChoiceEditor(kind, render)
     else:
       widget = WIDGETS[schema[field]['render']](attrs=attrs)
+
     if self.survey_record:
       value = value
     else:
       value = None
+
     these_choices = [(v,v) for v in getattr(self.survey_content, field)]
     if not tip:
       tip = 'Testing Tooltip for Multiple Choices!'
+
     question = PickQuantField(help_text=tip, required=req, label=label,
                              choices=tuple(these_choices), widget=widget,
                              initial=value)
@@ -256,8 +276,10 @@ class UniversalChoiceEditor(widgets.Widget):
   """
 
   def __init__(self, kind, render, attrs=None, choices=()):
+
     self.attrs = attrs or {}
-    # choices can be any iterable, but we may need to render this widget
+
+    # Choices can be any iterable, but we may need to render this widget
     # multiple times. Thus, collapse it into a list so it can be consumed
     # more than once.
     self.choices = list(choices)
@@ -265,11 +287,14 @@ class UniversalChoiceEditor(widgets.Widget):
     self.render_as = render
 
   def render(self, name, value, attrs=None, choices=()):
+
     if value is None:
       value = ''
+
     final_attrs = self.build_attrs(attrs, name=name)
+
+    # find out which options should be selected in type and render drop-downs.
     selected = 'selected="selected"'
-    # Find out which options should be selected in type and render drop-downs.
     context =  dict(
         name=name,
         is_selection=selected * (self.kind == 'selection'),
@@ -279,13 +304,16 @@ class UniversalChoiceEditor(widgets.Widget):
         is_checkboxes=selected * (self.render_as == 'multi_checkbox'),
         is_radio_buttons=selected * (self.render_as == 'quant_radio'),
         )
-    str_value = forms.util.smart_unicode(value) # Normalize to string.
+
+    str_value = forms.util.smart_unicode(value) # normalize to string.
     chained_choices = enumerate(chain(self.choices, choices))
     choices = {}
+
     for i, (option_value, option_label) in chained_choices:
       option_value = escape(forms.util.smart_unicode(option_value))
       choices[i] = option_value
     context['choices'] = choices
+
     template = 'soc/survey/universal_choice_editor.html'
     return loader.render_to_string(template, context)
 
@@ -338,18 +366,20 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
       value = []
     has_id = attrs and attrs.has_key('id')
     final_attrs = self.build_attrs(attrs, name=name)
-    # Normalize to strings.
+
+    # normalize to strings.
     str_values = set([forms.util.smart_unicode(v) for v in value])
     is_checked = lambda value: value in str_values
     smart_unicode = forms.util.smart_unicode
 
-    # Set container fieldset and list
+    # set container fieldset and list
     output = [u'<fieldset id="id_%s">\n  <ul class="pick_multi">' % name]
 
-    # Add numbered checkboxes wrapped in list items
+    # add numbered checkboxes wrapped in list items
     chained_choices = enumerate(chain(self.choices, choices))
     for i, (option_value, option_label) in chained_choices:
       option_label = escape(smart_unicode(option_label))
+
       # If an ID attribute was given, add a numeric index as a suffix,
       # so that the checkboxes don't all have the same ID attribute.
       if has_id:
@@ -365,7 +395,7 @@ class PickManyCheckbox(forms.CheckboxSelectMultiple):
     return u'\n'.join(output)
 
   def id_for_label(self, id_):
-    # See the comment for RadioSelect.id_for_label()
+    # see the comment for RadioSelect.id_for_label()
     if id_:
       id_ += '_fieldset'
     return id_
@@ -395,7 +425,7 @@ class PickQuantRadio(forms.RadioSelect):
     super(PickQuantRadio, self).__init__(*args, **kwargs)
 
 
-# In the future, we'll have more widget types here
+# in the future, we'll have more widget types here
 WIDGETS = {'multi_checkbox': PickManyCheckbox,
            'single_select': PickOneSelect,
            'quant_radio': PickQuantRadio}
@@ -422,24 +452,28 @@ class SurveyResults(widgets.Widget):
     updates = dicts.rename(params, params['list_params'])
     content.update(updates)
     contents = [content]
+
     if len(content) == 1:
       content = content[0]
       key_order = content.get('key_order')
 
     context['list'] = Lists(contents)
 
-    #TODO(ajaksu) Is this the best way to build the results list?
+    # TODO(ajaksu) is this the best way to build the results list?
     for list_ in context['list']._contents:
       if len(list_['data']) < 1:
         return "<p>No Survey Results Have Been Submitted</p>"
+
       list_['row'] = 'soc/survey/list/results_row.html'
       list_['heading'] = 'soc/survey/list/results_heading.html'
       list_['description'] = 'Survey Results:'
+
     context['properties'] = survey.survey_content.orderedProperties()
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
     context['grades'] = survey.has_grades
+
     path = (survey.entity_type().lower(), survey.prefix,
             survey.scope_path, survey.link_id)
     context['grade_action'] = "/%s/grade/%s/%s/%s" % path
