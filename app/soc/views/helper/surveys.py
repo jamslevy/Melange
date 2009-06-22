@@ -515,8 +515,10 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
     if this_project:      
       for tup in project_tuples:
         if tup[1] == this_project.title:
-          projectField.choices.insert(0, (tup[0],tup[1] + " (Saved)")  )
+          if survey_record: project_name = tup[1] + " (Saved)"
+          else: project_name = tup[1] 
           projectField.choices.remove(tup)
+          projectField.choices.insert(0, (tup[0], project_name)  )
           break
     survey_form.fields.insert(0, 'project', projectField )
 
