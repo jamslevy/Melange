@@ -65,10 +65,12 @@ class SurveyForm(djangoforms.ModelForm):
     self.kwargs = kwargs
     self.survey_content = self.kwargs.get('survey_content', None)
     self.this_user = self.kwargs.get('this_user', None)
+    self.project = self.kwargs.get('project', None)
     self.survey_record = self.kwargs.get('survey_record', None)
 
     del self.kwargs['survey_content']
     del self.kwargs['this_user']
+    del self.kwargs['project']
     del self.kwargs['survey_record']
 
     self.read_only = self.kwargs.get('read_only', None)
@@ -488,7 +490,7 @@ class SurveyResults(widgets.Widget):
 
 
 
-def getRoleSpecificFields(survey, user, survey_form, survey_record):
+def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record):
   # Serves as both access handler and retrieves projects for selection
   from django import forms
   field_count = len(eval(survey.survey_content.schema).items())
@@ -507,14 +509,15 @@ def getRoleSpecificFields(survey, user, survey_form, survey_record):
                               required=True,
                               widget=forms.Select())
     projectField.choices.insert(0, (None, "Choose a Project")  )
-    if survey_record:
+    # if editing an existing survey
+    if not this_project and survey_record:
+      this_project = survey.record.project
+    if this_project:      
       for tup in project_tuples:
-        if tup[1] == survey_record.project.title:
+        if tup[1] == this_project.title:
           projectField.choices.insert(0, (tup[0],tup[1] + " (Saved)")  )
           projectField.choices.remove(tup)
-          break;
-
-
+          break
     survey_form.fields.insert(0, 'project', projectField )
 
   if survey.taking_access == "mentor":

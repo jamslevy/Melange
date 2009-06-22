@@ -14,7 +14,7 @@
  */
 
 var DEFAULT_LONG_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
-var DEFAULT_SHORT_ANSWER_TEXT = 'Write a Custom Prompt For This Question...';
+var DEFAULT_SHORT_ANSWER_TEXT = 'Write a Custom Prompt...';
 var DEFAULT_OPTION_TEXT = 'Add A New Option...';
 var SURVEY_PREFIX = 'survey__';
 

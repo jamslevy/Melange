@@ -56,8 +56,21 @@ $(function () {
       $(this).find('input').each(function(){
        // if $(this).attr('checked', 'true');});
          });
+    });
       
-  }
+      }
+      
+
+  /*
+  * == Configure Project ==
+  *
+  */      
+  
+  $('select#id_project').change(function(){
+    if ($(this).val() != 'None')
+    window.location=window.location.href.split('?')[0] + "?project=" + $(this).val();
+  });
+      
   /*
   * == Survey Submission Handler ==
   *
@@ -81,7 +94,7 @@ $(function () {
 
     
     
-  $('form').bind('submit', function () {
+  $('form').bind('submit', function() {
 
     $('input#id_s_html').val(
     widget.find('div#survey_options').remove().end().html()

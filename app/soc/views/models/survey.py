@@ -181,28 +181,36 @@ class View(base.View):
   def _public(self, request, entity, context):
     """Survey taking and result display handler.
 
-    For surveys, the "public" page is actually the access-protected
-    survey-taking page. We should use a different method name just to
-    make this clear.
 
     Args:
       request: the django request object
       entity: the entity to make public
       context: the context object
+      
 
-    Renders survey taking widget to HTML.
+    -- Taking Survey Pages Are Not 'Public' --
+    
+    For surveys, the "public" page is actually the access-protected
+    survey-taking page.
 
-    Checks if user has already submitted form. If so, show existing form
-    If we don't want students/mentors to edit the values they've already
-    submitted for a survey, this behavior should be altered.
+    -- SurveyProjectPairs --
+    
+    Each survey can be taken once per user per project.
+    
+    This means that MidtermGSOC2009 can be taken once for a student
+    for a project, and once for a mentor for each project they are
+    mentoring.
+    
+    The project selected while taking a survey determines how this_user
+    SurveyRecord will be linked to other SurveyRecords. 
+    
+    --- Deadlines ---
 
     A deadline can also be used as a conditional for updating values,
     we have a special read_only UI and a check on the POST handler for this.
     Passing read_only=True here allows one to fetch the read_only view.
     """
 
-    # This won't work -- there's *always* a survey entity. We want to
-    # check if there is a survey record from this user.
     survey = entity
     user = user_logic.getForCurrentAccount()
 
@@ -214,21 +222,32 @@ class View(base.View):
     if can_write and read_only and 'user_results' in request.GET:
       user = user_logic.getFromKeyNameOr404(request.GET['user_results'])
 
-    if read_only or len(request.POST) == 0 or not_ready:
-      # not submitting completed survey record OR we're ignoring late submission
+    # get project from GET arg
+    if request._get.get('project'):
+      import soc.models.student_project
+      project = soc.models.student_project.StudentProject.get(
+      request._get.get('project'))
+    else: 
+      project = None
+    if read_only or not_ready:
+      context['notice'] = "Survey Submission Is Now Closed"
       pass
     else:
-      # submitting a completed survey record
-      survey_record = SurveyRecord.gql("WHERE user = :1 AND survey = :2",
-                                       user, survey).get()
-      context['notice'] = "Survey Submission Saved"
-      survey_record = survey_logic.updateSurveyRecord(user, survey,
-                                                        survey_record,
-                                                        request.POST)
+      # check for existing survey_record
+      survey_record = SurveyRecord.all(
+      ).filter("user =", user
+      ).filter("survey =", survey
+      ).filter("project =", project
+      ).get()
+      
+      if len(request.POST) > 0:
+        # save/update the submitted survey
+        context['notice'] = "Survey Submission Saved"
+        survey_record = survey_logic.updateSurveyRecord(user, survey,
+        survey_record, request.POST)
     survey_content = survey.survey_content
-    survey_record = SurveyRecord.gql("WHERE user = :1 AND survey = :2",
-                                     user, survey).get()
 
+    """
     if not survey_record and read_only:
       # no recorded answers, we're either past deadline or want to see answers
       is_same_user = user.key() == user_logic.getForCurrentAccount().key()
@@ -238,9 +257,13 @@ class View(base.View):
         # form as readonly. Otherwise, below, show nothing.
         context["notice"] = "There are no records for this survey and user."
         return False
+    """
 
+    
+    
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user,
+                                     project=project,
                                      survey_record=survey_record,
                                      read_only=read_only,
                                      editing=False)
@@ -248,11 +271,12 @@ class View(base.View):
     if survey.taking_access != "everyone":
       # midterm survey
       # should this be context['survey_form'] ?
-      survey_form = surveys.getRoleSpecificFields(survey, user, survey_form,
-                                                  survey_record)
+      survey_form = surveys.getRoleSpecificFields(survey, user, 
+                                  project, survey_form, survey_record)
 
     # set help and status text
-    self.setHelpStatus(context, read_only, survey_record, survey_form, survey)
+    self.setHelpStatus(context, read_only, 
+    survey_record, survey_form, survey)
 
     if not context['survey_form']:
       access_tpl = "You Must Be a %s to Take This Survey"
@@ -576,9 +600,13 @@ class View(base.View):
     self._entity = entity
     survey_content = entity.survey_content
     user = user_logic.getForCurrentAccount()
+    # no project or survey_record needed for survey prototype 
+    project = None
+    survey_record = None
+    
 
     survey_form = surveys.SurveyForm(survey_content=survey_content,
-                                     this_user=user, survey_record=None,
+                                     this_user=user, project=project, survey_record=survey_record,
                                      editing=True, read_only=False)
     survey_form.getFields()
 
@@ -596,7 +624,7 @@ class View(base.View):
     # activate grades flag
     if request._get.get('activate'):
       self.grade(request)
-
+      
     return super(View, self).editGet(request, entity, context, params=params)
 
   def getMenusForScope(self, entity, params):
@@ -666,8 +694,9 @@ class View(base.View):
     # TODO(ajaksu) Should be removed, as the POST/checkbox way works better and
     # we want to separate grading from non-grading surveys
     path = request.path.replace('/activate/', '/edit/')
-
-    return http.HttpResponseRedirect(path + '?activate=1')
+    if '?' in path: redirect_path = path + '&activate=1'
+    else: redirect_path = path + '?activate=1'
+    return http.HttpResponseRedirect(redirect_path)
 
   def grade(self, request, **kwargs):
     """Updates SurveyRecord's grades for a given Survey.
