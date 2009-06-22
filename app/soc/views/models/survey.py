@@ -268,9 +268,7 @@ class View(base.View):
                                      read_only=read_only,
                                      editing=False)
     survey_form.getFields()
-    if survey.taking_access != "everyone":
-      # midterm survey
-      # should this be context['survey_form'] ?
+    if 'evaluation' in survey.taking_access:
       survey_form = surveys.getRoleSpecificFields(survey, user, 
                                   project, survey_form, survey_record)
 
@@ -279,7 +277,7 @@ class View(base.View):
     survey_record, survey_form, survey)
 
     if not context['survey_form']:
-      access_tpl = "You Must Be a %s to Take This Survey"
+      access_tpl = "This Survey Has Access Limited To %s"
       context["notice"] = access_tpl % survey.taking_access.capitalize()
 
     context['read_only'] = read_only

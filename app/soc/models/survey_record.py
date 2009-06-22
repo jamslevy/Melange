@@ -63,3 +63,30 @@ class SurveyRecord(db.Expando):
     for position, property in survey_order.items():
         values.insert(position, getattr(self, property, None))
     return values
+
+
+
+
+
+class SurveyRecordGroup(db.Expando):
+  """
+
+  Because Mentors and Students take different surveys,
+  we cannot simply link survey records by a common project and survey.
+  
+  Instead, we establish a SurveyRecordGroup.
+  
+  A SurveyRecordGroup links a group of survey records with a common
+  project, and links back to its records. 
+  
+  """
+  # get survey by threading through record:
+  # survey = survey_record_group.mentor_record.survey
+  mentor_record = db.ReferenceProperty(SurveyRecord, required=False,
+                              collection_name='mentor_record_groups')
+  student_record = db.ReferenceProperty(SurveyRecord, required=False,
+                              collection_name='student_record_groups')
+  project = db.ReferenceProperty(soc.models.student_project.StudentProject,
+                                collection_name="survey_record_groups")
+  created = db.DateTimeProperty(auto_now_add=True)
+  modified = db.DateTimeProperty(auto_now=True)

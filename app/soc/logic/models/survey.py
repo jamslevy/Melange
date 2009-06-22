@@ -70,16 +70,18 @@ class Logic(work.Logic):
     db.put(survey_content)
     return survey_content
 
-  def updateSurveyRecord(self, user, survey_entity, survey_record, fields):
+  def updateSurveyRecord(self, user, survey, survey_record, fields):
     """ Create a new survey record, or get an existing one.
     """
 
     if survey_record:
+      create = False
       for prop in survey_record.dynamic_properties():
         delattr(survey_record, prop)
     else:
-      survey_record = SurveyRecord(user=user, survey=survey_entity)
-    schema = eval(survey_entity.survey_content.schema)
+      create = True 
+      survey_record = SurveyRecord(user=user, survey=survey)
+    schema = eval(survey.survey_content.schema)
     for name, value in fields.items():
       if name == 'project':
         project = soc.models.student_project.StudentProject.get(value)
@@ -92,9 +94,75 @@ class Logic(work.Logic):
           setattr(survey_record, name, ','.join(fields.getlist(name)))
         else:
           setattr(survey_record, name, value)
+    # if creating evaluation record, set SurveyRecordGroup
     db.put(survey_record)
+    if 'evaluation' in survey.taking_access and create:
+      if not project: return False
+      role = self.getUserRole(user, survey, project)
+      survey_record_group = self.setSurveyRecordGroup(role, survey,
+      survey_record, project)
+      if survey_record_group:  db.put(survey_record_group)
     return survey_record
 
+
+  def setSurveyRecordGroup(self, role, survey, survey_record, project):
+    from soc.models.survey_record import SurveyRecordGroup
+    group_query = SurveyRecordGroup.all().filter(
+    "project = ", project)
+    if survey.taking_access == 'mentor evaluation':
+      survey_record_group = group_query.filter(
+      "mentor = ", None ).get()
+    if survey.taking_access == 'student evaluation':
+      survey_record_group = group_query.filter(
+      "student = ", None ).get()
+    if not survey_record_group:
+      survey_record_group = SurveyRecordGroup(project=project)
+    if survey.taking_access == 'mentor evaluation':
+      survey_record_group.mentor_record = survey_record
+    if survey.taking_access == 'student evaluation':
+      survey_record_group.student_record = survey_record
+    return survey_record_group
+          
+  def getUserRole(self, user, survey, project):
+    """ sets a SurveyRecordGroup for this SurveyRecord
+    """
+    if survey.taking_access == 'mentor evaluation':
+      mentors = self.getMentorforProject(user, project)
+      if len(mentors) < 1 or len(mentors) > 1: 
+        logging.warning('Unable to determine mentor for \
+        user %s. Results returned: %s ' % (
+        user.key().name(), str(mentors)) )
+        return False
+      this_mentor = mentors[0]
+    if survey.taking_access == 'student evaluation': 
+      students = self.getStudentforProject(user, project)
+      if len(students) < 1 or len(students) > 1: 
+        logging.warning('Unable to determine student for \
+        user %s. Results returned: %s ' % (
+        user.key().name(), str(students)) )
+        return False
+      this_student = students[0]
+      
+      
+  def getStudentforProject(self, user, project):
+      import soc.models.student
+      from soc.logic.models.student import logic as student_logic
+      user_students = student_logic.getForFields({'user': user}) # status=active?
+      if not user_students: return []
+      return set([project.student for project in sum((list(s.student_projects.run()
+      ) for s in user_students), []
+      ) if project.key() == project.key()])
+
+  def getMentorforProject(self, user, project):
+      import soc.models.mentor
+      from soc.logic.models.mentor import logic as mentor_logic
+      user_mentors = mentor_logic.getForFields({'user': user}) # program = program  # status=active?
+      if not user_mentors: return []
+      return set([project.mentor for project in sum((list(mentor.student_projects.run()
+      ) for mentor in user_mentors), []
+       ) if project.key() == project.key()])
+            
+      
   def getKeyNameFromPath(self, path):
     """ Gets survey key name from a request path
     """
@@ -112,9 +180,9 @@ class Logic(work.Logic):
     from settings import DEBUG as debug
     if debug:
       user = self.getDebugUser(survey, this_program)
-    if survey.taking_access == 'mentor':
+    if 'mentor' in survey.taking_access:
       these_projects = self.getMentorProjects(user, this_program)
-    if survey.taking_access == 'student':
+    if 'student' in survey.taking_access:
       these_projects = self.getStudentProjects(user, this_program)
     if len(these_projects) == 0:
       return False
@@ -122,12 +190,12 @@ class Logic(work.Logic):
 
   def getDebugUser(self, survey, this_program):
     # impersonate another user, for debugging
-    if survey.taking_access == 'mentor':
+    if 'mentor' in survey.taking_access:
       from soc.models.mentor import Mentor
       role = Mentor.get_by_key_name(
       this_program.key().name() + "/org_1/test")
 
-    if survey.taking_access == 'student':
+    if 'student' in survey.taking_access:
       from soc.models.student import Student
       role = Student.get_by_key_name(
       this_program.key().name() + "/test")

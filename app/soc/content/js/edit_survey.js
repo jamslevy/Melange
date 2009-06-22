@@ -231,12 +231,12 @@ $(function () {
     var role_specific_fields = survey.find('tr.role-specific');
     role_specific_fields.remove();
     switch (role_type) {
-    case "mentor":
-      survey.prepend(CHOOSE_A_GRADE_FIELD);
+    case "mentor evaluation":
       survey.prepend(CHOOSE_A_PROJECT_FIELD);
+      survey.append(CHOOSE_A_GRADE_FIELD);
       break;
 
-    case "student":
+    case "student evaluation":
       survey.prepend(CHOOSE_A_PROJECT_FIELD);
       break;
     }
