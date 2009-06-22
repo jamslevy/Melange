@@ -26,7 +26,7 @@ import csv
 import datetime
 import re
 import StringIO
-
+import string
 from django import forms
 from django import http
 
@@ -277,8 +277,8 @@ class View(base.View):
     survey_record, survey_form, survey)
 
     if not context['survey_form']:
-      access_tpl = "This Survey Has Access Limited To %s"
-      context["notice"] = access_tpl % survey.taking_access.capitalize()
+      access_tpl = "Access Error: This Survey Is Limited To %s"
+      context["notice"] = access_tpl % string.capwords(survey.taking_access)
 
     context['read_only'] = read_only
     return True
