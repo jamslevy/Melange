@@ -55,7 +55,7 @@ class Logic():
   def addToFeed(self, sender, receivers, update_type, payload=None):
     """ Adds new item to feed for sender, given a list of receievers 
     """
-
+    return # temporary
     from google.appengine.api.labs import taskqueue
     taskqueue.add(url='/addToFeedTask', params={})
 
@@ -72,18 +72,22 @@ class Logic():
       url_name = CUSTOM_URL_NAMES.get(sender.kind().lower())
       if not url_name: url_name = sender.kind().lower()
 
-      #new_feed_item = soc.models.news_feed.FeedItem(
-      #sender_key= str(sender.key()),      # .should this just be key or key_name?
-      #receiver_key = str(receiver.key()),
-      #user = user,
-      #update_type = update_type,
-      #link = "/%s/show/%s" % (url_name, sender.key().name() )
-      #)
-      #if payload: new_feed_item.payload = payload
-      #save_items.append(new_feed_item)
+      new_feed_item = soc.models.news_feed.FeedItem(
+      sender_key= str(sender.key()),      # .should this just be key or key_name?
+      receiver_key = str(receiver.key()),
+      user = user,
+      update_type = update_type,
+      link = "/%s/show/%s" % (url_name, sender.key().name() )
+      )
+      if payload: new_feed_item.payload = payload
+      save_items.append(new_feed_item)
     db.put(save_items)
 
 
+  def addToFeedTask(self):
+    """ Task for adding new feed item 
+    """
+    
 
   def retrieveFeed(self, entity, count=10):
     """ Retrieves feed for a given entity 
