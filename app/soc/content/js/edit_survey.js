@@ -478,7 +478,7 @@ $(function () {
               '" onClick="return false;">Create new option</button>\n</fieldset>');
               $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
               field_template.find('label').attr('for', 'NEW_' + name)
-              .append(question_content + ":").end().find('td').append(new_field);
+              .append(question_content).end().find('td').append(new_field);
               survey_table.append(field_template).trigger('init').end();
 
               if (question_options) {
