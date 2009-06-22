@@ -461,7 +461,7 @@ $(function () {
               '\n  <select id="type_for_' + name + '" name="type_for_' + name + '">' +
               '\n    <option selected="selected" value="selection">selection</option>' +
               '\n    <option value="pick_multi">pick_multi</option>' +
-              '\n  </select>\n  <label for="render_for_' + name + '">Render as</label>' +
+              '\n  </select>\n <br/> <label for="render_for_' + name + '">Render as</label>' +
               '\n  <select id="render_for_' + name + '" name="render_for_' + name + '">' +
               '\n    <option selected="selected" value="select">select</option>' +
               '\n    <option value="checkboxes">checkboxes</option>' +

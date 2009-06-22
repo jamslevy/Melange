@@ -169,7 +169,7 @@ class Logic(work.Logic):
     return '/'.join(path.split('/')[-4:]).split('?')[0]
 
 
-  def getProjects(self, survey, user, debug=False):
+  def getProjects(self, survey, user):
     """
     Get projects linking user to a program.
     Serves as access handler (since no projects == no access)
@@ -177,13 +177,16 @@ class Logic(work.Logic):
 
     """
     this_program = survey.scope
-    from settings import DEBUG as debug
-    if debug:
+    from soc.logic.system import isDebug
+    # just for testing purposes
+    if isDebug():
       user = self.getDebugUser(survey, this_program)
+      logging.info(str(user.__dict__))
     if 'mentor' in survey.taking_access:
       these_projects = self.getMentorProjects(user, this_program)
     if 'student' in survey.taking_access:
       these_projects = self.getStudentProjects(user, this_program)
+    logging.info(these_projects)
     if len(these_projects) == 0:
       return False
     return these_projects
