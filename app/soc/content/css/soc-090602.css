@@ -728,6 +728,14 @@ span.formfieldlabel {
 
 
 .sortable_li {border: solid 1px !important; padding:5px !important;}
+
+
+.sortable_li, div #survey_widget fieldset{
+-moz-border-radius: 5px;
+-webkit-border-radius: 5px;
+}
+
+
 #dialog {font-size: 62.5%;}
 #dialog    label, input { display:block; }
 #dialog p{ text-align:center; padding-left: 0;}
