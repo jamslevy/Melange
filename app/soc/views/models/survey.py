@@ -36,14 +36,17 @@ from soc.cache import home
 from soc.logic import cleaning
 from soc.logic import dicts
 from soc.logic.models.survey import logic as survey_logic
+from soc.logic.models.survey import results_logic
 from soc.logic.models.survey import GRADES
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import Survey
 from soc.models.survey_record import SurveyRecord
 from soc.models.user import User
+from soc.views import out_of_band
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import redirects
+from soc.views.helper import responses
 from soc.views.helper import surveys
 from soc.views.helper import widgets
 from soc.views.models import base
@@ -106,10 +109,13 @@ class View(base.View):
     new_params['extra_django_patterns'] = [
         (r'^%(url_name)s/(?P<access_type>activate)/%(scope)s$',
          'soc.views.models.%(module_name)s.activate',
-         'Create a new %(name)s'),
+         'Activate grades %(name)s'),
          (r'^%(url_name)s/(?P<access_type>grade)/%(scope)s$',
          'soc.views.models.%(module_name)s.grade',
-         'Create a new %(name)s'),
+         'Grade a list of results %(name)s'),
+        (r'^%(url_name)s/(?P<access_type>results)/%(scope)s$',
+         'soc.views.models.%(module_name)s.results',
+         'View survey results %(name)s'),
         ]
 
     new_params['export_content_type'] = 'text/text'
@@ -186,24 +192,24 @@ class View(base.View):
       request: the django request object
       entity: the entity to make public
       context: the context object
-      
+
 
     -- Taking Survey Pages Are Not 'Public' --
-    
+
     For surveys, the "public" page is actually the access-protected
     survey-taking page.
 
     -- SurveyProjectGroups --
-    
+
     Each survey can be taken once per user per project.
-    
+
     This means that MidtermGSOC2009 can be taken once for a student
     for a project, and once for a mentor for each project they are
     mentoring.
-    
+
     The project selected while taking a survey determines how this_user
-    SurveyRecord will be linked to other SurveyRecords. 
-    
+    SurveyRecord will be linked to other SurveyRecords.
+
     --- Deadlines ---
 
     A deadline can also be used as a conditional for updating values,
@@ -222,9 +228,9 @@ class View(base.View):
     if can_write and read_only and 'user_results' in request.GET:
       user = user_logic.getFromKeyNameOr404(request.GET['user_results'])
 
-    if read_only or not_ready:
-      context['notice'] = "Survey Submission Is Now Closed"
-      return True
+    if not_ready and not can_write:
+      context['notice'] = "No survey available."
+      return False
     else:
       # check for existing survey_record
       record_query = SurveyRecord.all(
@@ -236,18 +242,20 @@ class View(base.View):
         project = soc.models.student_project.StudentProject.get(
         request._get.get('project'))
         record_query = record_query.filter("project =", project)
-      else: 
+      else:
         project = None
       survey_record = record_query.get()
-      
-      if len(request.POST) > 0:
+
+      if len(request.POST) < 1 or read_only or not_ready:
+         # not submitting completed survey OR we're ignoring late submission
+        pass
+      else:
         # save/update the submitted survey
         context['notice'] = "Survey Submission Saved"
         survey_record = survey_logic.updateSurveyRecord(user, survey,
         survey_record, request.POST)
     survey_content = survey.survey_content
 
-    """
     if not survey_record and read_only:
       # no recorded answers, we're either past deadline or want to see answers
       is_same_user = user.key() == user_logic.getForCurrentAccount().key()
@@ -257,10 +265,7 @@ class View(base.View):
         # form as readonly. Otherwise, below, show nothing.
         context["notice"] = "There are no records for this survey and user."
         return False
-    """
 
-    
-    
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user,
                                      project=project,
@@ -269,11 +274,11 @@ class View(base.View):
                                      editing=False)
     survey_form.getFields()
     if 'evaluation' in survey.taking_access:
-      survey_form = surveys.getRoleSpecificFields(survey, user, 
+      survey_form = surveys.getRoleSpecificFields(survey, user,
                                   project, survey_form, survey_record)
 
     # set help and status text
-    self.setHelpStatus(context, read_only, 
+    self.setHelpStatus(context, read_only,
     survey_record, survey_form, survey)
 
     if not context['survey_form']:
@@ -599,10 +604,10 @@ class View(base.View):
     self._entity = entity
     survey_content = entity.survey_content
     user = user_logic.getForCurrentAccount()
-    # no project or survey_record needed for survey prototype 
+    # no project or survey_record needed for survey prototype
     project = None
     survey_record = None
-    
+
 
     survey_form = surveys.SurveyForm(survey_content=survey_content,
                                      this_user=user, project=project, survey_record=survey_record,
@@ -623,7 +628,7 @@ class View(base.View):
     # activate grades flag
     if request._get.get('activate'):
       self.grade(request)
-      
+
     return super(View, self).editGet(request, entity, context, params=params)
 
   def getMenusForScope(self, entity, params):
@@ -663,7 +668,7 @@ class View(base.View):
         rights = self._params['rights']
         can_read = access.Checker.hasMembership(rights, roles, params)
 
-        # cache ACL for a give entity.read_access
+        # cache ACL for a given entity.read_access
         survey_rights[entity.read_access] = can_read
 
         if not can_read:
@@ -728,6 +733,56 @@ class View(base.View):
 
     #TODO(ajaksu) find elegant alternative for redirect if code gets alive again
     return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
+
+  @decorators.merge_params
+  @decorators.check_access
+  def viewResults(self, request, access_type, page_name=None,
+                  params=None, **kwargs):
+    """
+    """
+
+    context = responses.getUniversalContext(request)
+    responses.useJavaScript(context, params['js_uses_all'])
+    context['page_name'] = page_name
+    entity = None
+
+    # TODO(ajaksu) there has to be a better way in this universe to get these
+    kwargs['prefix'] = 'program'
+    kwargs['link_id'] = request.path.split('/')[-1]
+    kwargs['scope_path'] = '/'.join(request.path.split('/')[4:-1])
+
+    try:
+      entity = survey_logic.getFromKeyFieldsOr404(kwargs)
+    except out_of_band.Error, error:
+      return responses.errorResponse(
+          error, request, template=params['error_public'], context=context)
+
+    if not self._public(request, entity, context):
+      redirect = params['public_redirect']
+      if redirect:
+        return http.HttpResponseRedirect(redirect)
+
+    user = user_logic.getForCurrentAccount()
+
+    filter = self._params.get('filter') or {}
+    filter.update({'user': user, 'survey': entity})
+
+    limit = self._params.get('limit') or 1000
+    offset = self._params.get('offset') or 0
+    order = self._params.get('order') or []
+    idx = self._params.get('idx') or 0
+
+    records = results_logic.getForFields(filter=filter, limit=limit,
+                                      offset=offset, order=order)
+
+    updates = dicts.rename(params, params['list_params'])
+    context.update(updates)
+
+    context['results'] = records, records
+    context['content'] = entity.survey_content
+
+    template = 'soc/survey/results_page.html'
+    return responses.respond(request, template, context=context)
 
 
 class HelperForm(object):
@@ -830,3 +885,4 @@ export = decorators.view(view.export)
 pick = decorators.view(view.pick)
 activate = decorators.view(view.activate)
 grade = decorators.view(view.grade)
+results = decorators.view(view.viewResults)
