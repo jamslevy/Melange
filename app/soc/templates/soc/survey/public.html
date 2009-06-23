@@ -53,7 +53,10 @@ limitations under the License.
   {# Project Selected for this Survey #}
   {% if project %}
  <div id="project_link" style="font-size:.8em; margin:3px; display:none;">
- view project: <a target="_blank" href="/student_project/show/{{ project.key.name }}" >{{ project.title }}</a>
+ view project: 
+ <a target="_blank" href="/student_project/show/{{ project.key.name }}" >
+ {{ project.title }}
+ </a>
  </div>
   {% endif %}
   
