@@ -231,6 +231,8 @@ class View(base.View):
     if not_ready and not can_write:
       context['notice'] = "No survey available."
       return False
+    elif not_ready:
+      return False
     else:
       # check for existing survey_record
       record_query = SurveyRecord.all(
