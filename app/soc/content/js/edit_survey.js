@@ -47,6 +47,19 @@ $(function () {
   }
   widget.find('table:first').show();
 
+
+
+/*
+*  Grade Activation Button Handler
+*  
+*/
+$('input#activate').click(function(){
+  if ($(this).hasClass('disabled')) 
+  alert("Grades can only be activated once the deadline has passed")
+});
+
+
+
   // Bind submit
 /*
 *  Restore survey content html from editPost

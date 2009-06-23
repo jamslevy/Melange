@@ -134,7 +134,7 @@ Please use this form to edit the {{ entity_type }}.
             </td>
           {% endif %}
           <td>
-            <input {% if passed_deadline %}disabled="TRUE"{% endif %} type="button" onclick="location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" value="Activate Grades"/>
+            <input id="activate" {% if not passed_deadline %}class="disabled"{% endif %} onclick="if (!$(this).hasClass('disabled')) location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" type="button"  value="Activate Grades"/>
           </td>
         {% endif %}
       {% endblock %}

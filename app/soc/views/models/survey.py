@@ -620,16 +620,19 @@ class View(base.View):
     grades = False
     if survey_content:
       grades = survey_content.survey_parent.get().has_grades
-
+      
+    # activate grades flag -- TODO: Can't configure notice on edit page
+    if request._get.get('activate'):
+      context['notice'] = "Evaluation Grades Have Been Activated"
+      
     local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
                 grades=grades, survey_h=entity.survey_content)
     context.update(local)
 
     params['edit_form'] = HelperForm(params['edit_form'])
-
-    # activate grades flag
-    if request._get.get('activate'):
-      self.grade(request)
+    if entity.deadline and datetime.datetime.now() > entity.deadline:
+      # are we already passed the deadline?
+      context["passed_deadline"] = True
 
     return super(View, self).editGet(request, entity, context, params=params)
 
@@ -696,15 +699,12 @@ class View(base.View):
   def activate(self, request, **kwargs):
     """This is a hack to support the 'Enable grades' button.
     """
-
-    # TODO(ajaksu) Should be removed, as the POST/checkbox way works better and
-    # we want to separate grading from non-grading surveys
-    path = request.path.replace('/activate/', '/edit/')
-    if '?' in path: redirect_path = path + '&activate=1'
-    else: redirect_path = path + '?activate=1'
+    self.activate_grades(request)
+    redirect_path = request.path.replace('/activate/', '/edit/') + '?activate=1'
     return http.HttpResponseRedirect(redirect_path)
 
-  def grade(self, request, **kwargs):
+
+  def activate_grades(self, request, **kwargs):
     """Updates SurveyRecord's grades for a given Survey.
     """
 
@@ -715,26 +715,11 @@ class View(base.View):
 
     survey_key_name = survey_logic.getKeyNameFromPath(request.path)
     survey = Survey.get_by_key_name(survey_key_name)
+    program = survey.scope
+    for project in program.student_projects.fetch(1000):
+      pass#print project.key().name()
     return
-    for user, grade in request.POST.items():
 
-      if user.startswith(prefix):
-        user = user.replace(prefix, '').replace(suffix, '')
-      else:
-        continue
-
-      # TODO(ajaksu) One alternative would be to store the user key as an id
-      # attr and send it in the request instead of the link_id
-      user = User.gql("WHERE link_id = :1", user).get()
-      survey_record = SurveyRecord.gql(
-          "WHERE user = :1 AND survey = :2", user, survey).get()
-
-      if survey_record:
-        survey_record.grade = GRADES[grade]
-        survey_record.put()
-
-    #TODO(ajaksu) find elegant alternative for redirect if code gets alive again
-    return http.HttpResponseRedirect(request.path.replace('/grade/', '/edit/'))
 
   @decorators.merge_params
   @decorators.check_access
@@ -886,5 +871,4 @@ public = decorators.view(view.public)
 export = decorators.view(view.export)
 pick = decorators.view(view.pick)
 activate = decorators.view(view.activate)
-grade = decorators.view(view.grade)
 results = decorators.view(view.viewResults)
