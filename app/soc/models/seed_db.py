@@ -524,7 +524,7 @@ def seed(request, *args, **kwargs):
       'scope_path': gsoc2009.key().name(),
       'scope': gsoc2009,
       'program': gsoc2009,
-      'user': current_user, # should this not be current user? 
+      'user': User.get_by_key_name('user_0000'), # should this not be current user? 
       'given_name': 'test',
       'surname': 'test',
       'birth_date': db.DateProperty.now(),
@@ -558,7 +558,8 @@ def seed(request, *args, **kwargs):
   student_id = 'test2'
   student_properties.update({
       'key_name': gsoc2009.key().name() + "/" + student_id,
-      'link_id': student_id
+      'link_id': student_id,
+      'user': User.get_by_key_name('user_0001')
       })
 
   melange_student2 = Student(**student_properties)
