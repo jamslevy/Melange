@@ -222,23 +222,21 @@ class View(base.View):
     if can_write and read_only and 'user_results' in request.GET:
       user = user_logic.getFromKeyNameOr404(request.GET['user_results'])
 
-    # get project from GET arg
-    if request._get.get('project'):
-      import soc.models.student_project
-      project = soc.models.student_project.StudentProject.get(
-      request._get.get('project'))
-    else: 
-      project = None
     if read_only or not_ready:
       context['notice'] = "Survey Submission Is Now Closed"
-      pass
+      return True
     else:
       # check for existing survey_record
-      survey_record = SurveyRecord.all(
+      record_query = SurveyRecord.all(
       ).filter("user =", user
-      ).filter("survey =", survey
-      ).filter("project =", project
-      ).get()
+      ).filter("survey =", survey)
+      # get project from GET arg
+      if request._get.get('project'):
+        import soc.models.student_project
+        project = soc.models.student_project.StudentProject.get(
+        request._get.get('project'))
+        record_query = record_query.filter("project =", project)
+      survey_record = record_query.get()
       
       if len(request.POST) > 0:
         # save/update the submitted survey
