@@ -177,9 +177,9 @@ class Logic(work.Logic):
 
     """
     this_program = survey.scope
-    from soc.logic.system import isDebug
+    from soc.logic.system import getMelangeVersion
     # just for testing purposes
-    if isDebug():
+    if getMelangeVersion() == 'devvin':
       user = self.getDebugUser(survey, this_program)
       logging.info(str(user.__dict__))
     if 'mentor' in survey.taking_access:
