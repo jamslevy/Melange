@@ -105,6 +105,79 @@ class Logic(work.Logic):
     return survey_record
 
 
+  def setSurveyRecordGroup(self, role, survey, survey_record, project):
+    """ First looks for an existing SurveyRecordGroup, using the 
+    project and its current status as a filter. 
+    
+    IOW SurveyRecordGroup cannot consist of surveys taken with 
+    two different statuses.
+    
+    This means that a student cannot take a survey after the mentor
+    has taken the accompanying survey and the project has since 
+    changed. (Assuming we want this strict behavior)
+    """
+    from soc.models.survey_record import SurveyRecordGroup
+    group_query = SurveyRecordGroup.all(
+    ).filter("project = ", project
+    ).filter("initial_status = ", project.status
+    )
+    if survey.taking_access == 'mentor evaluation':
+      survey_record_group = group_query.filter(
+      "mentor = ", None ).get()
+    if survey.taking_access == 'student evaluation':
+      survey_record_group = group_query.filter(
+      "student = ", None ).get()
+    if not survey_record_group:
+      #create Survey Record Group if it doesn't already exist
+      survey_record_group = SurveyRecordGroup(
+      project=project,
+      initial_status = project.status
+      )
+    if survey.taking_access == 'mentor evaluation':
+      survey_record_group.mentor_record = survey_record
+    if survey.taking_access == 'student evaluation':
+      survey_record_group.student_record = survey_record
+    return survey_record_group
+          
+  def getUserRole(self, user, survey, project):
+    """ sets a SurveyRecordGroup for this SurveyRecord
+    """
+    if survey.taking_access == 'mentor evaluation':
+      mentors = self.getMentorforProject(user, project)
+      if len(mentors) < 1 or len(mentors) > 1: 
+        logging.warning('Unable to determine mentor for \
+        user %s. Results returned: %s ' % (
+        user.key().name(), str(mentors)) )
+        return False
+      this_mentor = mentors[0]
+    if survey.taking_access == 'student evaluation': 
+      students = self.getStudentforProject(user, project)
+      if len(students) < 1 or len(students) > 1: 
+        logging.warning('Unable to determine student for \
+        user %s. Results returned: %s ' % (
+        user.key().name(), str(students)) )
+        return False
+      this_student = students[0]
+      
+      
+  def getStudentforProject(self, user, project):
+      import soc.models.student
+      from soc.logic.models.student import logic as student_logic
+      user_students = student_logic.getForFields({'user': user}) # status=active?
+      if not user_students: return []
+      return set([project.student for project in sum((list(s.student_projects.run()
+      ) for s in user_students), []
+      ) if project.key() == project.key()])
+
+  def getMentorforProject(self, user, project):
+      import soc.models.mentor
+      from soc.logic.models.mentor import logic as mentor_logic
+      user_mentors = mentor_logic.getForFields({'user': user}) # program = program  # status=active?
+      if not user_mentors: return []
+      return set([project.mentor for project in sum((list(mentor.student_projects.run()
+      ) for mentor in user_mentors), []
+       ) if project.key() == project.key()])
+            
       
   def getKeyNameFromPath(self, path):
     """ Gets survey key name from a request path
