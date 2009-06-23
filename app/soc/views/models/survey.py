@@ -193,7 +193,7 @@ class View(base.View):
     For surveys, the "public" page is actually the access-protected
     survey-taking page.
 
-    -- SurveyProjectPairs --
+    -- SurveyProjectGroups --
     
     Each survey can be taken once per user per project.
     
@@ -281,6 +281,7 @@ class View(base.View):
       context["notice"] = access_tpl % string.capwords(survey.taking_access)
 
     context['read_only'] = read_only
+    context['project'] = project
     return True
 
   def getStatus(self, request, context, user, survey):

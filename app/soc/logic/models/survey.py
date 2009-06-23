@@ -106,9 +106,21 @@ class Logic(work.Logic):
 
 
   def setSurveyRecordGroup(self, role, survey, survey_record, project):
+    """ First looks for an existing SurveyRecordGroup, using the 
+    project and its current status as a filter. 
+    
+    IOW SurveyRecordGroup cannot consist of surveys taken with 
+    two different statuses.
+    
+    This means that a student cannot take a survey after the mentor
+    has taken the accompanying survey and the project has since 
+    changed. (Assuming we want this strict behavior)
+    """
     from soc.models.survey_record import SurveyRecordGroup
-    group_query = SurveyRecordGroup.all().filter(
-    "project = ", project)
+    group_query = SurveyRecordGroup.all(
+    ).filter("project = ", project
+    ).filter("initial_status = ", project.status
+    )
     if survey.taking_access == 'mentor evaluation':
       survey_record_group = group_query.filter(
       "mentor = ", None ).get()
@@ -116,7 +128,11 @@ class Logic(work.Logic):
       survey_record_group = group_query.filter(
       "student = ", None ).get()
     if not survey_record_group:
-      survey_record_group = SurveyRecordGroup(project=project)
+      #create Survey Record Group if it doesn't already exist
+      survey_record_group = SurveyRecordGroup(
+      project=project,
+      initial_status = project.status
+      )
     if survey.taking_access == 'mentor evaluation':
       survey_record_group.mentor_record = survey_record
     if survey.taking_access == 'student evaluation':

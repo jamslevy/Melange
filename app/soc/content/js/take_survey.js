@@ -67,19 +67,23 @@ $(function () {
   */      
   
   $('input,textarea,select')
-  .change(function(){ 
+  .change(function(){
     if ($(this).attr('id') == 'id_project') return;
     $('form:first').data('touched', true);
   });
-  $('select#id_project').change(function(){
+  
+  $('select#id_project').blur(function(){
+   $(this).data('selected', $(this).find('option:first'));
+  }).change(function(){
     if ($('form:first').data('touched') == true)
     {
     var save_check = confirm(
     "Switching projects will lose unsaved edits made to this survey."
     );
-    if (!save_check) return false;
+    if (!save_check) {
+      $(this).data('selected').attr('selected', 'selected');
+      return false; }
     }
-    
     if ($(this).val() != 'None')
     window.location=window.location.href.split('?')[0] + "?project=" + $(this).val();
   });

@@ -79,6 +79,11 @@ class SurveyRecordGroup(db.Expando):
   A SurveyRecordGroup links a group of survey records with a common
   project, and links back to its records. 
   
+  This entity also includes the current project_status at its creation.
+  This property is used as a filter in lookups and acts as a safeguard
+  against unpredictable behavior. 
+
+  
   """
   # get survey by threading through record:
   # survey = survey_record_group.mentor_record.survey
@@ -87,6 +92,9 @@ class SurveyRecordGroup(db.Expando):
   student_record = db.ReferenceProperty(SurveyRecord, required=False,
                               collection_name='student_record_groups')
   project = db.ReferenceProperty(soc.models.student_project.StudentProject,
-                                collection_name="survey_record_groups")
+                                collection_name="survey_record_groups",
+                                required=True)
+  initial_status = db.StringProperty(required=True)
+  final_status = db.StringProperty(required=False)
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)

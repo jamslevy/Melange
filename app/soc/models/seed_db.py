@@ -567,9 +567,9 @@ def seed(request, *args, **kwargs):
                                        
   project_id = 'test_project'
   project_properties = {
-      'key_name':  gsoc2009.key().name() + "/" + project_id,
+      'key_name':  gsoc2009.key().name() + "/org_1/" + project_id,
       'link_id': project_id, 
-      'scope_path': gsoc2009.key().name(),
+      'scope_path': gsoc2009.key().name() + "/org_1",
       'scope': gsoc2009,
 
       'title': 'test project',
@@ -585,7 +585,7 @@ def seed(request, *args, **kwargs):
 
   project_id = 'test_project2'
   project_properties.update({
-      'key_name':  gsoc2009.key().name() + "/" + project_id,
+      'key_name':  gsoc2009.key().name() + "/org_1/" + project_id,
       'link_id': project_id,
       'student': melange_student2,
       'title': 'test project2'

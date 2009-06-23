@@ -47,8 +47,16 @@ limitations under the License.
   {{ help_text }}
 
   <div class="{{ status }}" id="survey_widget">
+    
     <table>
 
+  {# Project Selected for this Survey #}
+  {% if project %}
+ <div id="project_link" style="font-size:.8em; display:none;">
+ View this Project: <a target="_blank" href="/student_project/show/{{ project.key.name }}" >{{ project.title }}</a>
+ </div>
+  {% endif %}
+  
       {% block form_table %}
         {% as_table survey_form %}
       {% endblock %}
