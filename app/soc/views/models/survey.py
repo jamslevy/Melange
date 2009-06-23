@@ -523,18 +523,18 @@ class View(base.View):
     RENDER = {'checkboxes': 'multi_checkbox', 'select': 'single_select',
               'radio_buttons': 'quant_radio'}
 
+    RENDER_TYPES = {'select': 'selection',
+                    'checkboxes': 'pick_multi',
+                    'radio_buttons': 'pick_quant' }
+                        
+                        
     for key in schema:
+      
       if schema[key]['type'] in CHOICE_TYPES and key in survey_fields:
-
-        # get choice type
-        type_for = 'type_for_' + key
-        if type_for in POST:
-          schema[key]['type'] = POST[type_for]
-
-        # get choice render
         render_for = 'render_for_' + key
         if render_for in POST:
           schema[key]['render'] = RENDER[POST[render_for]]
+          schema[key]['type'] = RENDER_TYPES[POST[render_for]]
 
         # handle reordering fields
         ordered = False

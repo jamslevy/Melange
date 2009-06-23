@@ -51,6 +51,7 @@ Please use this form to edit the {{ entity_type }}.
 
   <span class="formfieldlabel">Survey content:</span>
 
+<div style="width:100%; float:left;">
   <div class="survey_admin" id="survey_widget">
     <table>
       {% block survey_content %}
@@ -91,7 +92,9 @@ Please use this form to edit the {{ entity_type }}.
 
       {% endfor %}
     </div>
+  </div> {# end survey_widget #}
   </div>
+  
   <table>
     <tr>
       <td colspan="4">&nbsp;</td>

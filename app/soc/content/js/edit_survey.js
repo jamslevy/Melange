@@ -66,6 +66,9 @@ $(function () {
   }
 
   var survey = widget.find('tbody:first');
+  if (survey.length == 0) var survey = widget.find('table')
+  .append('<tbody/>');
+  $survey = survey;
   var options = widget.find('#survey_options');
 
   function renderHTML() {
@@ -121,7 +124,7 @@ $(function () {
 *
 */
 
-  survey.bind('init', function () {
+  $survey.bind('init', function () {
     // unnecessarily redundant
     // this should be refactored as a jQuery function that acts on only a single field
     // and it should be merged with renderHTML since they have comparable functionality
@@ -163,14 +166,6 @@ $(function () {
       }
     });
 
-
-    // Delete list/choice-field item from survey
-    widget.find('a.delete_item').click(function () {
-      var to_delete = this.id.replace('del_', '');
-      $('#delete_item_field').val(to_delete);
-      $('#delete_item_dialog').dialog('open');
-    }).end();
-
     // Add list/choice-field item to survey
     $('[name=create-option-button]').each(function () {
       $(this).click(function () {
@@ -207,7 +202,17 @@ $(function () {
 
       $("#new_question_dialog").dialog('open').find('input:first').focus();
     });
-  }).trigger('init');
+  }).trigger('init')
+    .bind('option_init', function(){
+      
+    // Delete list/choice-field item from survey
+    widget.find('a.delete_item').click(function () {
+      var to_delete = this.id.replace('del_', '');
+      $('#delete_item_field').val(to_delete);
+      $('#delete_item_dialog').dialog('open');
+    }).end();
+
+      }).trigger('option_init');
 
 
   /* GSOC ROLE-SPECIFIC FIELD PLUGIN
@@ -392,6 +397,7 @@ $(function () {
         $('#new_item_name').val('');
         $('#new_item_field_ol_id').val('');
         $(this).dialog('close');
+        $survey.trigger('option_init');
       },
       Cancel: function () {
         $('#new_item_name').val('');
@@ -456,13 +462,7 @@ $(function () {
                                   field_name);
             if (button_id === 'choice')  {
               var name = (field_name);
-              new_field = $('<fieldset>\n  <label for="type_for_' + name +
-              '">Question Type</label>' +
-              '\n  <select id="type_for_' + name + '" name="type_for_' + name + '">' +
-              '\n    <option selected="selected" value="selection">selection</option>' +
-              '\n    <option value="pick_multi">pick_multi</option>' +
-              '\n    <option value="pick_quant">pick_quant</option>' +
-              '\n  </select>\n <br/> <label for="render_for_' + name + '">Render as</label>' +
+              new_field = $('<fieldset>\n <label for="render_for_' + name + '">Render as</label>' +
               '\n  <select id="render_for_' + name + '" name="render_for_' + name + '">' +
               '\n    <option selected="selected" value="select">select</option>' +
               '\n    <option value="checkboxes">checkboxes</option>' +
@@ -481,7 +481,7 @@ $(function () {
               $(new_field).attr({ 'id': 'id_' + formatted_name, 'name': formatted_name });
               field_template.find('label').attr('for', 'NEW_' + name)
               .append(question_content).end().find('td').append(new_field);
-              survey_table.append(field_template).trigger('init').end();
+              survey_table.append(field_template).end();
 
               if (question_options) {
 
@@ -507,6 +507,8 @@ $(function () {
                     del_li.join(option_html.attr('id'))));
                   ol.sortable().disableSelection();
                 }
+                
+                $survey.trigger('option_init');
               }
             }
 
@@ -517,9 +519,13 @@ $(function () {
               field_template.find('label').attr('for', 'id_' + formatted_name)
               .append(question_content + ":").end().find('td').append(new_field)
               .append($(question_for));
-              survey_table.append(field_template).trigger('init');
+              survey_table.append(field_template);
+              
 
             }
+            
+          $survey.trigger('init');
+            
           }
         }
         $("#new_question_name").val('');
