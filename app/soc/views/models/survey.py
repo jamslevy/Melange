@@ -236,6 +236,8 @@ class View(base.View):
         project = soc.models.student_project.StudentProject.get(
         request._get.get('project'))
         record_query = record_query.filter("project =", project)
+      else: 
+        project = None
       survey_record = record_query.get()
       
       if len(request.POST) > 0:
