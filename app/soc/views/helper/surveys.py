@@ -485,11 +485,6 @@ class SurveyResults(widgets.Widget):
     return markup
 
 
-
-
-
-
-
 def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record):
   # Serves as both access handler and retrieves projects for selection
   from django import forms
@@ -512,11 +507,11 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
     # if editing an existing survey
     if not this_project and survey_record:
       this_project = survey_record.project
-    if this_project:      
+    if this_project:
       for tup in project_tuples:
         if tup[1] == this_project.title:
           if survey_record: project_name = tup[1] + " (Saved)"
-          else: project_name = tup[1] 
+          else: project_name = tup[1]
           projectField.choices.remove(tup)
           projectField.choices.insert(0, (tup[0], project_name)  )
           break

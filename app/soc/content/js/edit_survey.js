@@ -105,7 +105,7 @@ $(function () {
   $('a.fetch_answers').click(function () {
     var user = this.id.replace('results_for_', '');
     var path = window.location.pathname;
-    path = path.replace('/edit/', '/show/');
+    path = path.replace('/edit/', '/show/').replace('/results/', '/show/');
     var query = '?read_only=true&user_results=' + user;
     var scrollable = '<div style="overflow-y: auto;margin-bottom:100px"></div>';
     $(scrollable).load(path + query + ' #survey_widget').dialog({
