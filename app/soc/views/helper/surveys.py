@@ -511,7 +511,7 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
     projectField.choices.insert(0, (None, "Choose a Project")  )
     # if editing an existing survey
     if not this_project and survey_record:
-      this_project = survey.record.project
+      this_project = survey_record.project
     if this_project:      
       for tup in project_tuples:
         if tup[1] == this_project.title:
