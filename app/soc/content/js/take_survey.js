@@ -88,6 +88,8 @@ $(function () {
     window.location=window.location.href.split('?')[0] + "?project=" + $(this).val();
   });
       
+   $('div#project_link').insertAfter($('select#id_project')).show();
+     
   /*
   * == Survey Submission Handler ==
   *
