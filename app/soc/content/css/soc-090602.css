@@ -694,7 +694,10 @@ font-size:medium;
 
 
 #survey_widget .quant_radio input, #survey_widget .quant_radio label {
-  display: inline;
+clear:left;
+display:block;
+float:left;
+margin:4px;
 }
 
 /* options */
