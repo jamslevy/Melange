@@ -133,9 +133,12 @@ Please use this form to edit the {{ entity_type }}.
               <input type="button" onclick="location.href='/{{ entity_type_url|lower }}/export/{{ entity_suffix }}'" value="Export"/>
             </td>
           {% endif %}
+          {% ifequal entity.taking_access "mentor evaluation" %}
           <td>
             <input id="activate" {% if not passed_deadline %}class="disabled"{% endif %} onclick="if (!$(this).hasClass('disabled')) location.href='/{{ entity_type_url|lower }}/activate/{{ entity_suffix }}'" type="button"  value="Activate Grades"/>
           </td>
+          {% endifequal %}
+          
         {% endif %}
       {% endblock %}
     </tr>

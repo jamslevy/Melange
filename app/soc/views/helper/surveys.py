@@ -474,7 +474,6 @@ class SurveyResults(widgets.Widget):
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
-    context['grades'] = survey.has_grades
 
     path = (survey.entity_type().lower(), survey.prefix,
             survey.scope_path, survey.link_id)
@@ -517,7 +516,7 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
           break
     survey_form.fields.insert(0, 'project', projectField )
 
-  if survey.taking_access == "mentor":
+  if survey.taking_access == "mentor evaluation":
     # if this is a mentor, add a field
     # determining if student passes or fails
     # Activate grades handler should determine whether new status

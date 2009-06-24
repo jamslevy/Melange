@@ -33,14 +33,17 @@ from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
 from soc.models.program import Program
 from soc.models.survey import SurveyContent, Survey
-from soc.models.survey_record import SurveyRecord
+from soc.models.survey_record import SurveyRecord, SurveyRecordGroup
 from soc.models.work import Work
 from soc.logic.models.news_feed import logic as newsfeed_logic
 from soc.logic.models.user import logic as user_logic
 
 
 GRADES = {'pass': True, 'fail': False}
-
+PROJECT_STATUSES = {
+'accepted': {True: 'mid_term_passed', False: 'mid_term_failed'}, 
+'mid_term_passed': {True: 'passed', False: 'final_failed'} 
+}
 
 class Logic(work.Logic):
   """Logic methods for the Survey model.
@@ -116,7 +119,6 @@ class Logic(work.Logic):
     has taken the accompanying survey and the project has since 
     changed. (Assuming we want this strict behavior)
     """
-    from soc.models.survey_record import SurveyRecordGroup
     group_query = SurveyRecordGroup.all(
     ).filter("project = ", project
     ).filter("initial_status = ", project.status
@@ -140,7 +142,7 @@ class Logic(work.Logic):
     return survey_record_group
           
   def getUserRole(self, user, survey, project):
-    """ sets a SurveyRecordGroup for this SurveyRecord
+    """ gets the role of a user for a project, used for SurveyRecordGroup 
     """
     if survey.taking_access == 'mentor evaluation':
       mentors = self.getMentorforProject(user, project)
@@ -178,6 +180,53 @@ class Logic(work.Logic):
       ) for mentor in user_mentors), []
        ) if project.key() == project.key()])
             
+    
+      
+  def activateGrades(self, survey):
+    """ Gets survey key name from a request path
+    """
+    if survey.taking_access != "mentor evaluation":
+      logging.error("Cannot activate grades for survey %s with taking access %s" 
+      % (survey.key().name(), survey.taking_access))
+      return False 
+    program = survey.scope
+    for project in program.student_projects.fetch(1000):
+      this_record_group = SurveyRecordGroup.all().filter(
+      "project = ", project).filter(
+      "initial_status = ", project.status).get()
+      if not this_record_group:
+         logging.warning('neither mentor nor student has \
+         taken the survey for project %s' % project.key().name() )
+         continue
+      if not this_record_group.mentor_record:
+        # student has taken survey, but not mentor
+        logging.warning('not continuing without mentor record...')
+        continue
+      status_options = PROJECT_STATUSES.get(project.status)
+      if not status_options:
+        logging.warning('unable to find status options for project \
+        status %s' % project.status)
+        continue
+      new_project_grade = this_record_group.mentor_record.grade
+      new_project_status = status_options.get(new_project_grade)
+      if getattr(this_record_group, 'final_status'):
+         logging.warning('project %s record group should not \
+         yet have a final status %s' % (
+         project.key().name(), this_record_group.final_status ) )
+         continue      
+      
+      # assign the new status to the project and surveyrecordgroup
+      project.status = new_project_status
+      this_record_group.final_status = new_project_status
+      
+      
+      
+       
+      
+      
+      
+     
+    
       
   def getKeyNameFromPath(self, path):
     """ Gets survey key name from a request path

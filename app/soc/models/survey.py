@@ -159,8 +159,6 @@ class Survey(soc.models.work.Work):
       'Indicates a date after which this survey'
       ' cannot be taken.')
 
-  has_grades = db.BooleanProperty(
-      verbose_name=ugettext('Gradable by mentors'))
 
   # this property should be named 'survey_content'
   survey_content = db.ReferenceProperty(SurveyContent,

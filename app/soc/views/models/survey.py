@@ -410,9 +410,6 @@ class View(base.View):
     survey_content = survey_logic.createSurvey(survey_fields, schema,
                                                 survey_content=survey_content)
 
-    # enable grading
-    if "has_grades" in request.POST and request.POST["has_grades"] == "on":
-      survey_content.has_grades = True
 
     # save survey_content for existent survey or pass for creating a new one
     if entity:
@@ -616,17 +613,13 @@ class View(base.View):
                                      editing=True, read_only=False)
     survey_form.getFields()
 
-    # are grades enabled?
-    grades = False
-    if survey_content:
-      grades = survey_content.survey_parent.get().has_grades
       
     # activate grades flag -- TODO: Can't configure notice on edit page
     if request._get.get('activate'):
       context['notice'] = "Evaluation Grades Have Been Activated"
       
     local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
-                grades=grades, survey_h=entity.survey_content)
+                survey_h=entity.survey_content)
     context.update(local)
 
     params['edit_form'] = HelperForm(params['edit_form'])
@@ -699,25 +692,17 @@ class View(base.View):
   def activate(self, request, **kwargs):
     """This is a hack to support the 'Enable grades' button.
     """
-    self.activate_grades(request)
+    self.activateGrades(request)
     redirect_path = request.path.replace('/activate/', '/edit/') + '?activate=1'
     return http.HttpResponseRedirect(redirect_path)
 
 
-  def activate_grades(self, request, **kwargs):
+  def activateGrades(self, request, **kwargs):
     """Updates SurveyRecord's grades for a given Survey.
     """
-
-    # TODO(ajaksu) needs ACL checks
-    # TODO(ajaksu) move to the survey results page
-    prefix = 'id_survey__'
-    suffix = '__selection__grade'
-
     survey_key_name = survey_logic.getKeyNameFromPath(request.path)
     survey = Survey.get_by_key_name(survey_key_name)
-    program = survey.scope
-    for project in program.student_projects.fetch(1000):
-      pass#print project.key().name()
+    survey_logic.activateGrades(survey)
     return
 
 
