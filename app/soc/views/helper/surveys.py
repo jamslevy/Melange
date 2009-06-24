@@ -25,7 +25,6 @@ __authors__ = [
 
 import datetime
 from itertools import chain
-
 from django import forms
 from django.forms import widgets
 from django.forms.fields import CharField
@@ -33,9 +32,7 @@ from django.template import loader
 from django.utils.encoding import force_unicode
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
-
 from google.appengine.ext.db import djangoforms
-
 from soc.logic import dicts
 from soc.logic.lists import Lists
 from soc.logic.models.survey import logic as survey_logic, results_logic
@@ -63,23 +60,15 @@ class SurveyForm(djangoforms.ModelForm):
     """
 
     self.kwargs = kwargs
-    self.survey_content = self.kwargs.get('survey_content', None)
-    self.this_user = self.kwargs.get('this_user', None)
-    self.project = self.kwargs.get('project', None)
-    self.survey_record = self.kwargs.get('survey_record', None)
+    self.survey_content = self.kwargs.pop('survey_content', None)
+    self.this_user = self.kwargs.pop('this_user', None)
+    self.project = self.kwargs.pop('project', None)
+    self.survey_record = self.kwargs.('survey_record', None)
+    self.read_only = self.kwargs.pop('read_only', None)
+    self.editing = self.kwargs.pop('editing', None)
 
-    del self.kwargs['survey_content']
-    del self.kwargs['this_user']
-    del self.kwargs['project']
-    del self.kwargs['survey_record']
 
-    self.read_only = self.kwargs.get('read_only', None)
-    if 'read_only' in self.kwargs:
-      del self.kwargs['read_only']
 
-    self.editing = self.kwargs.get('editing', None)
-    if 'editing' in self.kwargs:
-      del self.kwargs['editing']
 
     super(SurveyForm, self).__init__(*args, **self.kwargs)
 
@@ -169,6 +158,7 @@ class SurveyForm(djangoforms.ModelForm):
     widget = widgets.TextInput(attrs=attrs)
 
     if not tip:
+      #TODO: Better tooltip text
       tip = 'Testing Tooltip!'
 
     #TODO(ajaksu) max_length should be configurable
@@ -443,7 +433,6 @@ class SurveyResults(widgets.Widget):
     filter = {'survey': survey}
     data = logic.getForFields(filter=filter, limit=limit, offset=offset,
                               order=order)
-
     params['name'] = "Survey Results"
     content = {
       'idx': idx,
@@ -454,13 +443,11 @@ class SurveyResults(widgets.Widget):
     updates = dicts.rename(params, params['list_params'])
     content.update(updates)
     contents = [content]
-
     if len(content) == 1:
       content = content[0]
       key_order = content.get('key_order')
 
     context['list'] = Lists(contents)
-
     # TODO(ajaksu) is this the best way to build the results list?
     for list_ in context['list']._contents:
       if len(list_['data']) < 1:
@@ -469,16 +456,13 @@ class SurveyResults(widgets.Widget):
       list_['row'] = 'soc/survey/list/results_row.html'
       list_['heading'] = 'soc/survey/list/results_heading.html'
       list_['description'] = 'Survey Results:'
-
     context['properties'] = survey.survey_content.orderedProperties()
     context['entity_type'] = "Survey Results"
     context['entity_type_plural'] = "Results"
     context['no_lists_msg'] = "No Survey Results"
-
     path = (survey.entity_type().lower(), survey.prefix,
             survey.scope_path, survey.link_id)
     context['grade_action'] = "/%s/grade/%s/%s/%s" % path
-
     markup = loader.render_to_string('soc/survey/results.html',
                                      dictionary=context).strip('\n')
     return markup
@@ -486,11 +470,9 @@ class SurveyResults(widgets.Widget):
 
 def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record):
   # Serves as both access handler and retrieves projects for selection
-  from django import forms
   field_count = len(eval(survey.survey_content.schema).items())
   these_projects = survey_logic.getProjects(survey, user)
   if not these_projects: return False # no projects found
-
   project_pairs = []
   #insert a select field with options for each project
   for project in these_projects:
@@ -515,7 +497,6 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
           projectField.choices.insert(0, (tup[0], project_name)  )
           break
     survey_form.fields.insert(0, 'project', projectField )
-
   if survey.taking_access == "mentor evaluation":
     # if this is a mentor, add a field
     # determining if student passes or fails
@@ -526,7 +507,6 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
     gradeField = forms.fields.ChoiceField(choices=grade_choices,
                                            required=True,
                                            widget=forms.Select())
-
     gradeField.choices.insert(0, (None, "Choose a Grade")  )
     if survey_record:
       for g in grade_choices:
@@ -535,7 +515,5 @@ def getRoleSpecificFields(survey, user, this_project, survey_form, survey_record
           gradeField.choices.remove(g)
           break;
       gradeField.show_hidden_initial = True
-
     survey_form.fields.insert(field_count + 1, 'grade', gradeField)
-
   return survey_form
