@@ -17,6 +17,20 @@
 
 """Specify the modules for which a stub exists."""
 
+__all__ = [
 
-__all__ = ['ftplib', 'httplib', 'py_imp', 'neo_cgi', 'select', 'socket',
-           'subprocess', 'tempfile']
+    'ftplib',
+    'httplib',
+    'neo_cgi',
+    'py_imp',
+    'select',
+    'socket',
+    'subprocess',
+    'tempfile',
+
+    'use_library',
+    ]
+
+from google.appengine.dist import _library
+
+use_library = _library.use_library

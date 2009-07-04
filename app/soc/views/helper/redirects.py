@@ -110,12 +110,14 @@ def getHomeRedirect(entity, params):
   return '/%s/home/%s' % (
       params['url_name'], entity.key().id_or_name())
 
+
 def getReviewRedirect(entity, params):
   """Returns the redirect to review the specified entity.
   """
 
   return '/%s/review/%s' % (
       params['url_name'], entity.key().id_or_name())
+
 
 def getReviewOverviewRedirect(entity, params):
   """Returns the redirect to the review_overview using the
@@ -345,25 +347,34 @@ def getListDocumentsRedirect(entity, prefix):
   return '/document/list/%s/%s' % (prefix, entity.key().id_or_name())
 
 
-def getCreateSurveyRedirect(entity, prefix):
-  """Returns the redirect for new documents.
+def getCreateSurveyRedirect(entity, prefix, url_name):
+  """Returns the redirect for new surveys.
   """
 
-  return '/survey/create/%s/%s' % (prefix, entity.key().id_or_name())
+  return '/%s/create/%s/%s' % (url_name, prefix, entity.key().id_or_name())
 
 
-def getListSurveysRedirect(entity, prefix):
-  """Returns the redirect for listing documents.
+def getListSurveysRedirect(entity, prefix, url_name):
+  """Returns the redirect for listing surveys.
   """
 
-  return '/survey/list/%s/%s' % (prefix, entity.key().id_or_name())
+  return '/%s/list/%s/%s' % (url_name, prefix, entity.key().id_or_name())
 
 
-def getListSurveyResultsRedirect(entity, prefix):
-  """Returns the redirect for listing documents.
+def getTakeProjectSurveyRedirect(entity, info):
+  """Returns the redirect for taking a Survey for the given Student Project.
+
+  Args:
+      entity: a StudentProject entity
+      info: a dictionary contain a survey and params entry
   """
 
-  return '/survey/list_results/%s/%s' % (prefix, entity.key().id_or_name())
+  survey_entity = info['survey']
+  params = info['params']
+
+  return '/%s/take/%s?project=%s' %(params['url_name'],
+                                    survey_entity.key().id_or_name(),
+                                    entity.key().id_or_name())
 
 
 def getToSRedirect(presence):

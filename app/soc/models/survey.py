@@ -23,6 +23,7 @@ SurveyContent contains the fields (questions) and their metadata.
 __authors__ = [
   '"Daniel Diniz" <ajaksu@gmail.com>',
   '"James Levy" <jamesalexanderlevy@gmail.com>',
+  '"Lennard de Rijk" <ljvderijk@gmail.com>',
 ]
 
 
@@ -31,6 +32,9 @@ from google.appengine.ext import db
 from django.utils.translation import ugettext
 
 import soc.models.work
+
+
+COMMENT_PREFIX = 'comment_for_'
 
 
 class SurveyContent(db.Expando):
@@ -47,14 +51,16 @@ class SurveyContent(db.Expando):
       - question (free form text question, used as label)
   """
 
+  #:Field storing the content of the survey in the form of a dictionary.
   schema = db.TextProperty()
+
+  #: Fields storing the created on and last modified on dates.
   created = db.DateTimeProperty(auto_now_add=True)
   modified = db.DateTimeProperty(auto_now=True)
 
   def getSurveyOrder(self):
     """Make survey questions always appear in the same (creation) order.
     """
-
     survey_order = {}
     schema = eval(self.schema)
     for property in self.dynamic_properties():
@@ -70,7 +76,6 @@ class SurveyContent(db.Expando):
   def orderedProperties(self):
     """Helper for View.get_fields(), keep field order.
     """
-
     properties = []
     survey_order = self.getSurveyOrder().items()
     for position,key in survey_order:
@@ -82,32 +87,24 @@ class Survey(soc.models.work.Work):
   """Model of a Survey.
 
   This model describes meta-information and permissions.
-  The actual questions of the survey are contained in the SurveyContent entity.
+  The actual questions of the survey are contained
+  in the SurveyContent entity.
   """
 
-  #TODO(James) Right now, this model has several properties from Document and
-  #TODO(James) it is unclear if they are necessary.
-  #
-  #TODO(James)  The inherited scope property is used to reference to a program.
-  #TODO(James)  Would it be more clear if a 'program' property were used?
   URL_NAME = 'survey'
-  # We should use euphemisms like "student" and "mentor" if possible
+  # euphemisms like "student" and "mentor" should be used if possible
   SURVEY_ACCESS = ['admin', 'restricted', 'member', 'user']
 
-  # These are GSoC specific, so eventually we can subclass this
-  SURVEY_TAKING_ACCESS = ['student', 
+  # these are GSoC specific, so eventually we can subclass this
+  SURVEY_TAKING_ACCESS = ['student',
                           'mentor',
-                          'student evaluation',
-                          'mentor evaluation',
+                          'org_admin',
+                          'user',
                           'public']
   GRADE_OPTIONS = {'midterm':['mid_term_passed', 'mid_term_failed'],
                    'final':['final_passed', 'final_failed'],
                    'N/A':[] }
-  # there should be a GSoC-specific property determining
-  # whether the survey is for the midterm or the final
 
-  #: field storing the prefix of this document
-  # Should this be removed from surveys?
   prefix = db.StringProperty(default='program', required=True,
       choices=['site', 'club', 'sponsor', 'program', 'org', 'user'],
       verbose_name=ugettext('Prefix'))
@@ -115,21 +112,21 @@ class Survey(soc.models.work.Work):
       'Indicates the prefix of the survey,'
       ' determines which access scheme is used.')
 
-  #: field storing the required access to read this document
+  #: Field storing the required access to read this survey.
   read_access = db.StringProperty(default='restricted', required=True,
       choices=SURVEY_ACCESS,
       verbose_name=ugettext('Survey Read Access'))
   read_access.help_text = ugettext(
       'Indicates who can read the results of this survey.')
 
-  #: field storing the required access to write to this document
+  #: Field storing the required access to write to this survey.
   write_access = db.StringProperty(default='admin', required=True,
       choices=SURVEY_ACCESS,
       verbose_name=ugettext('Survey Write Access'))
   write_access.help_text = ugettext(
       'Indicates who can edit this survey.')
 
-  #: field storing the required access to write to this document
+  #: Field storing the required access to write to this survey.
   taking_access = db.StringProperty(default='student', required=True,
       choices=SURVEY_TAKING_ACCESS,
       verbose_name=ugettext('Survey Taking Access'))
@@ -137,29 +134,27 @@ class Survey(soc.models.work.Work):
       'Indicates who can take this survey. '
       'Student/Mentor options are for Midterms and Finals.')
 
-  #: field storing whether a link to the survey should be featured in
+  #: Field storing whether a link to the survey should be featured in
   #: the sidebar menu (and possibly elsewhere); FAQs, Terms of Service,
-  #: and the like are examples of "featured" survey
+  #: and the like are examples of "featured" survey.
   is_featured = db.BooleanProperty(
       verbose_name=ugettext('Is Featured'))
   is_featured.help_text = ugettext(
-      'Field used to indicate if a Work should be featured, for example,'
+      'Field used to indicate if a Survey should be featured, for example,'
       ' in the sidebar menu.')
 
-  # date at which the survey becomes available for taking
-  opening = db.DateTimeProperty(required=False)
-  opening.help_text = ugettext(
+  #: Date at which the survey becomes available for taking.
+  survey_start = db.DateTimeProperty(required=False)
+  survey_start.help_text = ugettext(
       'Indicates a date before which this survey'
       ' cannot be taken or displayed.')
 
-  # deadline for taking survey
-  # default should be one week ahead
-  deadline = db.DateTimeProperty(required=False)
-  deadline.help_text = ugettext(
+  #: Deadline for taking survey.
+  survey_end = db.DateTimeProperty(required=False)
+  survey_end.help_text = ugettext(
       'Indicates a date after which this survey'
       ' cannot be taken.')
 
-
-  # this property should be named 'survey_content'
+  #: Referenceproperty that specifies the content of this survey.
   survey_content = db.ReferenceProperty(SurveyContent,
                                      collection_name="survey_parent")

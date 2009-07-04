@@ -637,7 +637,6 @@ class View(presence.View):
       if entity.status == 'visible':
         # show the documents for this program, even for not logged in users
         items += document_view.view.getMenusForScope(entity, params)
-        items += survey_view.view.getMenusForScope(entity, params)
         items += self._getTimeDependentEntries(entity, params, id, user)
 
       try:
@@ -673,11 +672,29 @@ class View(presence.View):
         items += [(redirects.getListDocumentsRedirect(entity, 'program'),
             "List Documents", 'any_access')]
         # add link to create a new Program Survey
-        items += [(redirects.getCreateSurveyRedirect(entity, 'program'),
+        items += [(redirects.getCreateSurveyRedirect(entity, 'program',
+                                                     'survey'),
             "Create a New Survey", 'any_access')]
         # add link to list all Program Surveys
-        items += [(redirects.getListSurveysRedirect(entity, 'program'),
+        items += [(redirects.getListSurveysRedirect(entity, 'program',
+                                                    'survey'),
             "List Surveys", 'any_access')]
+        # add link to create a new Project Survey
+        items += [(redirects.getCreateSurveyRedirect(entity, 'program',
+                                                     'project_survey'),
+            "Create a New Project Survey", 'any_access')]
+        # add link to list all Project Surveys
+        items += [(redirects.getListSurveysRedirect(entity, 'program',
+                                                    'project_survey'),
+            "List Project Surveys", 'any_access')]
+        # add link to create a new Grading Survey
+        items += [(redirects.getCreateSurveyRedirect(entity, 'program',
+                                                     'grading_project_survey'),
+            "Create a New Grading Survey", 'any_access')]
+        # add link to list all Grading Surveys
+        items += [(redirects.getListSurveysRedirect(entity, 'program',
+                                                    'grading_project_survey'),
+            "List Grading Surveys", 'any_access')]
 
       except out_of_band.Error:
         pass
@@ -832,4 +849,3 @@ show_duplicates = decorators.view(view.showDuplicates)
 slots = decorators.view(view.slots)
 home = decorators.view(view.home)
 pick = decorators.view(view.pick)
-subscribe = decorators.view(view.subscribe)

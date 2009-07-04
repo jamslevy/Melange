@@ -21,14 +21,13 @@ __authors__ = [
   ]
 
 
-from soc.modules import callback
-
 from soc.views.models import club
 from soc.views.models import club_app
 from soc.views.models import club_admin
 from soc.views.models import club_member
 from soc.views.models import cron
 from soc.views.models import document
+from soc.views.models import grading_project_survey as grading_survey
 from soc.views.models import host
 from soc.views.models import job
 from soc.views.models import mentor
@@ -38,6 +37,7 @@ from soc.views.models import org_admin
 from soc.views.models import org_app
 from soc.views.models import priority_group
 from soc.views.models import program
+from soc.views.models import project_survey
 from soc.views.models import request
 from soc.views.models import site
 from soc.views.models import sponsor
@@ -48,9 +48,6 @@ from soc.views.models import survey
 from soc.views.models import timeline
 from soc.views.models import user
 from soc.views.models import user_self
-
-# Task Queue URLs
-from soc.logic.models.news_feed import logic as news_feed_logic
 
 
 class Callback(object):
@@ -82,6 +79,7 @@ class Callback(object):
 
     self.core.registerSitemapEntry(cron.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(document.view.getDjangoURLPatterns())
+    self.core.registerSitemapEntry(grading_survey.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(host.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(job.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(mentor.view.getDjangoURLPatterns())
@@ -91,6 +89,7 @@ class Callback(object):
     self.core.registerSitemapEntry(org_app.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(priority_group.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(program.view.getDjangoURLPatterns())
+    self.core.registerSitemapEntry(project_survey.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(request.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(site.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(sponsor.view.getDjangoURLPatterns())
@@ -101,17 +100,6 @@ class Callback(object):
     self.core.registerSitemapEntry(timeline.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user_self.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user.view.getDjangoURLPatterns())
-    self.core.registerSitemapEntry(self.getMiscPatterns())
-
-    
-  def getMiscPatterns(self):    
-    """ Miscellanious URL patterns
-     for task queue URLs, etc. 
-    """
-    patterns = [
-    ('^addToFeedTask', news_feed_logic.addToFeedTask) 
-    ]
-    return patterns
 
   def registerWithSidebar(self):
     """Called by the server when sidebar entries should be registered.

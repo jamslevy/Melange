@@ -78,16 +78,5 @@ class Logic(group.Logic):
 
     super(Logic, self)._onCreate(entity)
 
-  def _onCreate(self, entity):
-    receivers = [entity]
-    newsfeed_logic.addToFeed(entity, receivers, "created")
 
-  def _onUpdate(self, entity):
-    receivers = [entity]
-    newsfeed_logic.addToFeed(entity, receivers, "updated")
-
-  def _onDelete(self, entity):
-    receivers = [entity]
-    newsfeed_logic.addToFeed(entity, receivers, "deleted")
-    
 logic = Logic()
