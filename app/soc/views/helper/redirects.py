@@ -361,6 +361,21 @@ def getListSurveysRedirect(entity, prefix, url_name):
   return '/%s/list/%s/%s' % (url_name, prefix, entity.key().id_or_name())
 
 
+def getTakeSurveyRedirect(entity, info):
+  """Returns the redirect for taking a Survey .
+
+  Args:
+      entity: a Survey entity
+      info: a dictionary contain a survey and params entry
+  """
+
+  survey_entity = entity
+  params = info
+
+  return '/%s/take/%s' % (params['url_name'],
+                                     survey_entity.key().id_or_name())
+
+
 def getTakeProjectSurveyRedirect(entity, info):
   """Returns the redirect for taking a Survey for the given Student Project.
 
@@ -372,9 +387,9 @@ def getTakeProjectSurveyRedirect(entity, info):
   survey_entity = info['survey']
   params = info['params']
 
-  return '/%s/take/%s?project=%s' %(params['url_name'],
-                                    survey_entity.key().id_or_name(),
-                                    entity.key().id_or_name())
+  return '/%s/take/%s?project=%s' % (params['url_name'],
+                                     survey_entity.key().id_or_name(),
+                                     entity.key().id_or_name())
 
 
 def getToSRedirect(presence):

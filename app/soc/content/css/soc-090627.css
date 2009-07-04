@@ -752,7 +752,7 @@ div #survey_widget select {
 }
 
 div #survey_widget td {
-display: block;
+  display: block;
 }
 
 div #survey_widget label {
@@ -764,7 +764,7 @@ div #survey_widget fieldset select {
 }
 
 div #survey_widget fieldset textarea,
-div #survey_widget fieldset input  {
+div #survey_widget fieldset input {
   margin: 10px;
 }
 

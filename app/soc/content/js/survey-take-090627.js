@@ -148,14 +148,11 @@
         );
       }
     );
-    
-
-
-    /*
-    * == Customize Comment Appearance ==
-    *
-    */
-    
+  
+   /*
+   * == Customize Comment Appearance ==
+   */
+   
    var comments = widget.find('td > .comment');
    comments.each(function(){
      $(this).parents('tr:first')

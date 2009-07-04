@@ -104,7 +104,7 @@ class View(base.View):
     rights['delete'] = ['checkIsDeveloper'] # TODO: fix deletion of Surveys
     rights['list'] = ['checkDocumentList']
     rights['pick'] = ['checkDocumentPick']
-    rights['take'] = ['checkIsDeveloper'] # TODO(ljvderijk) test proper check
+    rights['take'] = [('checkIsSurveyTakeable', survey_logic)]
 
     new_params = {}
     new_params['logic'] = survey_logic
@@ -285,6 +285,8 @@ class View(base.View):
       fields['survey_content'] = survey_content
 
     fields['modified_by'] = user
+    
+    self.getMenusForScope
     super(View, self)._editPost(request, entity, fields)
 
   def loadSurveyContent(self, schema, survey_fields, entity):
@@ -498,7 +500,8 @@ class View(base.View):
     survey_record = self._getSurveyRecordFor(entity, request, params)
 
     # get an instance of SurveyTakeForm to use
-    survey_form = self._getSurveyTakeForm(entity, survey_record, params)
+    survey_form = self._getSurveyTakeForm(entity, survey_record, params,
+                                          request.POST)
 
     # fill context with the survey_form and additional information
     context['survey_form'] = survey_form
@@ -534,20 +537,24 @@ class View(base.View):
 
     return record_logic.getForFields(filter, unique=True)
 
-  def _getSurveyTakeForm(self, survey, record, params):
+  def _getSurveyTakeForm(self, survey, record, params, post_dict=None):
     """Returns the specific SurveyTakeForm needed for the take view.
 
     Args:
         survey: a Survey entity
         record: a SurveyRecord instance if any exist
         params: the params dict for the requesting View
+        post_dict: POST data to be passed to form initialization
 
     Returns:
         An instance of SurveyTakeForm that can be used to take a Survey.
     """
 
     return surveys.SurveyTakeForm(survey_content=survey.survey_content,
-                                  survey_logic=params['logic'])
+                                  survey_record=record,
+                                  survey_logic=params['logic'],
+                                  data=post_dict)
+
 
   def takeGet(self, request, template, context, params, survey_form, entity,
               record, **kwargs):
@@ -560,14 +567,6 @@ class View(base.View):
         record: a SurveyRecord entity iff any exists
         rest: see base.View.public()
     """
-
-    # set the possible survey record as initial value
-    # TODO: SurveyTakeForm should just work with post_data if available
-    # and otherwise use the record supplied.
-    survey_form.survey_record = record
-
-    # fetch field contents
-    survey_form.getFields()
 
     # call the hook method
     self._takeGet(request, template, context, params, entity, record, **kwargs)
@@ -603,9 +602,6 @@ class View(base.View):
     survey_logic = params['logic']
     record_logic = survey_logic.getRecordLogic()
 
-    # fill form with request data
-    survey_form.getFields(post_dict=request.POST)
-
     if not survey_form.is_valid():
       # show the form errors
       return self._constructResponse(request, entity=entity, context=context,
@@ -623,7 +619,8 @@ class View(base.View):
     self._takePost(request, params, entity, record, properties)
 
     # update the record entity if any and clear all dynamic properties
-    record_logic.updateOrCreateFromFields(record, properties, clear_dynamic=True)
+    record_logic.updateOrCreateFromFields(record, properties,
+                                          clear_dynamic=True)
 
     # TODO: add notice to page that the response has been saved successfully
     # redirect to the same page for now
@@ -643,6 +640,72 @@ class View(base.View):
         properties: properties to be stored in the SurveyRecord entity
     """
     pass
+
+  def getMenusForScope(self, entity, params):
+    """List featured surveys if after the survey_start date 
+    and before survey_end.
+    """
+
+    # only list surveys for registered users
+    user = user_logic.getForCurrentAccount()
+    if not user:
+      return []
+
+    filter = {
+        'prefix' : params['url_name'],
+        'scope_path': entity.key().id_or_name(),
+        'is_featured': True,
+        }
+
+    entities = self._logic.getForFields(filter)
+    submenus = []
+    now = datetime.datetime.now()
+
+    # cache ACL
+    survey_rights = {}
+
+    # add a link to all featured documents
+    for entity in entities:
+
+      # only list those surveys the user can read
+      if entity.read_access not in survey_rights:
+
+        params = dict(prefix=entity.prefix, scope_path=entity.scope_path,
+                      link_id=entity.link_id, user=user)
+
+        checker = access.rights_logic.Checker(entity.prefix)
+        roles = checker.getMembership(entity.read_access)
+        rights = self._params['rights']
+        can_read = access.Checker.hasMembership(rights, roles, params)
+
+        # cache ACL for a given entity.read_access
+        survey_rights[entity.read_access] = can_read
+
+        if not can_read:
+          continue
+
+      elif not survey_rights[entity.read_access]:
+        continue
+
+      # omit if either before survey_start or after survey_end
+      if entity.survey_start and entity.survey_start > now:
+        continue
+
+      if entity.survey_end and entity.survey_end < now:
+        continue
+
+      survey_record = SurveyRecord.all(
+      ).filter("user =", user
+      ).filter("survey =", entity).get()
+      if survey_record: taken_status = ""
+      else: taken_status = "(new)"
+      submenu = (redirects.getTakeSurveyRedirect(entity, self._params),
+                 'Survey ' + taken_status + ': ' + entity.short_name, 
+                 'show')
+
+      submenus.append(submenu)
+    return submenus
+    
 
   def setHelpAndStatus(self, context, survey, survey_record):
     """Get help_text and status for template use.
