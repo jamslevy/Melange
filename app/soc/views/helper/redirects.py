@@ -361,7 +361,7 @@ def getListSurveysRedirect(entity, prefix, url_name):
   return '/%s/list/%s/%s' % (url_name, prefix, entity.key().id_or_name())
 
 
-def getTakeSurveyRedirect(entity, info):
+def getTakeSurveyRedirect(entity, url_name):
   """Returns the redirect for taking a Survey .
 
   Args:
@@ -370,10 +370,8 @@ def getTakeSurveyRedirect(entity, info):
   """
 
   survey_entity = entity
-  params = info
 
-  return '/%s/take/%s' % (params['url_name'],
-                                     survey_entity.key().id_or_name())
+  return '/%s/take/%s' % (url_name, survey_entity.key().id_or_name())
 
 
 def getTakeProjectSurveyRedirect(entity, info):

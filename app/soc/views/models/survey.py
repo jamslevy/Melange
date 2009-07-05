@@ -107,6 +107,7 @@ class View(base.View):
     rights['take'] = [('checkIsSurveyTakeable', survey_logic)]
 
     new_params = {}
+    #new_params['url_name'] = 'survey'
     new_params['logic'] = survey_logic
     new_params['rights'] = rights
 
@@ -286,7 +287,6 @@ class View(base.View):
 
     fields['modified_by'] = user
     
-    self.getMenusForScope
     super(View, self)._editPost(request, entity, fields)
 
   def loadSurveyContent(self, schema, survey_fields, entity):
@@ -641,7 +641,7 @@ class View(base.View):
     """
     pass
 
-  def getMenusForScope(self, entity, params):
+  def getMenusForScope(self, entity, params, subclass=None):
     """List featured surveys if after the survey_start date 
     and before survey_end.
     """
@@ -657,7 +657,14 @@ class View(base.View):
         'is_featured': True,
         }
 
-    entities = self._logic.getForFields(filter)
+    # check params to decide what model to query
+    if subclass:
+      logic = subclass
+    else:
+      logic = self._logic
+      
+    entities = logic.getForFields(filter)
+    
     submenus = []
     now = datetime.datetime.now()
 
@@ -667,7 +674,12 @@ class View(base.View):
     # add a link to all featured documents
     for entity in entities:
 
+      
       # only list those surveys the user can read
+      #TODO(james): can_read should allow be able to query for
+      # entity.taking_access, not entity.read_access
+      # this would likely involve expanding the rights checker
+      # not read access
       if entity.read_access not in survey_rights:
 
         params = dict(prefix=entity.prefix, scope_path=entity.scope_path,
@@ -699,7 +711,8 @@ class View(base.View):
       ).filter("survey =", entity).get()
       if survey_record: taken_status = ""
       else: taken_status = "(new)"
-      submenu = (redirects.getTakeSurveyRedirect(entity, self._params),
+
+      submenu = (redirects.getTakeSurveyRedirect(entity, logic.url_name),
                  'Survey ' + taken_status + ': ' + entity.short_name, 
                  'show')
 

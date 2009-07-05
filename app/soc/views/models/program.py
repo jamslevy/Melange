@@ -614,7 +614,7 @@ class View(presence.View):
 
     A menu item is generated for each program that is currently
     running. The public page for each program is added as menu item,
-    as well as all public documents for that program.
+    as well as all public documents and surveys for that program.
 
     Args:
       params: a dict with params for this View.
@@ -637,7 +637,16 @@ class View(presence.View):
       if entity.status == 'visible':
         # show the documents for this program, even for not logged in users
         items += document_view.view.getMenusForScope(entity, params)
+        # show surveys for program
         items += survey_view.view.getMenusForScope(entity, params)
+        # show project surveys for program
+        from soc.logic.models.survey import project_logic
+        items += survey_view.view.getMenusForScope(entity, params,
+                                            subclass=project_logic)
+        # show grading surveys for program
+        from soc.logic.models.survey import grading_logic
+        items += survey_view.view.getMenusForScope(entity, params,
+                                            subclass=grading_logic)        
         items += self._getTimeDependentEntries(entity, params, id, user)
 
       try:

@@ -49,6 +49,8 @@ PROJECT_STATUSES = {
 'accepted': {True: 'mid_term_passed', False: 'mid_term_failed'},
 'mid_term_passed': {True: 'passed', False: 'final_failed'}
 }
+URL_NAMES = { Survey: 'survey', ProjectSurvey: 'project_survey',
+             GradingProjectSurvey: 'grading_survey' }
 
 class Logic(work.Logic):
   """Logic methods for the Survey model.
@@ -63,6 +65,7 @@ class Logic(work.Logic):
       record_logic: SurveyRecordLogic (or subclass) instance for this Survey
     """
 
+    self.url_name = URL_NAMES[model]
     self.record_logic = record_logic
 
     super(Logic, self).__init__(model=model, base_model=base_model,
