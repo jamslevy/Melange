@@ -52,7 +52,6 @@ from soc.views.helper import widgets
 from soc.views.models import presence
 from soc.views.models import document as document_view
 from soc.views.models import sponsor as sponsor_view
-from soc.views.models import survey as survey_view
 from soc.views.sitemap import sidebar
 
 import soc.cache.logic
@@ -614,11 +613,15 @@ class View(presence.View):
 
     A menu item is generated for each program that is currently
     running. The public page for each program is added as menu item,
-    as well as all public documents and surveys for that program.
+    as well as all public documents for that program.
 
     Args:
       params: a dict with params for this View.
     """
+
+    from soc.views.models import survey as survey_view
+    from soc.views.models import project_survey as project_survey_view
+    from soc.views.models import grading_project_survey as grading_survey_view
 
     logic = params['logic']
     rights = params['rights']
@@ -637,18 +640,12 @@ class View(presence.View):
       if entity.status == 'visible':
         # show the documents for this program, even for not logged in users
         items += document_view.view.getMenusForScope(entity, params)
-        # show surveys for program
-        items += survey_view.view.getMenusForScope(entity, params)
-        # show project surveys for program
-        from soc.logic.models.survey import project_logic
-        items += survey_view.view.getMenusForScope(entity, params,
-                                            subclass=project_logic)
-        # show grading surveys for program
-        from soc.logic.models.survey import grading_logic
-        items += survey_view.view.getMenusForScope(entity, params,
-                                            subclass=grading_logic)        
+        items += survey_view.view.getMenusForScope(entity, params, id, user)
+        items += project_survey_view.view.getMenusForScope(
+            entity, params, id, user)
+        items += grading_survey_view.view.getMenusForScope(
+            entity, params, id, user)
         items += self._getTimeDependentEntries(entity, params, id, user)
-
       try:
         # check if the current user is a host for this program
         rights.doCachedCheck('checkIsHostForProgram',
@@ -658,6 +655,11 @@ class View(presence.View):
         if entity.status == 'invisible':
           # still add the document links so hosts can see how it looks like
           items += document_view.view.getMenusForScope(entity, params)
+          items += survey_view.view.getMenusForScope(entity, params, id, user)
+          items += project_survey_view.view.getMenusForScope(
+              entity, params, id, user)
+          items += grading_survey_view.view.getMenusForScope(
+              entity, params, id, user)
           items += self._getTimeDependentEntries(entity, params, id, user)
 
         items += [(redirects.getReviewOverviewRedirect(

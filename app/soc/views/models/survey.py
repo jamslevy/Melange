@@ -35,6 +35,7 @@ from django.utils import simplejson
 
 from soc.logic import cleaning
 from soc.logic import dicts
+from soc.logic.helper import timeline
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
 from soc.models.survey import Survey
@@ -93,9 +94,6 @@ class View(base.View):
       params: a dict with params for this View
     """
 
-    # TODO: read/write access needs to match survey
-    # TODO: usage requirements
-
     rights = access.Checker(params)
     rights['any_access'] = ['allow']
     rights['show'] = [('checkIsSurveyWritable', survey_logic)]
@@ -107,7 +105,6 @@ class View(base.View):
     rights['take'] = [('checkIsSurveyTakeable', survey_logic)]
 
     new_params = {}
-    #new_params['url_name'] = 'survey'
     new_params['logic'] = survey_logic
     new_params['rights'] = rights
 
@@ -286,7 +283,7 @@ class View(base.View):
       fields['survey_content'] = survey_content
 
     fields['modified_by'] = user
-    
+
     super(View, self)._editPost(request, entity, fields)
 
   def loadSurveyContent(self, schema, survey_fields, entity):
@@ -641,84 +638,6 @@ class View(base.View):
     """
     pass
 
-  def getMenusForScope(self, entity, params, subclass=None):
-    """List featured surveys if after the survey_start date 
-    and before survey_end.
-    """
-
-    # only list surveys for registered users
-    user = user_logic.getForCurrentAccount()
-    if not user:
-      return []
-
-    filter = {
-        'prefix' : params['url_name'],
-        'scope_path': entity.key().id_or_name(),
-        'is_featured': True,
-        }
-
-    # check params to decide what model to query
-    if subclass:
-      logic = subclass
-    else:
-      logic = self._logic
-      
-    entities = logic.getForFields(filter)
-    
-    submenus = []
-    now = datetime.datetime.now()
-
-    # cache ACL
-    survey_rights = {}
-
-    # add a link to all featured documents
-    for entity in entities:
-
-      
-      # only list those surveys the user can read
-      #TODO(james): can_read should allow be able to query for
-      # entity.taking_access, not entity.read_access
-      # this would likely involve expanding the rights checker
-      # not read access
-      if entity.read_access not in survey_rights:
-
-        params = dict(prefix=entity.prefix, scope_path=entity.scope_path,
-                      link_id=entity.link_id, user=user)
-
-        checker = access.rights_logic.Checker(entity.prefix)
-        roles = checker.getMembership(entity.read_access)
-        rights = self._params['rights']
-        can_read = access.Checker.hasMembership(rights, roles, params)
-
-        # cache ACL for a given entity.read_access
-        survey_rights[entity.read_access] = can_read
-
-        if not can_read:
-          continue
-
-      elif not survey_rights[entity.read_access]:
-        continue
-
-      # omit if either before survey_start or after survey_end
-      if entity.survey_start and entity.survey_start > now:
-        continue
-
-      if entity.survey_end and entity.survey_end < now:
-        continue
-
-      survey_record = SurveyRecord.all(
-      ).filter("user =", user
-      ).filter("survey =", entity).get()
-      if survey_record: taken_status = ""
-      else: taken_status = "(new)"
-
-      submenu = (redirects.getTakeSurveyRedirect(entity, logic.url_name),
-                 'Survey ' + taken_status + ': ' + entity.short_name, 
-                 'show')
-
-      submenus.append(submenu)
-    return submenus
-    
 
   def setHelpAndStatus(self, context, survey, survey_record):
     """Get help_text and status for template use.
@@ -887,6 +806,98 @@ class View(base.View):
       return error, None
 
     return entity, context
+
+  def getMenusForScope(self, entity, params, id, user):
+    """List featured surveys if after the survey_start date 
+    and before survey_end an iff the current user has the right taking access.
+
+    Args:
+      entity: entity which is the scope for a Survey
+      params: params from the requesting View
+      id: GAE user instance for the current user
+      user: User entity from the current user
+    """
+
+    # only list surveys for registered users
+    if not user:
+      return []
+
+    survey_params = self.getParams().copy()
+    survey_logic = survey_params['logic']
+    record_logic = survey_logic.getRecordLogic()
+
+    # filter all featured surveys for the given entity
+    filter = {
+        'prefix' : params['url_name'],
+        'scope_path': entity.key().id_or_name(),
+        'is_featured': True,
+        }
+
+    survey_entities = survey_logic.getForFields(filter)
+    submenus = []
+
+    # get the rights checker
+    rights = self._params['rights']
+    rights.setCurrentUser(id, user)
+
+    # cache ACL
+    survey_rights = {}
+
+    # add a link to all featured active surveys the user can take
+    for survey_entity in survey_entities:
+
+      if survey_entity.taking_access not in survey_rights:
+        # we have not determined if this user has the given type of access
+
+        # check if the current user is allowed to visit the take Survey page
+        allowed_to_take = False
+
+        try:
+          rights.checkIsSurveyTakeable(
+              {'key_name': survey_entity.key().name(),
+               'prefix': survey_entity.prefix,
+               'scope_path': survey_entity.scope_path,
+               'link_id': survey_entity.link_id,
+               'user': user},
+              survey_logic,
+              check_time=False)
+          allowed_to_take = True
+        except:
+          pass
+
+        # cache ACL for a given entity.taking_access
+        survey_rights[survey_entity.taking_access] = allowed_to_take
+
+        if not allowed_to_take:
+          # not allowed to take this survey
+          continue
+
+      elif not survey_rights[survey_entity.taking_access]:
+        # we already determined that the user doens't have access to this type
+        continue
+
+      if not timeline.isActivePeriod(survey_entity, 'survey'):
+        # this survey is not active right now
+        continue
+
+      # check if any SurveyRecord is available for this survey
+      filter = {'survey': survey_entity,
+                'user': user}
+
+      survey_record = record_logic.getForFields(filter, unique=True)
+
+      if survey_record:
+        taken_status = ""
+      else:
+        # no SurveyRecord available so we mark the survey as new
+        taken_status = "(new)"
+
+      submenu = (redirects.getTakeSurveyRedirect(survey_entity, survey_params),
+                 'Survey ' + taken_status + ': ' + survey_entity.short_name,
+                 'show')
+
+      submenus.append(submenu)
+    return submenus
 
 
 view = View()

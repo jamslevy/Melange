@@ -16,7 +16,7 @@ limitations under the License.
 {% block scripts %}
 {{ block.super }}
 <script type="text/javascript" src="/soc/content/js/survey-default-text-090627.js"></script>
-<script type="text/javascript" src="/soc/content/js/survey-take-090627.js"></script>
+<script type="text/javascript" src="/soc/content/js/survey-take-090705.js"></script>
 <script type="text/javascript" src="/jquery/jquery-growfield.js"></script>
 {% endblock %}
 
@@ -38,7 +38,7 @@ limitations under the License.
   {% else %}
     <form method="post">
   {% endif %}
-    <div style="width:100%; float:left;">
+    <div style="width:100%; float:left; clear:right;">
       <div class="{{ status }}" id="survey_widget">
         <table>
           {% block form_table %}
@@ -49,15 +49,17 @@ limitations under the License.
     </div>
 
 <br/><br/>
-    <table>
-      <tbody>
-        <tr>
-          <td>
-            <input type="submit" value="Submit" style="font-weight: bold;"/>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div style="float:left">
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <input type="submit" value="Submit" style="font-weight: bold;"/>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </form>
 {% endif %}
 

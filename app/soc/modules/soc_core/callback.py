@@ -131,4 +131,3 @@ class Callback(object):
     self.core.registerSidebarEntry(org_admin.view.getSidebarMenus)
     self.core.registerSidebarEntry(mentor.view.getSidebarMenus)
     self.core.registerSidebarEntry(org_app.view.getSidebarMenus)
-
