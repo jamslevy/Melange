@@ -347,11 +347,17 @@ class Logic(work.Logic):
     return entity.scope
 
   def _onCreate(self, entity):
-    """Set the scope of the survey.
-    """
-
     self.getScope(entity)
-    super(Logic, self)._onCreate(entity)
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+  def _onUpdate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+  def _onDelete(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
 
 
 class ProjectLogic(Logic):

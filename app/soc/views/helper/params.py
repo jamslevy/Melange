@@ -99,6 +99,7 @@ def constructParams(params):
   rights['unspecified'] = []
   rights['any_access'] = ['checkIsLoggedIn']
   rights['show'] = ['checkIsUser']
+  rights['subscribe'] = ['checkIsUser']
   rights['create'] = ['checkIsDeveloper']
   rights['edit'] = ['checkIsDeveloper']
   rights['delete'] = ['checkIsDeveloper']
@@ -122,6 +123,9 @@ def constructParams(params):
 
   if 'document_prefix' not in params:
     params['document_prefix'] = params['url_name']
+  
+  if 'subscribe' not in params:
+    params['subscribe'] = rights['subscribe']
 
   # Do not expand edit_redirect to allow it to be overwritten without suffix
   new_params['edit_redirect'] = '/%(url_name)s/edit/%(suffix)s'
@@ -219,11 +223,16 @@ def constructParams(params):
         (r'^%(url_name)s/(?P<access_type>list)/%(sans_link_id)s$',
          '%(module_package)s.%(module_name)s.list', 'List %(name_plural)s')]
 
-  if params.get('sans_link_id_public_list'):
+  if params.get('sans_link_id_list'):
+    new_params['django_patterns_defaults'] += [
+        (r'^%(url_name)s/(?P<access_type>list)/%(sans_link_id)s$',
+         '%(module_package)s.%(module_name)s.list', 'List %(name_plural)s')]
+         
+  if params.get('subscribe'):
     new_params['django_patterns_defaults'] += [
         (r'^%(url_name)s/(?P<access_type>list_public)/%(sans_link_id)s$',
-         '%(module_package)s.%(module_name)s.list_public', 
-         'List %(name_plural)s')]
+         '%(module_package)s.%(module_name)s.subscribe', 
+         'Subscribe to %(name_plural)s')]
 
   new_params['public_template'] = 'soc/%(module_name)s/public.html' % params
   new_params['export_template'] = 'soc/export.html'

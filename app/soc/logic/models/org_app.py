@@ -24,7 +24,7 @@ __authors__ = [
 
 from soc.logic.models import group_app
 from soc.logic.models import program as program_logic
-
+from soc.logic.models.news_feed import logic as newsfeed_logic
 import soc.models.group_app
 import soc.models.org_app
 
@@ -42,5 +42,16 @@ class Logic(group_app.Logic):
     super(Logic, self).__init__(model=model, base_model=base_model,
         scope_logic=program_logic)
 
+  def _onCreate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+  def _onUpdate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+  def _onDelete(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
 
 logic = Logic()

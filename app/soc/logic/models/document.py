@@ -26,7 +26,7 @@ from soc.cache import sidebar
 from soc.cache import home
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
-
+from soc.logic.models.news_feed import logic as newsfeed_logic
 import soc.models.document
 import soc.models.work
 
@@ -68,10 +68,7 @@ class Logic(work.Logic):
     return not entity.home_for
 
   def _updateField(self, entity, entity_properties, name):
-    """Special logic for Document.
-
-    - Flush the sidebar when a document is featured.
-    - Remove the document from the homepage cache when the home_for is updated
+    """Special logic for role. If state changes to active we flush the sidebar.
     """
 
     value = entity_properties[name]
@@ -87,4 +84,52 @@ class Logic(work.Logic):
     return True
 
 
+  def getScope(self, entity):
+    """Gets Scope for entity.
+
+    params:
+      entity = Survey entity
+    """
+
+    if getattr(entity, 'scope', None):
+      return entity.scope
+
+    import soc.models.program
+    import soc.models.organization
+    import soc.models.user
+    import soc.models.site
+
+    # use prefix to generate dict key
+    scope_types = {"program": soc.models.program.Program,
+    "org": soc.models.organization.Organization,
+    "user": soc.models.user.User,
+    "site": soc.models.site.Site}
+
+    # determine the type of the scope
+    scope_type = scope_types.get(entity.prefix)
+
+    if not scope_type:
+      # no matching scope type found
+      raise AttributeError('No Matching Scope type found for %s' % entity.prefix)
+
+    # set the scope and update the entity
+    entity.scope = scope_type.get_by_key_name(entity.scope_path)
+    entity.put()
+
+  def _onCreate(self, entity):
+    self.getScope(entity)
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+
+  def _onUpdate(self, entity):
+    self.getScope(entity) # for older entities
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+
+  def _onDelete(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
+    
 logic = Logic()
