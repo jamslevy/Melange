@@ -44,4 +44,16 @@ class Logic(role.Logic):
                                 disallow_last_resign=disallow_last_resign)
 
 
+  def _onCreate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "created")
+
+  def _onUpdate(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "updated")
+
+  def _onDelete(self, entity):
+    receivers = [entity.scope]
+    newsfeed_logic.addToFeed(entity, receivers, "deleted")
+    
 logic = Logic()

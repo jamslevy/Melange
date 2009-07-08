@@ -116,18 +116,16 @@ class Logic(role.Logic):
 
     return super(Logic, self)._updateField(entity, entity_properties, name)
 
-
   def _onCreate(self, entity):
-    receivers = [entity]
+    receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "created")
 
   def _onUpdate(self, entity):
-    receivers = [entity]
+    receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "updated")
 
   def _onDelete(self, entity):
-    receivers = [entity]
+    receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "deleted")
-    
 
 logic = Logic()
