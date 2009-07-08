@@ -223,10 +223,11 @@ def constructParams(params):
         (r'^%(url_name)s/(?P<access_type>list)/%(sans_link_id)s$',
          '%(module_package)s.%(module_name)s.list', 'List %(name_plural)s')]
 
-  if params.get('sans_link_id_list'):
+  if params.get('sans_link_id_public_list'):
     new_params['django_patterns_defaults'] += [
-        (r'^%(url_name)s/(?P<access_type>list)/%(sans_link_id)s$',
-         '%(module_package)s.%(module_name)s.list', 'List %(name_plural)s')]
+        (r'^%(url_name)s/(?P<access_type>list_public)/%(sans_link_id)s$',
+         '%(module_package)s.%(module_name)s.list_public', 
+         'List %(name_plural)s')]
          
   if params.get('subscribe'):
     new_params['django_patterns_defaults'] += [
