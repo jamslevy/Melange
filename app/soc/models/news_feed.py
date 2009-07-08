@@ -21,12 +21,19 @@ __authors__ = [
 ]
 
 from google.appengine.ext import db
+
 from soc.models import base
 import soc.models.linkable 
 import soc.models.user
 
 class FeedItem(base.ModelWithFieldAttributes):
-  """ An item referencing an entity and its scope. 
+  """ A feed item referencing a sender entity (the updated entity)
+  and a receiver entity (where the feed item should appear)
+  
+  If an entity has multiple receievers, a FeedItem entity is created
+  for each receiver-sender pair, so that there are often several
+  FeedItem entities created for a single update. 
+  
   """
 
   # refers to the entity this feed item is about 
@@ -38,31 +45,23 @@ class FeedItem(base.ModelWithFieldAttributes):
                                 collection_name="feed_items",
                                 required=False)
                                 
-  update_type = db.StringProperty(required=False)
-
-  #scope = db.ReferenceProperty(soc.models.linkable.Linkable,
-  #required=True, collection_name='receieved_feed_items')
-  #entity = db.ReferenceProperty(soc.models.linkable.Linkable,
-  #required=False, collection_name='sent_feed_items')
-
-  update_type = db.StringProperty(required=True)
-  # link to sender page
-  link = db.StringProperty(required=True)
-  
+  update_type = db.StringProperty(required=True)  
   
   # a message or markup that go along with the feed item
   payload = db.TextProperty(required=False)
 
   #: date when the feed item was created
   created = db.DateTimeProperty(auto_now_add=True)
-  #: date when the feed item was created (is it ever modified?) 
-  modified = db.DateTimeProperty(auto_now=True)  
-  # story, payload?
-  
+
+    
+  def linktoEntity(self):
+    from soc.views.helper.news_feed import NewsFeed
+    news_feed = NewsFeed( self.sender() )
+    return news_feed.linkToEntity()
+        
   def sender(self):
     return db.get(self.sender_key)
 
   def receiver(self):
-    print "BLAH"
     return db.get(self.receiver_key)
     

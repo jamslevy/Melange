@@ -30,12 +30,12 @@ from soc.logic import dicts
 from soc.views import out_of_band
 from soc.views.helper import access
 from soc.views.helper import decorators
+from soc.views.helper.news_feed import NewsFeed
 from soc.views.helper import redirects
 from soc.views.helper import responses
 from soc.views.helper import widgets
 from soc.views.models import document as document_view
 from soc.views.models import presence_with_tos
-from soc.views.helper.news_feed import NewsFeed
 import soc.models.site
 import soc.logic.models.site
 import soc.logic.dicts

@@ -230,7 +230,7 @@ def constructParams(params):
          
   if params.get('subscribe'):
     new_params['django_patterns_defaults'] += [
-        (r'^%(url_name)s/(?P<access_type>list_public)/%(sans_link_id)s$',
+        (r'^%(url_name)s/(?P<access_type>subscribe)/%(key_fields)s$',
          '%(module_package)s.%(module_name)s.subscribe', 
          'Subscribe to %(name_plural)s')]
 

@@ -410,3 +410,10 @@ def getToSRedirect(presence):
     return None
 
   return getPublicRedirect(tos_doc, {'url_name': 'document'})
+
+
+def getSubscribeRedirect(entity, params):
+  """Redirects to subscription XML doc for an entity
+  """
+  return'/%s/subscribe/%s' % (
+      params['url_name'], entity.key().name())

@@ -21,7 +21,27 @@ __authors__ = [
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
   
+from django.template import loader
+  
 from soc.cache import news_feed
+from soc.logic.models.news_feed import logic as newsfeed_logic
+from soc.views.helper.redirects import getSubscribeRedirect
+
+# Note: CUSTOM_URL_NAMES is a temporary solution.
+# see getFeedUrl for details on the url_name problem.
+#
+# value should correlate to params['url_name'] in view
+# Regex sub() method could also be used to add the underscores.
+CUSTOM_URL_NAMES = { 
+'studentproject': 'student_project',
+'prioritygroup': 'priority_group',
+'studentproposal':'student_proposal', 
+'groupapp':'group_app', 
+'orgapp':'org_app', 
+'clubmember':'club_member', 
+'organization': 'org'
+}
+
 
 class NewsFeed():
   """
@@ -29,20 +49,21 @@ class NewsFeed():
   """ 
   
   def __init__(self, entity):
+    """ 
+    params:
+      entity - arbitrary model entity 
+    """
     self.entity = entity
-  
   
   def getFeed(self): 
     """gets HTML version of Newsfeed for entity
     """ 
-    from django.template import loader
     feed_items = self.retrieveFeed()
     feed_url = self.getFeedUrl()
     context = { 'feed_items': feed_items, 'feed_url': feed_url }
     return loader.render_to_string('soc/news_feed/news_feed.html',
                                      dictionary=context)
     
-
   def getFeedXML(self):
     """gets XML version of Newsfeed for entity
     """ 
@@ -52,22 +73,42 @@ class NewsFeed():
     context = {'entity': self.entity, 'feed_items': feed_items, 'feed_url': feed_url }
     return template, context
 
-
   @news_feed.cache
-  def retrieveFeed(self):                            
-    from soc.logic.models.news_feed import logic as newsfeed_logic
+  def retrieveFeed(self):
+    """ retrieves feed for entity
+    """                            
     return newsfeed_logic.retrieveFeed(self.entity)
 
   def getFeedUrl(self):
     """ retrieve the Feed URL for the entity
+    
+    TODO(James): 
+  
+    This temporary method should be superceded by standard methods.
+    
+    Specifically, url_name should be retrieved from params
+    and redirect directly used for subscribe URL.
+    
+    The issue is that the url_name for one entity (such as a document)
+    is required from the view for another entity (such as a site)
+    
+    The existing url_name val therefore cannot normally be accessed
+    from params. 
+    
     """ 
-    # should this be in redirects module? 
-    #return self.entity.sc
-    
     # get the url name
-    from soc.logic.models.news_feed import CUSTOM_URL_NAMES
     url_name = CUSTOM_URL_NAMES.get(self.entity.kind().lower())
-    if not url_name: url_name = self.entity.kind().lower()
-    # return formatted link
-    return "/%s/subscribe/%s" % (url_name, self.entity.key().name() )
+    if not url_name: 
+      url_name = self.entity.kind().lower()
+    params = {'url_name': url_name}
+    return getSubscribeRedirect(self.entity, params)
     
+    
+  def linkToEntity(self):
+    """ link to entity for a feed item
+    """
+    url_name = CUSTOM_URL_NAMES.get(self.entity.kind().lower())
+    if not url_name: 
+      url_name = self.entity.kind().lower()
+    return "/%s/show/%s" % (url_name, self.entity.key().name() )  
+

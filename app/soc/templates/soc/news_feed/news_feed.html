@@ -3,18 +3,17 @@
 <div class="news_feed">
 
 <h2>
-<a id="feed_icon" href="{{ feed_url }}"><img src="/soc/content/images/feed.gif"/></a>
+<a id="feed_icon" href="{{ feed_url }}">
+<img src="/soc/content/images/feed.gif"/></a>
 <a class="">Recent Updates:</a>
 </h2>
 
 <div class="inner">
 {% for item in feed_items %}
-{% if empty %}
-EMPTY
-{% endif %}
 <div class="entry">
-<div class="title"> {# this could also be item.link and be added when the link is created using redirect view helper #}
-<a href="{{ item.link }}" >{{ item.sender.title }}</a> was {{ item.update_type }} by {{ item.user.name }}
+<div class="title">
+<a href="{{ item.linktoEntity }}" >{{ item.sender.title }}</a>
+ was {{ item.update_type }} by {{ item.user.name }}
 </div>
 <div class="time">{{ item.created|timesince }} ago</div>
 

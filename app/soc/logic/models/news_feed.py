@@ -22,80 +22,45 @@ __authors__ = [
   ]
 
 import logging
+
 from google.appengine.ext import db
+
+from soc.logic.models.user import logic as user_logic
 import soc.models.news_feed
 import soc.models.linkable 
-from soc.logic.models.user import logic as user_logic
 
-
-# custom url names
-# value should correlate to params['url_name'] in view
-# Regex sub() method could also be used to add the underscores.
-CUSTOM_URL_NAMES = { 
-'studentproject': 'student_project',
-'prioritygroup': 'priority_group',
-'studentproposal':'student_proposal', 
-'groupapp':'group_app', 
-'orgapp':'org_app', 
-'clubmember':'club_member', 
-'organization': 'org'
-}
-      
       
 class Logic():
   """Logic methods for the Newsfeed.
   """
 
-  def __init__(self):
-    """ initiate logic module
-    """
-    pass
-
   # this should be a background task
   def addToFeed(self, sender, receivers, update_type, payload=None):
     """Sends out a message if there is only one unread notification.
     """
-
     save_items = []
     user = user_logic.getForCurrentAccount()
+    
     for receiver in receivers:
-      if not receiver: 
-         logging.warning('empty receiver sent for newsfeed item')
-         continue
-         
-        
-      
-      
-      url_name = CUSTOM_URL_NAMES.get(sender.kind().lower())
-      if not url_name: url_name = sender.kind().lower()
-      
       new_feed_item = soc.models.news_feed.FeedItem( 
-      sender_key= str(sender.key()),      # .should this just be key or key_name?
+      sender_key= str(sender.key()),     
       receiver_key = str(receiver.key()),
       user = user,
-      update_type = update_type,
-      link = "/%s/show/%s" % (url_name, sender.key().name() ) 
+      update_type = update_type
       )
-      if payload: new_feed_item.payload = payload
+      
+      if payload: 
+        new_feed_item.payload = payload
+        
       save_items.append(new_feed_item)
     db.put(save_items)  
     
-    
-
   def retrieveFeed(self, entity, count=10):
     """ Retrieves feed for a given entity 
     """
-    # argh old method wasn't working at all...
-    # let's start from scratch.
-    
-    # use django time translation 
-    
     feed_items = soc.models.news_feed.FeedItem.all().filter(
     "receiver_key =", str(entity.key())).fetch(1000)
     return feed_items[:count]
     
     
-        
-
-
 logic = Logic()
