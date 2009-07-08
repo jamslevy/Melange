@@ -25,13 +25,11 @@ from django.template import loader
   
 from soc.cache import news_feed
 from soc.logic.models.news_feed import logic as newsfeed_logic
+from soc.views.helper.redirects import getPublicRedirect
 from soc.views.helper.redirects import getSubscribeRedirect
 
 # Note: CUSTOM_URL_NAMES is a temporary solution.
 # see getFeedUrl for details on the url_name problem.
-#
-# value should correlate to params['url_name'] in view
-# Regex sub() method could also be used to add the underscores.
 CUSTOM_URL_NAMES = { 
 'studentproject': 'student_project',
 'prioritygroup': 'priority_group',
@@ -110,5 +108,6 @@ class NewsFeed():
     url_name = CUSTOM_URL_NAMES.get(self.entity.kind().lower())
     if not url_name: 
       url_name = self.entity.kind().lower()
-    return "/%s/show/%s" % (url_name, self.entity.key().name() )  
+    params = {'url_name': url_name}
+    return getPublicRedirect(self.entity, params)  
 
