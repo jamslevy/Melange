@@ -121,6 +121,9 @@ class View(base.View):
     if not entity:
       return
 
+    news_feed = NewsFeed(entity)
+    context['news_feed'] = news_feed.getFeed() 
+    
     try:
       home_doc = entity.home
     except db.Error:
@@ -152,9 +155,6 @@ class View(base.View):
       # put the link to edit to home document in context
       context['home_document_edit_redirect'] = redirects.getEditRedirect(
           home_doc, {'url_name': 'document'})
-
-    news_feed = NewsFeed(entity)
-    context['news_feed'] = news_feed.getFeed() 
     
     return super(View, self)._public(request, entity, context)
 
