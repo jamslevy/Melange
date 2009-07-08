@@ -47,11 +47,13 @@ from soc.views import out_of_band
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import lists
+from soc.views.helper.news_feed import NewsFeed
 from soc.views.helper import redirects
 from soc.views.helper import widgets
 from soc.views.models import presence
 from soc.views.models import document as document_view
 from soc.views.models import sponsor as sponsor_view
+from soc.views.models import survey as survey_view
 from soc.views.sitemap import sidebar
 
 import soc.cache.logic
@@ -843,6 +845,13 @@ class View(presence.View):
 
     return items
 
+  def _public(self, request, entity, context):
+    """See base.View._public().
+    """
+
+    news_feed = NewsFeed(entity)
+    context['news_feed'] = news_feed.getFeed() 
+
 
 view = View()
 
@@ -861,3 +870,4 @@ show_duplicates = decorators.view(view.showDuplicates)
 slots = decorators.view(view.slots)
 home = decorators.view(view.home)
 pick = decorators.view(view.pick)
+subscribe = decorators.view(view.subscribe)
