@@ -64,3 +64,10 @@ class FeedItem(base.ModelWithFieldAttributes):
   def receiver(self):
     return db.get(self.receiver_key)
     
+
+
+class FeedItemCount(db.Model):
+  """Shared Counter of Feed Items for an Entity
+  """
+  entity = db.StringProperty()
+  count = db.IntegerProperty(default=0)
