@@ -834,6 +834,7 @@ div #survey_widget td > fieldset > label {
   border: 10px solid #e5ecf9;
   border-top: 1px solid #3366cc;
   float:left;
+  margin:50px 0;
 }
 
 .news_feed .inner{
