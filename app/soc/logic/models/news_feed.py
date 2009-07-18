@@ -28,33 +28,19 @@ from google.appengine.ext import db
 from soc.logic.models.user import logic as user_logic
 import soc.models.news_feed
 import soc.models.linkable 
+import soc.tasks.news_feed
 
-      
 class Logic():
   """Logic methods for the Newsfeed.
   """
 
-  # this should be a background task
-  def addToFeed(self, sender, receivers, update_type, payload=None):
-    """Sends out a message if there is only one unread notification.
-    """
-    save_items = []
-    user = user_logic.getForCurrentAccount()
-    
-    for receiver in receivers:
-      new_feed_item = soc.models.news_feed.FeedItem( 
-      sender_key= str(sender.key()),     
-      receiver_key = str(receiver.key()),
-      user = user,
-      update_type = update_type
-      )
-      
-      if payload: 
-        new_feed_item.payload = payload
+
+  def addToFeed(self, sender, receivers, update_type, **kwargs):
+    # see method for doc string
+    return soc.tasks.news_feed.scheduleAddToFeedTask(sender, receivers, 
+    update_type, **kwargs)
+
         
-      save_items.append(new_feed_item)
-    db.put(save_items)  
-    
   def retrieveFeed(self, entity, count=10):
     """ Retrieves feed for a given entity 
     """

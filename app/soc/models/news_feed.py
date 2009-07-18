@@ -36,9 +36,9 @@ class FeedItem(base.ModelWithFieldAttributes):
   
   """
   # refers to the entity this feed item is about 
-  sender_key = db.StringProperty(required=False)
+  sender_key = db.StringProperty(required=True)
   # refers to scope of feed where this item will appear 
-  receiver_key = db.StringProperty(required=False)
+  receiver_key = db.StringProperty(required=True)
   
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
                                 collection_name="feed_items",
