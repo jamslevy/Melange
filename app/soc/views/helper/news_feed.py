@@ -111,3 +111,6 @@ class NewsFeed():
     params = {'url_name': url_name}
     return getPublicRedirect(self.entity, params)  
 
+
+
+
