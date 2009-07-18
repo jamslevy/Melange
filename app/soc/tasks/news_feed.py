@@ -22,10 +22,13 @@ __authors__ = [
 
 import logging
 
+from django import http
+
 from google.appengine.api.labs import taskqueue
 from google.appengine.ext import db
 
 from soc.logic.models.user import logic as user_logic
+import soc.logic.helper.notifications
 import soc.models.news_feed
 import soc.models.linkable 
 from soc.tasks.helper import error_handler
@@ -103,7 +106,7 @@ def AddToFeedTask(request, *args, **kwargs):
   
   # save items to datastore
   save_items = []
-  for receiver_key in receiver_keys:
+  for receiver_key in receiver_keys.split(','):
     new_feed_item = soc.models.news_feed.FeedItem( 
     sender_key= str(sender_key), #TODO(james): db.Key
     receiver_key = str(receiver_key),
@@ -116,7 +119,38 @@ def AddToFeedTask(request, *args, **kwargs):
       
     save_items.append(new_feed_item)
   db.put(save_items)
+  
+  # task completed, return OK
+  return http.HttpResponse('OK')
 
+def sendEmailNotifications(user, sender, 
+                           receivers, update_type, **kwargs):
+  """
+   Sends e-mail notification to user about new feed item. 
+   Private payload info can be included in this message
+   (while it is not included in the Atom feed)
+   
+  """  
 
-def sendEmailNotifications(sender, receivers, update_type, **kwargs):
-  pass
+  from_user = False
+  for receiver in receievers:
+    if getattr(receiever, 'title'):
+      receiever_title = receiever.title
+    else: receiver_title  = receiever.key().name()
+    subject = "%s has been (%s)" % update_type
+    template = "We need a django template here" 
+    # this should be a user query function and there should be
+    # an access check for the receiver and then a check against a 
+    # no_subscribe ListProperty for user for both sender and recevier.
+    users = getSubscribedUsersForFeedItem(receiver, sender)
+    for to_user in users:
+      soc.logic.helper.notifications.sendNotification(
+      to_user, 
+      from_user, 
+      message_properties, 
+      subject, 
+      template)
+    
+      
+    
+
