@@ -28,7 +28,7 @@ from django import http
 from google.appengine.api.labs import taskqueue
 from google.appengine.ext import db
 
-from soc.logic import accounts
+
 import soc.logic.models as model_logic
 from soc.logic.models.user import logic as user_logic
 import soc.logic.helper.notifications
@@ -51,7 +51,7 @@ def getDjangoURLPatterns():
   
 def scheduleAddToFeedTask(sender, receivers, update_type, **kwargs):
   """ Create new feed items for an event, using the Task API
-  params:
+  Args:
   
     sender - the entity sending the event
     receivers - a list of receivers receiving items in their feed
@@ -80,7 +80,7 @@ def AddToFeedTask(request, *args, **kwargs):
   """ Creates a FeedItem entity pairing an event for a sender entity
   and one receiver entity
   
-  params:
+  Args:
     sender_key - key for the entity sending the event
     receiver_key - one receiver receiving item in their feed
     update_type - create, update, delete, etc.
@@ -124,72 +124,103 @@ def AddToFeedTask(request, *args, **kwargs):
     save_items.append(new_feed_item)
   db.put(save_items)
   
-  sendFeedItemEmailNotifications(user, sender_key, 
-                 receiver_keys, update_type, payload, **kwargs)
+  sendFeedItemEmailNotifications(sender_key, user,
+                                 update_type, payload, **kwargs)
                   
   # task completed, return OK
   return http.HttpResponse('OK')
 
+
+from soc.logic import accounts
 from soc.logic import mail_dispatcher
-
-
 # this belongs in notifications module
-def sendFeedItemEmailNotifications(user, sender_key, receiver_keys, 
-    update_type, payload, context = {}, from_user = False, **kwargs):
+def sendFeedItemEmailNotifications(entity_key, user, update_type, payload, 
+    context = {}, **kwargs):
   """
    Sends e-mail notification to user about new feed item. 
    Private payload info can be included in this message
    (while it is not included in the Atom feed)
-   
+  
+  Args:
+         entity_key - entity being updated
+         user - use who performed feed action
+         update_type - type of update (created, updated, deleted)
+         payload - extra information for message
+         context - template dict
+         
   """  
 
    # no from_user required
-  sender = db.get(sender_key)
-  feed_helper = NewsFeedHelper(sender)
-  if from_user: 
-    sender_name, sender  = from_user.name, from_user
+  entity = db.get(entity_key)
+  feed_helper = NewsFeedHelper(entity)
+  if user: user_name = user.name
   else:
-    sender_name, sender  = mail_dispatcher.getDefaultMailSender()
-  for receiver_key in receiver_keys:
-    receiver = db.get(receiver_key)
-    if getattr(receiver, 'title', None):
-      receiever_title = receiver.title
-    else: receiver_title  = receiver.key().name()
-    subject = "%s (%s) has been %s" % (
-    receiver_title, receiver.kind(), update_type)
+    user_name, user  = mail_dispatcher.getDefaultMailSender()
     
-    # this should be a user query function and there should be
-    # an access check for the receiver and then a check against a 
-    # no_subscribe ListProperty for user for both sender and recevier.
-    to_users = getSubscribedUsersForFeedItem(receiver, sender)
+  if getattr(entity, 'title', None):
+    entity_title = entity.title
+  else: entity_title  = entity.key().name()
+  subject = "%s (%s) has been %s" % (
+  entity_title, entity.kind(), update_type)
+  
+  # this should be a user query function and there should be
+  # an access check for the receiver and then a check against a 
+  # no_subscribe ListProperty for user for both sender and recevier.
+  to_users = getSubscribedUsersForFeedItem(entity)
 
-    # get site name
-    site_entity = model_logic.site.logic.getSingleton()
-    site_name = site_entity.site_name
-     
-    for to_user in to_users:
-      messageProperties = {
-          'to_name': to_user.name,
-          'sender_name': sender_name,
-          'to': accounts.denormalizeAccount(to_user.account).email(),
-          'sender': sender,
-          'payload': payload,
-          'subject': subject,
-          'payload': payload,
-          'url': feed_helper.linkToEntity(),
-          'site_location': 'http://%s' % os.environ['HTTP_HOST'],
-          }
-      # send out the message using the news_feed template
-      mail_dispatcher.sendMailFromTemplate(
-      'soc/mail/news_feed_notification.html', messageProperties)
+  # get site name
+  site_entity = model_logic.site.logic.getSingleton()
+  site_name = site_entity.site_name
+   
+  for to_user in to_users:
+    messageProperties = {
+        'to_name': to_user.name,
+        'to': accounts.denormalizeAccount(to_user.account).email(),          
+        'sender_name': user_name,
+        'sender': accounts.denormalizeAccount(user.account).email(),
+        'entity': entity,
+        'payload': payload,
+        'subject': subject,
+        'url': feed_helper.linkToEntity(),
+        'site_location': 'http://%s' % os.environ['HTTP_HOST']
+        }
+    logging.info(messageProperties)
+    # send out the message using the news_feed template
+    mail_dispatcher.sendMailFromTemplate(
+    'soc/mail/news_feed_notification.html', messageProperties)
 
       
-# this should be replaced in user_logic   
-def getSubscribedUsersForFeedItem(receiver, sender):
-  user = user_logic.getForCurrentAccount()
-  print ""
-  logging.info(user)
-  return [user]
+# this should be added to user_logic   
+def getSubscribedUsersForFeedItem(entity):
+  """ retrieve all users who have an active role for 
+  the receiever entity, and then check to make sure they haven't
+  set the no_subscribe preference to block either the sender or 
+  receieverkind, (or the sender or receiver entities?)
+  
+  TODO(james): use Checker.checkHasActiveRole -
+  how would this be made as universal as possible for any model kind?
+  
+  """
+  
+
+  #
+  # get all users who have active read-access for this entity. 
+  #
+  #
+  #
+  
+  from soc.models.user import User
+  access_passed_users = User.all().fetch(1000)
+  return access_passed_users
+  subscribed_users = []
+  for user in access_passed_users:
+    if user.has_email_subscription and entity.key not in user.unsubscribed:
+      subscribed_users.append(user) # or entity scope?
+  return subscribed_users
+    
+  
+  #users = user_logic.getForFields({}, unique=false)
+  #return users
   
 
 

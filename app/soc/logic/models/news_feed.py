@@ -41,12 +41,12 @@ class Logic():
     update_type, **kwargs)
 
         
-  def retrieveFeed(self, entity, count=10):
+  def retrieveFeed(self, entity, count=10, sort_order="-receiver_key"):
     """ Retrieves feed for a given entity 
     """
     feed_items = soc.models.news_feed.FeedItem.all().filter(
-    "receiver_key =", str(entity.key())).fetch(1000)
-    return feed_items[:count]
+    "receiver_key =", str(entity.key())).order(sort_order).fetch(count)
+    return feed_items
     
     
 logic = Logic()
