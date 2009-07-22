@@ -72,3 +72,19 @@ class FeedItemCount(db.Model):
   """
   entity = db.StringProperty()
   count = db.IntegerProperty(default=0)
+
+
+
+
+class NewsFeedSubscriber(db.Model):
+  """ Manages subscriptions for user
+  """
+
+  user = db.ReferenceProperty(reference_class=soc.models.user.User,
+                                collection_name="feed_subscriber",
+                                required=True)
+  has_email_subscription = db.BooleanProperty(required=True)
+  unsubscribed = db.ListProperty(db.Key)
+  
+  
+  

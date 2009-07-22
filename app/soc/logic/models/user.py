@@ -255,6 +255,9 @@ class Logic(base.Logic):
     """
 
     notifications.sendWelcomeMessage(entity)
+    from soc.logic.models.news_feed import logic as newsfeed_logic
+    newsfeed_logic.createSubscriber(entity)
+    
 
     super(Logic, self)._onCreate(entity)
 

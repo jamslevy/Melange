@@ -202,20 +202,17 @@ def getSubscribedUsersForFeedItem(entity):
   
   """
   
-
   #
   # get all users who have active read-access for this entity. 
   #
   #
   #
-  
-  from soc.models.user import User
-  access_passed_users = User.all().fetch(1000)
-  return access_passed_users
   subscribed_users = []
-  for user in access_passed_users:
-    if user.has_email_subscription and entity.key not in user.unsubscribed:
-      subscribed_users.append(user) # or entity scope?
+  for user in access_passed_users(entity):
+    subscriber = user.feed_subscriber.get()
+    if subscriber and subscriber.has_email_subscription:
+       if entity.key() not in subscriber.unsubscribed:
+         subscribed_users.append(user) # what if entity scope is unsubscribed?
   return subscribed_users
     
   
@@ -224,4 +221,6 @@ def getSubscribedUsersForFeedItem(entity):
   
 
 
- 
+def access_passed_users(entity): 
+  from soc.models.user import User
+  return User.all().fetch(1000)

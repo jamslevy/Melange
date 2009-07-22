@@ -127,8 +127,10 @@ class UserSeeder(Seeder):
         'name': 'User %04d' % i,
         }
     entity = User(**user_properties)
+    from soc.logic.models.user import logic as user_logic
     if entities is None:
       entity.put()
+      user_logic._onCreate(entity)
     else:
       entities.append(entity)
 

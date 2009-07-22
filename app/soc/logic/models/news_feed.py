@@ -25,7 +25,6 @@ import logging
 
 from google.appengine.ext import db
 
-from soc.logic.models.user import logic as user_logic
 import soc.models.news_feed
 import soc.models.linkable 
 import soc.tasks.news_feed
@@ -48,5 +47,26 @@ class Logic():
     "receiver_key =", str(entity.key())).order(sort_order).fetch(count)
     return feed_items
     
+  def createSubscriber(self, user, has_email_subscription=True):
+    subscriber = soc.models.news_feed.NewsFeedSubscriber(
+    user = user,
+    has_email_subscription = has_email_subscription)
+    db.put(subscriber)
+    
+    
+    
+    
+    
+"""
+
+from soc.logic.models.news_feed import logic as newsfeed_logic
+from soc.models.user import User
+users = User.all().fetch(1000)
+for user in users:
+ newsfeed_logic.createSubscriber(user)
+ 
+"""
     
 logic = Logic()
+
+

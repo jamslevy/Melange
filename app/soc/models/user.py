@@ -120,6 +120,3 @@ class User(soc.models.linkable.Linkable):
       'Indicates the status of the User. Invalid means that this account '
       'has been excluded from using the website.')
   
-  has_email_subscription = db.BooleanProperty(required=False, default=True)
-  
-  
