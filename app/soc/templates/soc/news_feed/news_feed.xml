@@ -5,26 +5,29 @@
 <updated>{{ feed_items.0.created }}</updated>
 <id>{# source #}</id>
 
-{% for item in feed_items %}
+{% for feed_item in feed_items %}
+
 <entry>
-<title>{{ item.sender.title }}</a>
- was {{ item.update_type }} by {{ item.user.name }}</title>
-<id>{{item.key }}</id>
-<updated>{{ item.created }}</updated>
+
+<title>{{ feed_item.item.sender.title }}
+ was {{ feed_item.item.update_type }} by 
+ {{ feed_item.item.user.name }}</title>
+ 
+<id>{{ feed_item.item.key }}</id>
+<updated>{{ feed_item.item.created }}</updated>
+
 <content type="html">
-
 <div class="title"> 
-<a href="/{{ item.sender.kind.lower }}/show/{{ item.sender.key.name }}" >
-{{ item.sender.title }}</a>
- was {{ item.update_type }} by {{ item.user.name }}
+<a href="/{{ feed_item.item.sender.kind.lower }}/show/{{ feed_item.item.sender.key.name }}" >
+{{ feed_item.item.sender.title }}</a>
+ was {{ feed_item.item.update_type }} by {{ feed_item.item.user.name }}
 </div>
-
-<div class="time">{{ item.created|timesince }} ago</div>
-
+<div class="time">{{ feed_item.item.created|timesince }} ago</div>
 {# additional information <div class="snippet"></div> #}
-
 </content>
+
 </entry>
+
 {% endfor %}
 
 </feed>

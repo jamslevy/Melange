@@ -38,7 +38,8 @@ class FeedItem(base.ModelWithFieldAttributes):
   # refers to the entity this feed item is about 
   sender_key = db.StringProperty(required=True)
   # refers to scope of feed where this item will appear 
-  receiver_key = db.StringProperty(required=True)
+  #receiver_key = db.StringProperty(required=True)
+  receivers = db.ListProperty(db.Key)
   
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
                                 collection_name="feed_items",
@@ -53,11 +54,6 @@ class FeedItem(base.ModelWithFieldAttributes):
   #: date when the feed item was created
   created = db.DateTimeProperty(auto_now_add=True)
 
-    
-  def linktoEntity(self):
-    from soc.views.helper.news_feed import NewsFeed
-    news_feed = NewsFeed( self.sender() )
-    return news_feed.linkToEntity()
         
   def sender(self):
     return db.get(self.sender_key)
@@ -73,18 +69,3 @@ class FeedItemCount(db.Model):
   entity = db.StringProperty()
   count = db.IntegerProperty(default=0)
 
-
-
-
-class NewsFeedSubscriber(db.Model):
-  """ Manages subscriptions for user
-  """
-
-  user = db.ReferenceProperty(reference_class=soc.models.user.User,
-                                collection_name="feed_subscriber",
-                                required=True)
-  has_email_subscription = db.BooleanProperty(required=True)
-  unsubscribed = db.ListProperty(db.Key)
-  
-  
-  

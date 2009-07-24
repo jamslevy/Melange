@@ -25,13 +25,20 @@ import logging
 
 from google.appengine.ext import db
 
+from soc.logic.models import base
 import soc.models.news_feed
 import soc.models.linkable 
 import soc.tasks.news_feed
 
-class Logic():
+class Logic(base.Logic):
   """Logic methods for the Newsfeed.
   """
+
+  def __init__(self, model=soc.models.news_feed.FeedItem):
+    """Defines the name, key_name and model for this entity.
+    """
+
+    super(Logic, self).__init__(model)
 
 
   def addToFeed(self, sender, receivers, update_type, **kwargs):
@@ -40,32 +47,23 @@ class Logic():
     update_type, **kwargs)
 
         
-  def retrieveFeed(self, entity, count=10, sort_order="-receiver_key"):
+  def retrieveFeed(self, entity, count=10, sort_order="-created"):
     """ Retrieves feed for a given entity 
+    
+    Args:
+      entity - entity rendering its news feed
+      count - number of feed items to retrieve
+      sort_order - sorting method 
+      
     """
-    feed_items = soc.models.news_feed.FeedItem.all().filter(
-    "receiver_key =", str(entity.key())).order(sort_order).fetch(count)
+    feed_items = soc.models.news_feed.FeedItem.all(
+    ).filter('receivers', entity
+    ).order(sort_order
+    ).fetch(count)
     return feed_items
-    
-  def createSubscriber(self, user, has_email_subscription=True):
-    subscriber = soc.models.news_feed.NewsFeedSubscriber(
-    user = user,
-    has_email_subscription = has_email_subscription)
-    db.put(subscriber)
-    
-    
-    
-    
-    
-"""
 
-from soc.logic.models.news_feed import logic as newsfeed_logic
-from soc.models.user import User
-users = User.all().fetch(1000)
-for user in users:
- newsfeed_logic.createSubscriber(user)
- 
-"""
+    
+
     
 logic = Logic()
 

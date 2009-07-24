@@ -8,13 +8,13 @@
 </h2>
 
 <div class="inner">
-{% for item in feed_items %}
+{% for feed_item in feed_items %}
 <div class="entry">
 <div class="title">
-<a href="{{ item.linktoEntity }}" >{{ item.sender.title }}</a>
- was {{ item.update_type }} by {{ item.user.name }}
+<a href="{{ feed_item.link }}" >{{ feed_item.item.sender.title }}</a>
+ was {{ feed_item.item.update_type }} by {{ feed_item.item.user.name }}
 </div>
-<div class="time">{{ item.created|timesince }} ago</div>
+<div class="time">{{ feed_item.item.created|timesince }} ago</div>
 
 {# additional information <div class="snippet"></div> #}
 </div>

@@ -52,7 +52,12 @@ class NewsFeed():
       entity - arbitrary model entity 
     """
     self.entity = entity
-  
+
+
+    
+
+    
+      
   def getFeed(self): 
     """gets HTML version of Newsfeed for entity
     """ 
@@ -68,15 +73,30 @@ class NewsFeed():
     feed_items = self.retrieveFeed()
     feed_url = self.getFeedUrl()
     template = 'soc/news_feed/news_feed.xml'
-    context = {'entity': self.entity, 'feed_items': feed_items, 'feed_url': feed_url }
+    context = {
+               'entity': self.entity, 
+               'feed_items': feed_items, 
+               'feed_url': feed_url 
+              }
     return template, context
 
   @news_feed.cache
   def retrieveFeed(self):
     """ retrieves feed for entity
     """                            
-    return newsfeed_logic.retrieveFeed(self.entity)
+    feed_item_list = []
+    feed_item_entities = newsfeed_logic.retrieveFeed(self.entity)
+    for item in feed_item_entities:
+      feed_item_list.append(
+      { 
+       "item": item,
+       "link": self.linkToEntity(item.sender())
+      })
+    return feed_item_list 
 
+
+
+    
   def getFeedUrl(self):
     """ retrieve the Feed URL for the entity
     
@@ -102,15 +122,16 @@ class NewsFeed():
     return getSubscribeRedirect(self.entity, params)
     
     
-  def linkToEntity(self):
+  def linkToEntity(self, entity):
     """ link to entity for a feed item
     """
-    url_name = CUSTOM_URL_NAMES.get(self.entity.kind().lower())
+    url_name = CUSTOM_URL_NAMES.get(entity.kind().lower())
     if not url_name: 
-      url_name = self.entity.kind().lower()
+      url_name = entity.kind().lower()
     params = {'url_name': url_name}
-    return getPublicRedirect(self.entity, params)  
+    return getPublicRedirect(entity, params)  
 
 
 
 
+news_feed = NewsFeed(None)
