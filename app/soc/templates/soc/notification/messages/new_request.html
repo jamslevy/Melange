@@ -1,4 +1,4 @@
-{% extends "soc/mail/base.html" %}
+{% extends "soc/notification/messages/base.html" %}
 {% comment %}
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,19 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-
 {% block content %}
-{{ subject }}
-<br/><br/>
-{% ifnotequal payload 'None' %} {{ payload }} <br/><br/> {% endifnotequal %}
-
-For more information please visit <a href="{{ url }}">{{ url }}</a>.
-{% endblock %}
-
-To change or cancel these notifications on your user profile: {{ site_location }}/user/edit_profile
-
-{% block signature %}
-Greetings, <br />
-The {{ site_name }} Team
+{{ requester_name }} has requested to become a {{ entity.role_verbose }} for {{ entity.scope.name }}.<br />
+Please click <a href="{{ request_url }}">here</a> to accept or reject this request.
 {% endblock %}

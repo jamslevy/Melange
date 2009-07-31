@@ -1,0 +1,9 @@
+{% extends "soc/survey/public.html" %}
+
+{% block page_description %}
+  {% if record %}
+    Below is a read-only view of the survey record for {{ entity.title }}.
+  {% else %}
+    Specify a Record ID with a 'record_id' GET argument.
+  {% endif %}
+{% endblock %}
