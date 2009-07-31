@@ -16,12 +16,13 @@ limitations under the License.
 
 {% block content %}
 {{ subject }}
-
-{{ payload|default:"" }}
-
+<br/><br/>
+{% if payload %} {{ payload }} <br/><br/> {% endif %}
 
 For more information please visit <a href="{{ url }}">{{ url }}</a>.
 {% endblock %}
+
+To change or cancel these notifications on your user profile: {{ site_location }}/user/edit_profile
 
 {% block signature %}
 Greetings, <br />

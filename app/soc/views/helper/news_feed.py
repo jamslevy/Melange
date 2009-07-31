@@ -133,8 +133,9 @@ class NewsFeed():
     if not url_name: 
       url_name = entity.kind().lower()
     params = {'url_name': url_name}
-    return getPublicRedirect(entity, params)  
-
+    return ('http://%s%s' 
+    % ( os.environ['HTTP_HOST'],
+    getPublicRedirect(entity, params)  ) )
 
 
 

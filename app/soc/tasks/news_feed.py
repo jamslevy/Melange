@@ -167,11 +167,14 @@ payload,  context = {}, **kwargs):
     sender_name, sender  = mail_dispatcher.getDefaultMailSender()
   if getattr(entity, 'title', None):
     entity_title = entity.title
-  else: entity_title  = entity.key().name()
-  subject = "%s (%s) has been %s" % (
+  else: 
+    entity_title  = entity.key().name()
+  
+  subject = "%s - %s (%s) has been %s" % (
+  os.environ['APPLICATION_ID'].capitalize(),
   entity_title, entity.kind(), update_type)
   
-  
+    
   # this should be a user query function and there should be
   # an access check for the receiver and then a check against a 
   # no_subscribe ListProperty for user for both sender and recevier.
@@ -183,10 +186,13 @@ payload,  context = {}, **kwargs):
    
   for to_user in to_users:
     messageProperties = {
+        # message configuration
         'to_name': to_user.name,
-        'to': accounts.denormalizeAccount(to_user.account).email(),          
+        'to': accounts.denormalizeAccount(to_user.account).email(),  
+                
         'sender_name': sender_name,
         'sender': accounts.denormalizeAccount(sender.account).email(),
+        # feed item info
         'acting_user': acting_user,
         'entity': entity,
         'payload': payload,

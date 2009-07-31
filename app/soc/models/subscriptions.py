@@ -31,7 +31,7 @@ class Subscriber(db.Model):
                                 collection_name="subscriber",
                                 required=True)
   # universal toggle
-  has_email_subscription = db.BooleanProperty(required=True)
+  has_email_subscription = db.BooleanProperty(required=True, default=True)
   # list of entities to which user is subscribed
   subscriptions = db.ListProperty(db.Key)
   

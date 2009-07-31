@@ -96,16 +96,30 @@ class Logic(base.Logic):
       logging.error('no subscriber update method found for entity kind\
       %s' % entity.kind().lower())
       return None
-    
+
+  def editSubscription(self, entity, is_subscribed):
+    """ Through the Edit Profile page, a user
+    can toggle a global e-mail subscription setting. Subscribe-by-star 
+    UI controls subscription to individual entities) 
+    """
+    subscriber = self.getSubscriberForUser(entity)
+    subscriber.has_email_subscription = is_subscribed
+    db.put(subscriber)
+          
 
 
 class UpdateLogic():
   """ 
   Update the subscribers for an entity
   
-  TODO: the access view helper module could be very useful,
+  TODO (James): 
+  
+  The access view helper module could be very useful,
   but is deeply integrated with the workflow of checking a single 
   user within the context of an entity's view. 
+  
+  The only option appears to be creating new logic infrastructure,
+  but leveraging any existing logic would surely be better. 
   """
 
   def addEntitySubscriptionForUsers(self, users, entity):

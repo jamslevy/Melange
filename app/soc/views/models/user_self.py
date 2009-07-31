@@ -38,6 +38,7 @@ from soc.logic import dicts
 from soc.logic import models as model_logic
 from soc.logic.models.user import logic as user_logic
 from soc.logic.models.site import logic as site_logic
+from soc.logic.models.subscriptions import logic as subscription_logic
 from soc.views import helper
 from soc.views.helper import access
 from soc.views.helper import decorators
@@ -98,6 +99,7 @@ class View(base.View):
         'agreed_to_tos_on': forms.DateTimeField(
           widget=widgets.ReadOnlyInput(attrs={'disabled':'true'}),
           required=False),
+        'email_subscription': forms.BooleanField(required=False)
         }
 
     new_params['sidebar_heading'] = 'User (self)'
@@ -148,6 +150,7 @@ class View(base.View):
       kwargs: The Key Fields for the specified entity
     """
 
+
     # set the link_id to the current user's link_id
     user_entity = user_logic.getForCurrentAccount()
     # pylint: disable-msg=E1103
@@ -181,7 +184,12 @@ class View(base.View):
       # that the form checks still pass
       form.fields['agreed_to_tos'] = forms.fields.BooleanField(
           widget=forms.HiddenInput, initial=entity.agreed_to_tos, required=True)
-
+          
+    # form field for e-mail notifications
+    subscriber = subscription_logic.getSubscriberForUser(entity)
+    form.fields['email_subscription'] = forms.fields.BooleanField(
+    initial = subscriber.has_email_subscription)
+    
   def editPost(self, request, entity, context, params=None):
     """Overwrite so we can add the contents of the ToS.
     For params see base.View.editPost().
@@ -200,6 +208,11 @@ class View(base.View):
 
     # fill in the account field with the current User
     fields['account'] = users.User()
+
+    # update user's subscription status
+    if entity:
+      subscription_logic.editSubscription(entity, 
+      fields['email_subscription'])
 
     # special actions if there is no ToS present
     s_logic = model_logic.site.logic
