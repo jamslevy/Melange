@@ -21,7 +21,9 @@ __authors__ = [
   ]
 
 
+from soc.tasks import grading_survey_group as grading_group_tasks
 from soc.tasks import news_feed as news_feed_tasks
+from soc.tasks import surveys as survey_tasks
 from soc.views.models import club
 from soc.views.models import club_app
 from soc.views.models import club_admin
@@ -29,6 +31,7 @@ from soc.views.models import club_member
 from soc.views.models import cron
 from soc.views.models import document
 from soc.views.models import grading_project_survey as grading_survey
+from soc.views.models import grading_survey_group
 from soc.views.models import host
 from soc.views.models import job
 from soc.views.models import mentor
@@ -81,6 +84,8 @@ class Callback(object):
     self.core.registerSitemapEntry(cron.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(document.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(grading_survey.view.getDjangoURLPatterns())
+    self.core.registerSitemapEntry(
+        grading_survey_group.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(host.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(job.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(mentor.view.getDjangoURLPatterns())
@@ -102,9 +107,11 @@ class Callback(object):
     self.core.registerSitemapEntry(user_self.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user.view.getDjangoURLPatterns())
 
-    # News Feed Tasks
+    # register task URL's
+    self.core.registerSitemapEntry(grading_group_tasks.getDjangoURLPatterns())
     self.core.registerSitemapEntry(news_feed_tasks.getDjangoURLPatterns())
-    
+    self.core.registerSitemapEntry(survey_tasks.getDjangoURLPatterns())
+
   def registerWithSidebar(self):
     """Called by the server when sidebar entries should be registered.
     """
@@ -135,3 +142,4 @@ class Callback(object):
     self.core.registerSidebarEntry(org_admin.view.getSidebarMenus)
     self.core.registerSidebarEntry(mentor.view.getSidebarMenus)
     self.core.registerSidebarEntry(org_app.view.getSidebarMenus)
+    self.core.registerSidebarEntry(grading_survey_group.view.getSidebarMenus)

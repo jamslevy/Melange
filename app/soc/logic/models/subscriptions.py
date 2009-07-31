@@ -131,15 +131,15 @@ class UpdateLogic():
         
       
   def document(self, entity):
-    users = user_logic.getForFields({})
+    users = []#user_logic.getForFields({})
     return users
 
   def survey(self, entity):
-    users = user_logic.getForFields({})
+    users = []#user_logic.getForFields({})
     return users
 
   def studentproject(self, entity):
-    users = user_logic.getForFields({})
+    users = []#user_logic.getForFields({})
     return users
             
     

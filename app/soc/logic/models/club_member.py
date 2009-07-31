@@ -35,13 +35,22 @@ class Logic(role.Logic):
 
   def __init__(self, model=soc.models.club_member.ClubMember,
                base_model=soc.models.role.Role, scope_logic=club_logic,
-               disallow_last_resign=False):
+               role_name='club_member', disallow_last_resign=False):
     """Defines the name, key_name and model for this entity.
     """
 
     super(Logic, self).__init__(model=model, base_model=base_model,
                                 scope_logic=scope_logic,
+                                role_name=role_name,
                                 disallow_last_resign=disallow_last_resign)
 
+  def getRoleLogicsToNotifyUponNewRequest(self):
+    """Returns a list with ClubAdmin logic which can be used to notify all
+    appropriate Club Admins.
+    """
+
+    from soc.logic.models.club_admin import logic as club_admin_logic
+
+    return [club_admin_logic]
 
 logic = Logic()

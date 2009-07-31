@@ -1,13 +1,5 @@
-<tr class="off" onmouseover="this.className='on'" onmouseout="this.className='off'"
-onclick="return false; document.location.href='{{ list.redirect }}'" name="name">
-
-  {% for value in list.item.getValues %}
-    <td>
-      <div class="{{ value }}">
-        {{ value }}
-      </div>
-    </td>
-  {% endfor %}
+<tr class="off" onmouseover="this.className='on'; do_redirect=true" onmouseout="this.className='off'"
+onclick="return false; if (do_redirect) document.location.href='{{ list.redirect }}'" name="name">
 
   <td>
     <div class="author">
@@ -27,8 +19,17 @@ onclick="return false; document.location.href='{{ list.redirect }}'" name="name"
     </div>
   </td>
 
+    <td style="max-width: 150px;">
+      <div class="first_answer">
+        {{ list.item.getValues.0|truncatewords:20 }}
+      </div>
+    </td>
+    
+
+
   <td>
-    <a class="fetch_answers" id="results_for_{{ list.item.user.link_id }}">View</a>
+    <a class="fetch_answers" id="results_for_{{ list.item.user.link_id }}" onclick="document.location.href='{{ record_redirect }}?record_id={{ list.item.key.id }}'">
+    Click to View Answers </a>
   </td>
 
   {% if grades %}

@@ -54,14 +54,27 @@ limitations under the License.
   {% if help_text %}
   <script type="text/javascript">
   $(document).ready( function() {
-    var tooltip = "<div class='tooltip'><div class='tooltip-body'><img src='/soc/content/images/purrInfo.png' alt='' /><h3>Info</h3><p>{% autoescape off %}{{ help_text|linebreaksbr|escapejs }}{% endautoescape %}</p></div><div class='tooltip-bottom'></div></div>";
+    var tooltip = [
+      "<div class='tooltip'>",
+      "  <div class='tooltip-body'>",
+      "    <img src='/soc/content/images/purrInfo.png' alt='' />",
+      "    <h3>Info</h3>",
+      "    <p>",
+      "      {% autoescape off %}",
+      "        {{ help_text|linebreaksbr|escapejs }}",
+      "      {% endautoescape %}",
+      "    </p>",
+      "  </div>",
+      "  <div class='tooltip-bottom'></div>",
+      "</div>"
+    ].join("");
     var tooltip_object=null;
     var documented = $("#{{ field_id }}");
     var not_fieldset = documented.attr('tagName') !== 'FIELDSET';
     if (not_fieldset) {
       documented.focus(function() {
         if (tooltip_object==null) {
-          tooltip_object = $(tooltip).purr({usingTransparentPNG: true});
+          tooltip_object = $(tooltip).purr({usingTransparentPNG: true,removeTimer: 10000});
         }
       });
       documented.blur(function() {
@@ -74,7 +87,7 @@ limitations under the License.
     else {
       documented.find("input").hover(function() {
         if (tooltip_object==null) {
-          tooltip_object = $(tooltip).purr({usingTransparentPNG: true});
+          tooltip_object = $(tooltip).purr({usingTransparentPNG: true,removeTimer: 10000});
         }
       },
       function() {

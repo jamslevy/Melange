@@ -270,7 +270,7 @@ def getSelectRedirect(params):
 def getInviteAcceptedRedirect(entity, _):
   """Returns the redirect for accepting an invite.
   """
-
+  # TODO: redesign this redirect to use ROLE_VIEWS from the Role View
   return '/%s/accept_invite/%s/%s' % (
       entity.role, entity.scope_path, entity.link_id)
 
@@ -362,7 +362,7 @@ def getListSurveysRedirect(entity, prefix, url_name):
 
 
 def getTakeSurveyRedirect(entity, info):
-  """Returns the redirect for taking a Survey .
+  """Returns the redirect for taking a Survey.
 
   Args:
       entity: a Survey entity
@@ -373,7 +373,7 @@ def getTakeSurveyRedirect(entity, info):
   params = info
 
   return '/%s/take/%s' % (params['url_name'],
-                                     survey_entity.key().id_or_name())
+                          survey_entity.key().id_or_name())
 
 
 def getTakeProjectSurveyRedirect(entity, info):
@@ -390,6 +390,28 @@ def getTakeProjectSurveyRedirect(entity, info):
   return '/%s/take/%s?project=%s' % (params['url_name'],
                                      survey_entity.key().id_or_name(),
                                      entity.key().id_or_name())
+
+
+def getSurveyRecordRedirect(entity, params):
+  """Returns the redirect for taking a Survey for the given Student Project.
+
+  Args:
+      entity: a Survey entity
+      params: params for view
+      
+  """
+
+  return '/%s/record/%s' % (params['url_name'],
+                            entity.key().id_or_name())
+    
+def getEditGradingRecordRedirect(entity, params):
+  """Returns the redirect for editing a given GradingRecord.
+  """
+
+  return '/%s/edit_record/%s?id=%s' % (
+      params['url_name'],
+      entity.grading_survey_group.key().id_or_name(),
+      entity.key().id_or_name())
 
 
 def getToSRedirect(presence):

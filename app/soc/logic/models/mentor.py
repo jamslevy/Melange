@@ -44,12 +44,13 @@ class Logic(role.Logic):
 
   def __init__(self, model=soc.models.mentor.Mentor,
                base_model=soc.models.role.Role, scope_logic=org_logic,
-               disallow_last_resign=False):
+               role_name='mentor', disallow_last_resign=False):
     """Defines the name, key_name and model for this entity.
     """
 
     super(Logic, self).__init__(model=model, base_model=base_model,
                                 scope_logic=scope_logic,
+                                role_name=role_name,
                                 disallow_last_resign=disallow_last_resign)
 
   def canResign(self, entity):
@@ -116,16 +117,13 @@ class Logic(role.Logic):
 
     return super(Logic, self)._updateField(entity, entity_properties, name)
 
-  def _onCreate(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "created")
+  def getRoleLogicsToNotifyUponNewRequest(self):
+    """Returns a list with OrgAdmin logic which can be used to notify all
+    appropriate Organization Admins.
+    """
 
-  def _onUpdate(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "updated")
+    from soc.logic.models.org_admin import logic as org_admin_logic
 
-  def _onDelete(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "deleted")
+    return [org_admin_logic]
 
 logic = Logic()

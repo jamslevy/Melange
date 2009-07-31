@@ -35,25 +35,14 @@ class Logic(role.Logic):
 
   def __init__(self, model=soc.models.student.Student,
                base_model=soc.models.role.Role, scope_logic=program_logic,
-               disallow_last_resign=False):
+               role_name='student', disallow_last_resign=False):
     """Defines the name, key_name and model for this entity.
     """
 
     super(Logic, self).__init__(model=model, base_model=base_model,
                                 scope_logic=scope_logic,
+                                role_name=role_name,
                                 disallow_last_resign=disallow_last_resign)
 
 
-  def _onCreate(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "created")
-
-  def _onUpdate(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "updated")
-
-  def _onDelete(self, entity):
-    receivers = [entity.scope]
-    newsfeed_logic.addToFeed(entity, receivers, "deleted")
-    
 logic = Logic()

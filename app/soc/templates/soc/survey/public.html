@@ -16,7 +16,7 @@ limitations under the License.
 {% block scripts %}
 {{ block.super }}
 <script type="text/javascript" src="/soc/content/js/survey-default-text-090627.js"></script>
-<script type="text/javascript" src="/soc/content/survey-take-090706.js"></script>
+<script type="text/javascript" src="/soc/content/js/survey-take-090708.js"></script>
 <script type="text/javascript" src="/jquery/jquery-growfield.js"></script>
 {% endblock %}
 
@@ -35,9 +35,12 @@ limitations under the License.
 
   {% load forms_helpers %}
   <form method="get" onsubmit="javascript:return false">
+  {% block page_description %}
     This page gives a preview of how users will see the Survey.
+    {% endblock %}
 
     {% if entity.content %}
+    <br/><br/>
       <div=survey_description>
         {{ entity.content|safe }}
       </div>

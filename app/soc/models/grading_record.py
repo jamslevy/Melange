@@ -57,22 +57,23 @@ class GradingRecord(base.ModelWithFieldAttributes):
 
   #: The GradingSurveyGroup to which this record belongs
   grading_survey_group = db.ReferenceProperty(
-      GradingSurveyGroup, required=True, collection_name='grading_records')
+      reference_class=GradingSurveyGroup, required=True, 
+      collection_name='grading_records')
 
   #: Mentor's GradingProjectSurveyRecord for this evaluation. Iff exists.
   mentor_record = db.ReferenceProperty(
-      GradingProjectSurveyRecord, required=False,
+      reference_class=GradingProjectSurveyRecord, required=False,
       collection_name='mentor_grading_records')
 
   #: Student's ProjectSurveyRecord for this evaluation. Iff exists.
   student_record = db.ReferenceProperty(
-      ProjectSurveyRecord, required=False,
+      reference_class=ProjectSurveyRecord, required=False,
       collection_name='student_grading_records')
 
   #: Project for this evaluation.
-  project = db.ReferenceProperty(StudentProject,
-                                collection_name='grading_records',
-                                required=True)
+  project = db.ReferenceProperty(
+      reference_class=StudentProject, required=True, 
+      collection_name='grading_records')
 
   #: Grade decision set for this grading record.
   #: pass: Iff the mentor_record states that the student has passed. 
@@ -85,12 +86,12 @@ class GradingRecord(base.ModelWithFieldAttributes):
   #:       set the decision will be fail.
   #: undecided: If no mentor_record has been set.
   grade_decision = db.StringProperty(required=True, default='undecided',
-      choices=['pass', 'fail', 'undecided'])
+                                     choices=['pass', 'fail', 'undecided'])
 
   #: Boolean that states if the grade_decision property has been locked
   #: This is to prevent an automatic update from a GradingSurveyGroup to
   #: overwrite the decision made by for example a Program Administrator.
-  locked = db.BooleanProperty(required=True, default=False,
+  locked = db.BooleanProperty(required=False, default=False,
                               verbose_name=ugettext('Grade Decision locked'))
 
   #: Property containing the date that this GradingRecord was created.

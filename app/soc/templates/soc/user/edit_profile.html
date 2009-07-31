@@ -69,8 +69,8 @@ adult) where you live.</i></b>
   </tr>
   <tr><td colspan="4">&nbsp;</td></tr>
 
-  {% field_as_table_row form.email_subscription %}
-  
+{% field_as_table_row form.email_subscription %}
+
 {% if tos_link %}
 {% if not user.agreed_to_tos %}
 <tr>

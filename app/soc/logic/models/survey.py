@@ -347,6 +347,18 @@ class Logic(work.Logic):
     # return the scope
     return entity.scope
 
+  def hasRecord(self, survey_entity):
+    """Returns True iff the given Survey has at least one SurveyRecord.
+
+    Args:
+      survey_entity: a Survey instance
+    """
+
+    fields = {'survey': survey_entity}
+
+    record_logic = self.getRecordLogic()
+    return record_logic.getQueryForFields(fields).count(1) > 0
+
   def _onCreate(self, entity):
     self.getScope(entity)
     receivers = [entity.scope]
@@ -359,7 +371,6 @@ class Logic(work.Logic):
   def _onDelete(self, entity):
     receivers = [entity.scope]
     newsfeed_logic.addToFeed(entity, receivers, "deleted")
-
 
 class ProjectLogic(Logic):
   """Logic class for ProjectSurvey.
@@ -377,7 +388,7 @@ class ProjectLogic(Logic):
 
 
 class GradingProjectLogic(ProjectLogic):
-  """Logic class for GradingProjectSurvey
+  """Logic class for GradingProjectSurvey.
   """
 
   def __init__(self, model=GradingProjectSurvey,

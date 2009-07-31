@@ -40,7 +40,6 @@ from django.template import loader
 from django.utils.datastructures import SortedDict
 from django.utils.encoding import force_unicode
 from django.utils.html import escape
-from django.utils.safestring import mark_safe
 
 from soc.logic import dicts
 from soc.logic.lists import Lists
@@ -295,6 +294,8 @@ class SurveyTakeForm(djangoforms.ModelForm):
       comment: initial comment value for field
     """
 
+    #fix growfield wrapping
+    attrs['wrap'] = 'hard'
     widget = widgets.Textarea(attrs=attrs)
 
     if not tip:
@@ -910,8 +911,10 @@ class PickQuantRadioRenderer(widgets.RadioFieldRenderer):
     """Outputs set of radio fields in a div.
     """
 
-    return mark_safe(u'<div class="quant_radio">\n%s\n</div>'
-                     % u'\n'.join([u'%s' % force_unicode(w) for w in self]))
+    from django.utils.html import linebreaks
+
+    return linebreaks(u'<div class="quant_radio">%s</div>'
+                      % u'\n'.join([u'%s' % force_unicode(w) for w in self]))
 
 
 class PickQuantRadio(forms.RadioSelect):
@@ -928,71 +931,6 @@ class PickQuantRadio(forms.RadioSelect):
 WIDGETS = {'multi_checkbox': PickManyCheckbox,
            'single_select': PickOneSelect,
            'quant_radio': PickQuantRadio}
-
-
-class SurveyResults(widgets.Widget):
-  """Render List of Survey Results For Given Survey.
-  """
-
-  def render(self, survey, params, filter=filter, limit=1000, offset=0,
-             order=[], idx=0, context={}):
-    """ renders list of survey results
-
-    params:
-      survey: current survey
-      params: dict of params for rendering list
-      filter: filter for list results
-      limit: limit for list results
-      offset: offset for list results
-      order: order for list results
-      idx: index for list results
-      context: context dict for template
-    """
-
-    survey_logic = params['logic']
-    record_logic = survey_logic.getRecordLogic()
-    filter = {'survey': survey}
-    data = record_logic.getForFields(filter=filter, limit=limit, offset=offset,
-                              order=order)
-
-    params['name'] = "Survey Results"
-    content = {
-      'idx': idx,
-      'data': data,
-      'logic': record_logic,
-      'limit': limit,
-     }
-    updates = dicts.rename(params, params['list_params'])
-    content.update(updates)
-    contents = [content]
-
-    if len(content) == 1:
-      content = content[0]
-      key_order = content.get('key_order')
-
-    context['list'] = Lists(contents)
-
-    # TODO(ajaksu) is this the best way to build the results list?
-    for list_ in context['list']._contents:
-      if len(list_['data']) < 1:
-        return "<p>No Survey Results Have Been Submitted</p>"
-
-      list_['row'] = 'soc/survey/list/results_row.html'
-      list_['heading'] = 'soc/survey/list/results_heading.html'
-      list_['description'] = 'Survey Results:'
-
-    context['properties'] = survey.survey_content.orderedProperties()
-    context['entity_type'] = "Survey Results"
-    context['entity_type_plural'] = "Results"
-    context['no_lists_msg'] = "No Survey Results"
-
-    path = (survey.entity_type().lower(), survey.prefix,
-            survey.scope_path, survey.link_id)
-    context['grade_action'] = "/%s/grade/%s/%s/%s" % path
-
-    markup = loader.render_to_string('soc/survey/results.html',
-                                     dictionary=context).strip('\n')
-    return markup
 
 
 class HelperForm(object):
@@ -1016,38 +954,40 @@ class HelperForm(object):
     return form
 
 
-def _get_csv_header(sur):
+def getCSVHeader(survey_entity):
   """CSV header helper, needs support for comment lines in CSV.
 
   Args:
-      sur: Survey entity
+      survey_entity: Survey entity
   """
 
   tpl = '# %s: %s\n'
 
   # add static properties
-  fields = ['# Melange Survey export for \n#  %s\n#\n' % sur.title]
-  fields += [tpl % (k,v) for k,v in sur.toDict().items()]
-  fields += [tpl % (f, str(getattr(sur, f))) for f in PLAIN.split()]
-  fields += [tpl % (f, str(getattr(sur, f).link_id)) for f in FIELDS.split()]
+  fields = ['# Melange Survey export for \n#  %s\n#\n' % survey_entity.title]
+  fields += [tpl % (k,v) for k,v in survey_entity.toDict().items()]
+  fields += [tpl % (f, str(getattr(survey_entity, f))) for f in PLAIN.split()]
+  fields += [tpl % (f, str(getattr(survey_entity, f).link_id))
+             for f in FIELDS.split()]
   fields.sort()
 
   # add dynamic properties
   fields += ['#\n#---\n#\n']
-  dynamic = sur.survey_content.dynamic_properties()
-  dynamic = [(prop, getattr(sur.survey_content, prop)) for prop in dynamic]
+  dynamic = survey_entity.survey_content.dynamic_properties()
+  dynamic = [(prop, getattr(survey_entity.survey_content, prop))
+             for prop in dynamic]
   fields += [tpl % (k,v) for k,v in sorted(dynamic)]
 
   # add schema
   fields += ['#\n#---\n#\n']
-  schema =  sur.survey_content.schema
+  schema =  survey_entity.survey_content.schema
   indent = '},\n#' + ' ' * 9
   fields += [tpl % ('Schema', schema.replace('},', indent)) + '#\n']
 
   return ''.join(fields).replace('\n', '\r\n')
 
 
-def _get_records(recs, props):
+def getRecords(recs, props):
   """Fetch properties from SurveyRecords for CSV export.
   """
 
@@ -1060,7 +1000,7 @@ def _get_records(recs, props):
   return records
 
 
-def to_csv(survey_view):
+def toCSV(survey_view):
   """CSV exporter.
 
   Args:
@@ -1074,7 +1014,7 @@ def to_csv(survey_view):
     record_logic = survey_logic.getRecordLogic()
 
     # get header and properties
-    header = _get_csv_header(survey)
+    header = getCSVHeader(survey)
     leading = ['user', 'created', 'modified']
     properties = leading + survey.survey_content.orderedProperties()
 
@@ -1090,7 +1030,7 @@ def to_csv(survey_view):
 
     # generate results list
     recs = record_query.run()
-    recs = _get_records(recs, properties)
+    recs = getRecords(recs, properties)
 
     # write results to CSV
     output = StringIO.StringIO()

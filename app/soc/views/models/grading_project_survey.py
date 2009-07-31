@@ -55,6 +55,7 @@ class View(project_survey.View):
     rights['edit'] = [('checkIsSurveyWritable', grading_survey_logic)]
     rights['delete'] = ['checkIsDeveloper'] # TODO: fix deletion of Surveys
     rights['list'] = ['checkDocumentList']
+    rights['results'] = [('checkIsSurveyWritable', grading_survey_logic)]
     rights['take'] = [('checkIsSurveyTakeable', grading_survey_logic),
                       ('checkIsAllowedToTakeProjectSurveyAs',
                        [grading_survey_logic, 'mentor', 'project'])]
@@ -65,37 +66,25 @@ class View(project_survey.View):
 
     new_params['name'] = "Grading Project Survey"
 
+    # used for sending reminders
+    new_params['survey_type'] = 'grading'
+
+    new_params['manage_student_project_heading'] = \
+        'soc/grading_project_survey/list/heading_manage_student_project.html'
+    new_params['manage_student_project_row'] = \
+        'soc/grading_project_survey/list/row_manage_student_project.html'
+
     params = dicts.merge(params, new_params, sub_merge=True)
 
     super(View, self).__init__(params=params)
 
-  # TODO: work on grade activation
-  def activate(self, request, **kwargs):
-    """This is a hack to support the 'Enable grades' button.
-    """
-    self.activateGrades(request)
-    redirect_path = request.path.replace('/activate/', '/edit/') + (
-        '?activate=1')
-    return http.HttpResponseRedirect(redirect_path)
-
-  def activateGrades(self, request, **kwargs):
-    """Updates SurveyRecord's grades for a given Survey.
-    """
-    survey_key_name = survey_logic.getKeyNameFromPath(request.path)
-    survey = Survey.get_by_key_name(survey_key_name)
-    survey_logic.activateGrades(survey)
-    return
-
   def _getSurveyTakeForm(self, survey, record, params, post_dict=None):
     """Returns the specific SurveyTakeForm needed for the take view.
 
-    Args:
-        survey: a Survey entity
-        record: a SurveyRecord instance if any exist
-        params: the params dict for the requesting View
+    For args see survey.View._getSurveyTakeForm().
 
     Returns:
-        An instance of GradseSurveyTakeForm.
+        An instance of GradeSurveyTakeForm.
     """
 
     grade_choices = (('pass', 'Pass'), ('fail', 'Fail'))
@@ -232,4 +221,7 @@ edit = decorators.view(view.edit)
 delete = decorators.view(view.delete)
 list = decorators.view(view.list)
 public = decorators.view(view.public)
+record = decorators.view(view.viewRecord)
+results = decorators.view(view.viewResults)
+send_reminder = decorators.view(view.sendReminder)
 take = decorators.view(view.take)

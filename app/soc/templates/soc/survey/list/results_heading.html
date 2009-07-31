@@ -1,14 +1,14 @@
 <tr align="left">
-  {% for property in properties %}
-    <th>{{ property }}</th>
-  {% endfor %}
+
   <th>Taken By</th>
 
   <th>Created On</th>
 
   <th>Last Modified</th>
 
-  <th>Answer</th>
+<th>{{ first_question|truncatewords:7 }}</th>
+
+  <th>Answers</th>
 
   {% if grades %}
     <th>Grade</th>

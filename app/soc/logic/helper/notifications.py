@@ -36,15 +36,16 @@ from soc.logic import dicts
 from soc.logic import mail_dispatcher
 from soc.views.helper import redirects
 
-import soc.views.models as model_view
-import soc.logic.models as model_logic
-
 
 DEF_NEW_NOTIFICATION_MSG = ugettext(
     "You have received a new Notification.")
 
 DEF_INVITATION_MSG_FMT = ugettext(
     "Invitation to become a %(role_verbose)s for %(group)s.")
+
+DEF_NEW_REQUEST_MSG_FMT = ugettext(
+    "New Request Received from %(requester)s to become a %(role_verbose)s "
+    "for %(group)s")
 
 DEF_NEW_GROUP_MSG_FMT = ugettext(
     "Your %(application_type)s for %(group_name)s has been accepted.")
@@ -56,6 +57,9 @@ DEF_WELCOME_MSG_FMT = ugettext("Welcome to %(site_name)s, %(name)s,")
 
 DEF_GROUP_INVITE_NOTIFICATION_TEMPLATE = 'soc/notification/messages/' \
     'invitation.html'
+
+DEF_NEW_REQUEST_NOTIFICATION_TEMPLATE = 'soc/notification/messages/' \
+    'new_request.html'
 
 DEF_NEW_REVIEW_NOTIFICATION_TEMPLATE = 'soc/notification/messages/' \
     'new_review.html'
@@ -70,9 +74,11 @@ def sendInviteNotification(entity):
     entity : A request containing the information needed to create the message
   """
 
+  from soc.logic.models.user import logic as user_logic
+
   # get the user the request is for
   properties = {'link_id': entity.link_id }
-  to_user = model_logic.user.logic.getForFields(properties, unique=True)
+  to_user = user_logic.getForFields(properties, unique=True)
 
   invitation_url = "http://%(host)s%(index)s" % {
       'host' : os.environ['HTTP_HOST'],
@@ -92,9 +98,60 @@ def sendInviteNotification(entity):
 
   template = DEF_GROUP_INVITE_NOTIFICATION_TEMPLATE
 
-  from_user = model_logic.user.logic.getForCurrentAccount()
+  from_user = user_logic.getForCurrentAccount()
 
   sendNotification(to_user, from_user, message_properties, subject, template)
+
+
+def sendNewRequestNotification(request_entity):
+  """Sends out a notification to the persons who can process this Request.
+
+  Args:
+    request_entity: an instance of Request model
+  """
+
+  from soc.logic.helper import notifications
+  from soc.logic.models.role import ROLE_LOGICS
+  from soc.logic.models.user import logic as user_logic
+
+  # get the users who should get the notification
+  to_users = []
+
+  # retrieve the Role Logics which we should query on
+  role_logic = ROLE_LOGICS[request_entity.role]
+  role_logics_to_notify = role_logic.getRoleLogicsToNotifyUponNewRequest()
+
+  # the scope of the roles is the same as the scope of the Request entity
+  fields = {'scope': request_entity.scope,
+            'status': 'active'}
+
+  for role_logic in role_logics_to_notify:
+    roles = role_logic.getForFields(fields)
+
+    for role_entity in roles:
+      # TODO: this might lead to double notifications
+      to_users.append(role_entity.user)
+
+  # get the user the request is from
+  properties = {'link_id': request_entity.link_id }
+  user_entity = user_logic.getForFields(properties, unique=True)
+
+  message_properties = {
+      'requester_name': user_entity.name,
+      'entity': request_entity,
+      'request_url': redirects.getProcessRequestRedirect(request_entity, None)}
+
+  subject = DEF_NEW_REQUEST_MSG_FMT % {
+      'requester': user_entity.name,
+      'role_verbose' : request_entity.role_verbose,
+      'group' : request_entity.scope.name
+      }
+
+  template = DEF_NEW_REQUEST_NOTIFICATION_TEMPLATE
+
+  for to_user in to_users:
+    notifications.sendNotification(to_user, None, message_properties,
+                                   subject, template)
 
 
 def sendNewGroupNotification(entity, params):
@@ -167,10 +224,13 @@ def sendNotification(to_user, from_user, message_properties, subject, template):
     template : template used for generating notification
   """
 
+  from soc.logic.models.notification import logic as notification_logic
+  from soc.logic.models.site import logic as site_logic
+
   if from_user:
     sender_name = from_user.name
   else:
-    site_entity = model_logic.site.logic.getSingleton()
+    site_entity = site_logic.getSingleton()
     sender_name = 'The %s Team' % (site_entity.site_name)
 
   new_message_properties = {
@@ -191,12 +251,10 @@ def sendNotification(to_user, from_user, message_properties, subject, template):
       'scope_path': to_user.link_id
   }
 
-  # pylint: disable-msg=W0612
-  import soc.logic.models.notification
-  key_name = model_logic.notification.logic.getKeyNameFromFields(fields)
+  key_name = notification_logic.getKeyNameFromFields(fields)
 
   # create and put a new notification in the datastore
-  model_logic.notification.logic.updateOrCreateFromKeyName(fields, key_name)
+  notification_logic.updateOrCreateFromKeyName(fields, key_name)
 
 
 def sendNewNotificationMessage(notification_entity):
@@ -205,17 +263,18 @@ def sendNewNotificationMessage(notification_entity):
     Args:
       notification_entity: Notification about which the message should be sent
   """
-  # pylint: disable-msg=W0612
-  import soc.views.models.notification
+
+  from soc.logic.models.site import logic as site_logic
+  from soc.views.models.notification import view as notification_view
 
   # create the url to show this notification
   notification_url = "http://%(host)s%(index)s" % {
       'host' : os.environ['HTTP_HOST'],
       'index': redirects.getPublicRedirect(notification_entity,
-          model_view.notification.view.getParams())}
+          notification_view.getParams())}
 
   sender = mail_dispatcher.getDefaultMailSender()
-  site_entity = model_logic.site.logic.getSingleton()
+  site_entity = site_logic.getSingleton()
   site_name = site_entity.site_name
 
   # get the default mail sender
@@ -253,8 +312,10 @@ def sendWelcomeMessage(user_entity):
       user_entity: User entity which the message should be send to
   """
 
+  from soc.logic.models.site import logic as site_logic
+
   # get site name
-  site_entity = model_logic.site.logic.getSingleton()
+  site_entity = site_logic.getSingleton()
   site_name = site_entity.site_name
 
   # get the default mail sender

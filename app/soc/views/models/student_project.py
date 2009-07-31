@@ -72,13 +72,13 @@ class View(base.View):
     rights['list'] = ['checkIsDeveloper']
     rights['manage'] = [('checkHasActiveRoleForScope',
                          org_admin_logic),
-        ('checkStudentProjectHasStatus', [['accepted', 'mid_term_passed']])]
+        ('checkStudentProjectHasStatus', [['accepted']])]
     rights['manage_overview'] = [('checkHasActiveRoleForScope',
                          org_admin_logic)]
     # TODO: lack of better name here!
     rights['st_edit'] = ['checkIsMyStudentProject',
         ('checkStudentProjectHasStatus',
-            [['accepted', 'mid_term_passed', 'passed']])
+            [['accepted', 'completed']])
         ]
 
     new_params = {}
@@ -95,7 +95,8 @@ class View(base.View):
 
     new_params['extra_dynaexclude'] = ['program', 'status', 'link_id',
                                        'mentor', 'additional_mentors',
-                                       'student']
+                                       'student', 'passed_evaluations',
+                                       'failed_evaluations']
 
     new_params['create_extra_dynaproperties'] = {
         'scope_path': forms.CharField(widget=forms.HiddenInput,
@@ -136,6 +137,10 @@ class View(base.View):
 
     new_params['edit_template'] = 'soc/student_project/edit.html'
     new_params['manage_template'] = 'soc/student_project/manage.html'
+    new_params['manage_overview_heading'] = \
+        'soc/student_project/list/heading_manage.html'
+    new_params['manage_overview_row'] = \
+        'soc/student_project/list/row_manage.html'
 
     params = dicts.merge(params, new_params)
 
@@ -333,12 +338,85 @@ class View(base.View):
 
     params['additional_mentor_form'] = additional_mentor_form
 
+    context['evaluation_list'] = self._getEvaluationLists(request, params,
+                                                          entity)
+
     if request.POST:
       return self.managePost(request, template, context, params, entity,
                              **kwargs)
     else: #request.GET
       return self.manageGet(request, template, context, params, entity,
                             **kwargs)
+
+  def _getEvaluationLists(self, request, params, entity):
+    """Returns List Object containing the list to be shown on the Student 
+    Project's manage page.
+
+    This list contains all Surveys that have at least one record and will also 
+    contain information about the presence (or absence) of a accompanying 
+    record for the given Student Project.
+
+    Args:
+      request: Django HTTP Request Object
+      params: the params dict for this View
+      entity: a StudentProject entity for which the Surveys(Records) should be
+              retrieved
+
+    Returns:
+      A List Object as specified by this method.
+    """
+
+    from soc.views.helper import list_info
+    from soc.views.models.grading_project_survey import view as \
+        grading_survey_view
+    from soc.views.models.project_survey import view as project_survey_view
+
+    fields = {'scope_path': entity.program.key().id_or_name()}
+
+    # get the GradingProjectSurvey list
+    gps_params = grading_survey_view.getParams().copy()
+    gps_params['list_key_order'] = None
+    gps_params['list_heading'] = gps_params['manage_student_project_heading']
+    gps_params['list_row'] = gps_params['manage_student_project_row']
+    gps_params['list_info'] = (
+        list_info.getProjectSurveyInfoForProject(entity, gps_params), None)
+
+    # list all surveys for this Project's Program
+    fields['scope_path'] = entity.program.key().id_or_name()
+    gps_params['list_description'] = \
+        'List of all Mentor Evaluations for this Project'
+    gps_params['list_action'] = None
+
+    gps_list = lists.getListContent(
+        request, gps_params, fields, idx=0)
+
+    # get the ProjectSurvey list
+    ps_params = project_survey_view.getParams().copy()
+    ps_params['list_key_order'] = None
+    ps_params['list_heading'] = ps_params['manage_student_project_heading']
+    ps_params['list_row'] = ps_params['manage_student_project_row']
+    ps_params['list_info'] = (
+        list_info.getProjectSurveyInfoForProject(entity, ps_params), None)
+
+    ps_params['list_description'] = \
+        'List of all Student Evaluations for this Project'
+    ps_params['list_action'] = None
+
+    # list all surveys for this Project's Program
+    fields['scope_path'] = entity.program.key().id_or_name()
+    ps_list = lists.getListContent(
+        request, ps_params, fields, idx=1)
+
+    # store both lists in the content
+    content = [gps_list, ps_list]
+
+    for list in content:
+      # remove all the surveys that have no records attached
+      list['data'] = [i for i in list['data'] if
+                      list['logic'].hasRecord(i)]
+
+    # return the List Object with the filtered list content
+    return soc.logic.lists.Lists(content)
 
   def manageGet(self, request, template, context, params, entity, **kwargs):
     """Handles the GET request for the project's manage page.
@@ -455,11 +533,11 @@ class View(base.View):
     mentor = mentor_logic.logic.getForFields(fields, unique=True)
 
     # add this mentor to the additional mentors
-    # pylint: disable-msg=E1103
     if not entity.additional_mentors:
       additional_mentors = [mentor.key()]
     else:
-      additional_mentors = additional_mentors.append(mentor.key())
+      additional_mentors = entity.additional_mentors
+      additional_mentors.append(mentor.key())
 
     fields = {'additional_mentors': additional_mentors}
     project_logic.updateEntityProperties(entity, fields)
@@ -478,6 +556,8 @@ class View(base.View):
     For params see base.View().public()
     """
 
+    from soc.views.helper import list_info
+
     # make sure the organization exists
     org_entity = org_logic.getFromKeyNameOr404(kwargs['scope_path'])
     fields = {'scope': org_entity}
@@ -488,9 +568,11 @@ class View(base.View):
     context['page_name'] = '%s %s' % (page_name, org_entity.name)
 
     list_params = params.copy()
+    list_params['list_heading'] = params['manage_overview_heading']
+    list_params['list_row'] = params['manage_overview_row']
 
     #list all active projects
-    fields['status'] = ['accepted', 'mid_term_passed']
+    fields['status'] = 'accepted'
     active_params = list_params.copy()
     active_params['list_description'] = \
         'List of all active %(name_plural)s' % list_params
@@ -498,9 +580,12 @@ class View(base.View):
 
     active_list = lists.getListContent(
         request, active_params, fields, idx=0)
+    # set the needed info
+    active_list = list_info.setStudentProjectSurveyInfo(active_list,
+                                                        org_entity.scope)
 
     # list all failed projects
-    fields['status'] = ['mid_term_failed', 'final_failed']
+    fields['status'] = 'failed'
     failed_params = list_params.copy()
     failed_params['list_description'] = ('List of all failed %(name_plural)s, '
         'these cannot be managed.') % list_params
@@ -508,9 +593,12 @@ class View(base.View):
 
     failed_list = lists.getListContent(
         request, failed_params, fields, idx=1, need_content=True)
+    # set the needed info
+    failed_list = list_info.setStudentProjectSurveyInfo(failed_list,
+                                                        org_entity.scope)
 
-    #list all completed projects
-    fields['status'] = ['passed']
+    # list all completed projects
+    fields['status'] = 'completed'
     completed_params = list_params.copy()
     completed_params['list_description'] = ('List of %(name_plural)s that have '
         'successfully completed the program, '
@@ -519,6 +607,9 @@ class View(base.View):
 
     completed_list = lists.getListContent(
         request, completed_params, fields, idx=2, need_content=True)
+    # set the needed info
+    completed_list = list_info.setStudentProjectSurveyInfo(completed_list,
+                                                           org_entity.scope)
 
     # always show the list with active projects
     content = [active_list]

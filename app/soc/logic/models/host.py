@@ -34,16 +34,16 @@ class Logic(role.Logic):
   """Logic methods for the Host model.
   """
 
-  def __init__(self, model=soc.models.host.Host, 
+  def __init__(self, model=soc.models.host.Host,
                base_model=soc.models.role.Role, scope_logic=sponsor_logic,
-               disallow_last_resign=True):
+               role_name='host', disallow_last_resign=True):
     """Defines the name, key_name and model for this entity.
     """
 
     super(Logic, self).__init__(model=model, base_model=base_model,
                                 scope_logic=scope_logic,
+                                role_name=role_name,
                                 disallow_last_resign=disallow_last_resign)
-
 
   def _onCreate(self, entity):
     """Marks the Sponsor for this Host as active it's status is new.

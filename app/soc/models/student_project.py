@@ -57,7 +57,7 @@ class StudentProject(soc.models.linkable.Linkable):
   additional_info.help_text = ugettext(
       'Link to a resource containing more information about this project.')
 
-  #: Optional field storing a feed URL; displayed publicly.
+  #: Optional field storing a feed URL; displayed publicly
   feed_url = db.LinkProperty(
       verbose_name=ugettext('Project Feed URL'))
   feed_url.help_text = ugettext(
@@ -65,7 +65,7 @@ class StudentProject(soc.models.linkable.Linkable):
       'Feed entries are shown on the public page.')
 
   #: A property containing which mentor has been assigned to this project.
-  #: A project must have a mentor at all times
+  #: A project must have a mentor at all times.
   mentor = db.ReferenceProperty(reference_class=soc.models.mentor.Mentor,
                                 required=True,
                                 collection_name='student_projects')
@@ -75,13 +75,27 @@ class StudentProject(soc.models.linkable.Linkable):
 
   #: The status of this project
   #: accepted: This project has been accepted into the program
-  #: mid_term_passed: This project has passed the midterm evaluation
-  #: mid_term_failed: This project has failed the midterm evaluation
-  #: final_failed: This project has failed the final evaluation
-  #: passed: This project has completed the program successfully
-  status = db.StringProperty(required=True, default='accepted',
-      choices=['accepted', 'mid_term_passed', 'mid_term_failed', 
-              'final_failed', 'passed'])
+  #: failed: This project has failed an evaluation.
+  #: completed: This project has completed the program successfully. This
+  #:            should be set automatically when a program has been deemed
+  #:            finished.
+  #: withdrawn: This project has been withdrawn from the program by a Program
+  #:            Administrator or higher.
+  #: invalid: This project has been marked as invalid because it was deleted
+  status = db.StringProperty(
+      required=True, default='accepted',
+      choices=['accepted', 'failed', 'completed', 'withdrawn', 'invalid'])
+
+  #: List of all processed GradingRecords which state a pass for this project.
+  #: This property can be used to determine how many evaluations someone has
+  #: passed. And is also used to ensure that a GradingRecord has been
+  #: processed.
+  passed_evaluations = db.ListProperty(item_type=db.Key, default=[])
+
+  #: List of all processed GradingRecords which state a fail for this project.
+  #: This is a ListProperty to ensure that the system keeps functioning when
+  #: manual changes in GradingRecords occur.
+  failed_evaluations = db.ListProperty(item_type=db.Key, default=[])
 
   #: Student which this project is from
   student = db.ReferenceProperty(

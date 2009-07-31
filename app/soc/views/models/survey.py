@@ -45,6 +45,7 @@ from soc.views import out_of_band
 from soc.views.helper import access
 from soc.views.helper import decorators
 from soc.views.helper import forms as forms_helper
+from soc.views.helper import lists
 from soc.views.helper import redirects
 from soc.views.helper import responses
 from soc.views.helper import surveys
@@ -52,34 +53,37 @@ from soc.views.helper import widgets
 from soc.views.models import base
 
 
-CHOICE_TYPES = set(('selection', 'pick_multi', 'choice', 'pick_quant'))
-TEXT_TYPES = set(('long_answer', 'short_answer'))
-PROPERTY_TYPES = tuple(CHOICE_TYPES) + tuple(TEXT_TYPES)
+DEF_CHOICE_TYPES = set(('selection', 'pick_multi', 'choice', 'pick_quant'))
+DEF_TEXT_TYPES = set(('long_answer', 'short_answer'))
+DEF_PROPERTY_TYPES = tuple(DEF_CHOICE_TYPES) + tuple(DEF_TEXT_TYPES)
 
 # used in View.getSchemaOptions to map POST values
-BOOL = {'True': True, 'False': False}
+DEF_BOOL = {'True': True, 'False': False}
 
-_short_answer = ("Short Answer",
-                "Less than 40 characters. Rendered as a text input. "
-                "It's possible to add a free form question (Content) "
-                "and a in-input prompt/example text.")
-_choice = ("Selection",
-           "Can be set as a single choice (selection) or multiple choice "
-           "(pick_multi) question. Rendered as a select (single choice) "
-           "or a group of checkboxes (multiple choice). It's possible to "
-           "add a free form question (Content) and as many free form options "
-           "as wanted. Each option can be edited (double-click), deleted "
-           "(click on (-) button) or reordered (drag and drop).")
-_long_answer = ("Long Answer",
-                "Unlimited length, auto-growing field. Rendered as a textarea. "
-                 "It's possible to add a free form question (Content) and "
-                 "an in-input prompt/example text.")
-QUESTION_TYPES = dict(short_answer=_short_answer, long_answer=_long_answer,
-                      choice=_choice)
+DEF_SHORT_ANSWER = ("Short Answer",
+                    "Less than 40 characters. Rendered as a text input. "
+                    "It's possible to add a free form question (Content) "
+                    "and a in-input prompt/example text.")
+DEF_CHOICE = (
+    "Selection",
+    "Can be set as a single choice (selection) or multiple choice "
+    "(pick_multi) question. Rendered as a select (single choice) "
+    "or a group of checkboxes (multiple choice). It's possible to "
+    "add a free form question (Content) and as many free form options "
+    "as wanted. Each option can be edited (double-click), deleted "
+    "(click on (-) button) or reordered (drag and drop).")
+DEF_LONG_ANSWER = (
+    "Long Answer",
+    "Unlimited length, auto-growing field. Rendered as a textarea. "
+    "It's possible to add a free form question (Content) and an in-input "
+    "prompt/example text.")
 
-# for to_csv and View.exportSerialized
-FIELDS = 'author modified_by'
-PLAIN = 'is_featured content created modified'
+DEF_QUESTION_TYPES = dict(short_answer=DEF_SHORT_ANSWER,
+                          long_answer=DEF_LONG_ANSWER, choice=DEF_CHOICE)
+
+# for toCSV and View.exportSerialized
+DEF_FIELDS = 'author modified_by'
+DEF_PLAIN = 'is_featured content created modified'
 
 
 class View(base.View):
@@ -102,14 +106,16 @@ class View(base.View):
     rights['delete'] = ['checkIsDeveloper'] # TODO: fix deletion of Surveys
     rights['list'] = ['checkDocumentList']
     rights['pick'] = ['checkDocumentPick']
+    rights['record'] = [('checkIsSurveyWritable', survey_logic)]
+    rights['results'] = [('checkIsSurveyWritable', survey_logic)]
     rights['take'] = [('checkIsSurveyTakeable', survey_logic)]
 
     new_params = {}
     new_params['logic'] = survey_logic
     new_params['rights'] = rights
 
-    new_params['name'] = "Survey"
-    new_params['pickable'] = True
+    new_params['name'] = 'Survey'
+    new_params['sidebar_grouping'] = "Surveys"
 
     new_params['extra_django_patterns'] = [
          (r'^%(url_name)s/(?P<access_type>take)/%(key_fields)s$',
@@ -118,7 +124,10 @@ class View(base.View):
          (r'^%(url_name)s/(?P<access_type>json)/%(scope)s$',
          'soc.views.models.%(module_name)s.json',
          'Export %(name)s as JSON'),
-        (r'^%(url_name)s/(?P<access_type>results)/%(scope)s$',
+        (r'^%(url_name)s/(?P<access_type>record)/%(key_fields)s$',
+         'soc.views.models.%(module_name)s.record',
+         'View survey records for %(name)s'),
+        (r'^%(url_name)s/(?P<access_type>results)/%(key_fields)s$',
          'soc.views.models.%(module_name)s.results',
          'View survey results for %(name)s'),
         (r'^%(url_name)s/(?P<access_type>show)/user/(?P<link_id>)\w+$',
@@ -128,7 +137,7 @@ class View(base.View):
 
     new_params['export_content_type'] = 'text/text'
     new_params['export_extension'] = '.csv'
-    new_params['export_function'] = surveys.to_csv(self)
+    new_params['export_function'] = surveys.toCSV(self)
     new_params['delete_redirect'] = '/'
     new_params['list_key_order'] = [
         'link_id', 'scope_path', 'name', 'short_name', 'title',
@@ -137,9 +146,10 @@ class View(base.View):
     new_params['edit_template'] = 'soc/survey/edit.html'
     new_params['create_template'] = 'soc/survey/edit.html'
     new_params['public_template'] = 'soc/survey/public.html'
+    new_params['record_template'] = 'soc/survey/record.html'
     new_params['take_template'] = 'soc/survey/take.html'
 
-    # TODO which one of these are leftovers from Document?
+    # TODO: which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
     new_params['no_create_with_scope'] = True
     new_params['no_create_with_key_fields'] = True
@@ -205,38 +215,29 @@ class View(base.View):
 
     # construct the form to be shown on the page
     # TODO(ljvderijk) Generate SurveyForm without passing along the logic
+    
+    record = None
+    if request.GET.get('record_id'):
+      # TODO(JamesLevy): Access Check Required
+      record_logic = self._logic.getRecordLogic()
+      try: 
+        record = record_logic.getFromID(
+        int(request.GET.get('record_id')))
+      except ValueError:
+        logging.warning('non-integer record_id %s passed as argument \
+        to view survey record.' % str(request.GET.get('record_id')))
+        
     survey_form = surveys.SurveyTakeForm(survey_content=entity.survey_content,
+                                         survey_record=record,
                                          survey_logic=self._params['logic'])
 
-    # TOOD(ljvderijk) pose question about the getFields method name and working
+    # TODO(ljvderijk) pose question about the getFields method name and working
     survey_form.getFields()
 
     context['survey_form'] = survey_form
 
     # return True to signal that the page may be displayed
     return True
-
-  def _editContext(self, request, context):
-    """Performs any required processing on the context for edit pages.
-
-    Args:
-      request: the django request object
-      context: the context dictionary that will be used
-
-      Adds list of SurveyRecord results as supplement to view.
-
-      See surveys.SurveyResults for details.
-    """
-
-    if not getattr(self, '_entity', None):
-      return
-
-    results = surveys.SurveyResults()
-
-    context['survey_records'] = results.render(self._entity, self._params,
-                                               filter={})
-
-    super(View, self)._editContext(request, context)
 
   def _editPost(self, request, entity, fields):
     """See base.View._editPost().
@@ -301,7 +302,7 @@ class View(base.View):
         if question_name not in schema:
           continue
 
-        if schema[question_name]['type'] not in CHOICE_TYPES:
+        if schema[question_name]['type'] not in DEF_CHOICE_TYPES:
           # Choice questions are always regenerated from request, see
           # self.get_request_questions()
           question = getattr(survey_content, question_name)
@@ -349,7 +350,7 @@ class View(base.View):
             # new Choice question, set generic type and get its index
             schema[name] = {'type': 'choice'}
 
-        if name in schema and schema[name]['type'] in CHOICE_TYPES:
+        if name in schema and schema[name]['type'] in DEF_CHOICE_TYPES:
           # build an index:content dictionary
           if name in survey_fields:
             if value not in survey_fields[name]:
@@ -368,7 +369,7 @@ class View(base.View):
         field_name = prefix.sub('', key)
         field = 'id_' + key
 
-        for ptype in PROPERTY_TYPES:
+        for ptype in DEF_PROPERTY_TYPES:
           # should only match one
           if ptype + "__" in field_name:
             field_name = field_name.replace(ptype + "__", "")
@@ -395,7 +396,7 @@ class View(base.View):
                     'radio_buttons': 'pick_quant' }
 
     for key in schema:
-      if schema[key]['type'] in CHOICE_TYPES and key in survey_fields:
+      if schema[key]['type'] in DEF_CHOICE_TYPES and key in survey_fields:
         render_for = 'render_for_' + key
         if render_for in POST:
           schema[key]['render'] = RENDER[POST[render_for]]
@@ -435,11 +436,11 @@ class View(base.View):
 
       # set wheter the question is required
       required_for = 'required_for_' + key
-      schema[key]['required'] = BOOL[POST[required_for]]
+      schema[key]['required'] = DEF_BOOL[POST[required_for]]
 
       # set wheter the question allows comments
       comment_for = 'comment_for_' + key
-      schema[key]['has_comment'] = BOOL[POST[comment_for]]
+      schema[key]['has_comment'] = DEF_BOOL[POST[comment_for]]
 
       # set the question index from JS-calculated value
       index_for = 'index_for_' + key
@@ -450,7 +451,7 @@ class View(base.View):
     """Pass the question types for the survey creation template.
     """
 
-    context['question_types'] = QUESTION_TYPES
+    context['question_types'] = DEF_QUESTION_TYPES
 
     # avoid spurious results from showing on creation
     context['new_survey'] = True
@@ -469,7 +470,7 @@ class View(base.View):
                                          survey_logic=params['logic'])
     survey_form.getFields()
 
-    local = dict(survey_form=survey_form, question_types=QUESTION_TYPES,
+    local = dict(survey_form=survey_form, question_types=DEF_QUESTION_TYPES,
                 survey_h=entity.survey_content)
     context.update(local)
 
@@ -667,107 +668,136 @@ class View(base.View):
           survey.survey_end.strftime("%A, %d. %B %Y %I:%M%p"))
 
     if survey_record:
-      help_text = "Edit and re-submit this survey" + survey_end_text + "."
+      help_text = "You may edit and re-submit this survey %s." %(
+          survey_end_text)
       status = "edit"
     else:
-      help_text = "Please complete this survey" + survey_end_text + "."
+      help_text = "Please complete this survey %s." %(
+          survey_end_text)
       status = "create"
 
     # update the context with the help_text and status
     context_update = dict(status=status, help_text=help_text)
     context.update(context_update)
 
-  def activate(self, request, **kwargs):
-    """This is a hack to support the 'Enable grades' button.
-    """
-    self.activateGrades(request)
-    redirect_path = request.path.replace('/activate/', '/edit/') + '?activate=1'
-    return http.HttpResponseRedirect(redirect_path)
-
-  def activateGrades(self, request, **kwargs):
-    """Updates SurveyRecord's grades for a given Survey.
-    """
-    survey_key_name = survey_logic.getKeyNameFromPath(request.path)
-    survey = Survey.get_by_key_name(survey_key_name)
-    survey_logic.activateGrades(survey)
-    return
-
   @decorators.merge_params
   @decorators.check_access
   def viewResults(self, request, access_type, page_name=None,
                   params=None, **kwargs):
-    """View for SurveyRecord and SurveyRecordGroup.
+    """View for SurveyRecords.
+
+    For params see base.View.public().
     """
 
-    results_logic = params['logic'].getRecordLogic()
+    survey_logic = params['logic']
+
+    try:
+      entity = survey_logic.getFromKeyFieldsOr404(kwargs)
+    except out_of_band.Error, error:
+      return responses.errorResponse(
+          error, request, template=params['error_public'])
+
+    # get the context for this webpage
+    context = responses.getUniversalContext(request)
+    responses.useJavaScript(context, params['js_uses_all'])
+    context['page_name'] = "%s titled '%s'" % (page_name, entity.title)
+    context['entity'] = entity
+
+    results_logic = survey_logic.getRecordLogic()
 
     user = user_logic.getForCurrentAccount()
 
-    # TODO(ajaksu) use the named parameter link_id from the re
-    if request.path == '/survey/show/user/' + user.link_id:
-      records = tuple(user.surveys_taken.run())
-      context = responses.getUniversalContext(request)
-      context['content'] = records[0].survey.survey_content
-      responses.useJavaScript(context, params['js_uses_all'])
-      context['page_name'] = u'Your survey records.'
-    else:
-      entity, context = self.getContextEntity(request, page_name,
-                                              params, kwargs)
+    context['properties'] = entity.survey_content.orderedProperties()
 
-      if context is None:
-        # user cannot see this page, return error response
-        return entity
-      context['content'] = entity.survey_content
-      can_write = False
-      rights = self._params['rights']
-      try:
-        rights.checkIsSurveyWritable({'key_name': entity.key().name(),
-                                      'prefix': entity.prefix,
-                                      'scope_path': entity.scope_path,
-                                      'link_id': entity.link_id,},
-                                     'key_name')
-        can_write = True
-      except out_of_band.AccessViolation:
-        pass
+    filter = self._params.get('filter') or {}
 
-      filter = self._params.get('filter') or {}
+    filter['survey'] = entity
 
-      # if user can edit the survey, show everyone's results
-      if can_write:
-        filter['survey'] = entity
-      else:
-        filter.update({'user': user, 'survey': entity})
+    list_params = params.copy()
+    list_params['list_description'] = \
+      'List of  %(name_plural)s.' % list_params
 
-      limit = self._params.get('limit') or 1000
-      offset = self._params.get('offset') or 0
-      order = self._params.get('order') or []
-      idx = self._params.get('idx') or 0
+    list_params['logic'] = results_logic
 
-      records = results_logic.getForFields(filter=filter, limit=limit,
-                                        offset=offset, order=order)
+    valid_list = lists.getListContent(request, list_params, filter, idx=0)
 
-    updates = dicts.rename(params, params['list_params'])
-    context.update(updates)
+    valid_list['row'] = 'soc/survey/list/results_row.html'
+    valid_list['heading'] = 'soc/survey/list/results_heading.html'
+    valid_list['description'] = 'Survey Results:'
 
-    context['results'] = records, records
+    contents = []
+    # fill contents with all the needed lists
+    contents.append(valid_list)
 
-    template = 'soc/survey/results_page.html'
-    return responses.respond(request, template, context=context)
+    return self._list(request, list_params, contents, page_name, context)
 
+  @decorators.merge_params
+  @decorators.check_access
+  def viewRecord(self, request, access_type, page_name=None,
+                       params=None, **kwargs):
+    """Read-Only View of Survey Form
+
+    For params see base.View.public()
+    """
+
+
+
+    try:
+      entity = params['logic'].getFromKeyFieldsOr404(kwargs)
+    except out_of_band.Error, error:
+      return responses.errorResponse(
+          error, request, template=params['error_public'])
+          
+    # get the context for this webpage
+    context = responses.getUniversalContext(request)
+
+    record = None
+    if request.GET.get('record_id'):
+      # TODO(JamesLevy): Access Check Required
+      record_logic = params['logic'].getRecordLogic()
+      try: 
+        record = record_logic.getFromID(
+        int(request.GET.get('record_id')))
+        context['record'] = record
+      except ValueError:
+        logging.warning('non-integer record_id %s passed as argument \
+        to view survey record.' % str(request.GET.get('record_id')))
+    survey_form = surveys.SurveyTakeForm(survey_content=entity.survey_content,
+                                         survey_record=record,
+                                         survey_logic=self._params['logic'])
+
+
+    template = params['record_template']
+    context['entity'] = entity
+    responses.useJavaScript(context, params['js_uses_all'])
+    
+    # TODO(ljvderijk) pose question about the getFields method name and working
+    survey_form.getFields()
+    # get the context for this webpage
+    context['survey_form'] = survey_form
+    return responses.respond(request, template, context)
+    
+    
   @decorators.merge_params
   @decorators.check_access
   def exportSerialized(self, request, access_type, page_name=None,
                        params=None, **kwargs):
+    """Exports Surveys in JSON format.
 
-    sur, context = self.getContextEntity(request, page_name, params, kwargs)
+    For args see base.View.public().
+    """
 
-    if context is None:
-      # user cannot see this page, return error response
-      return sur
+    survey_logic = params['logic']
+
+    try:
+      sur = survey_logic.getFromKeyFieldsOr404(kwargs)
+    except out_of_band.Error, error:
+      return responses.errorResponse(
+          error, request, template=params['error_public'])
 
     json = sur.toDict()
-    json.update(dict((f, str(getattr(sur, f))) for f in PLAIN.split()))
-    static = ((f, str(getattr(sur, f).link_id)) for f in FIELDS.split())
+    json.update(dict((f, str(getattr(sur, f))) for f in DEF_PLAIN.split()))
+    static = ((f, str(getattr(sur, f).link_id)) for f in DEF_FIELDS.split())
     json.update(dict(static))
 
     dynamic = sur.survey_content.dynamic_properties()
@@ -782,6 +812,18 @@ class View(base.View):
     return self.json(request, data=json)
 
   def importSerialized(self, request, fields, user):
+    """Import Surveys in JSON format.
+
+    TODO: have this method do a proper import
+
+    Args:
+      request: Django Requset object
+      fields: ???
+      user: ???
+
+    Returns:
+      Keywords, the survey's schema and the survey content.
+    """
     json = request.POST['serialized']
     json = simplejson.loads(json)['data']
     survey_content = json.pop('survey_content')
@@ -789,7 +831,7 @@ class View(base.View):
     del json['author']
     del json['created']
     del json['modified']
-    #del json['is_featured']
+
     # keywords can't be unicode
     keywords = {}
     for key, val in json.items():
@@ -797,27 +839,6 @@ class View(base.View):
     if 'is_featured' in keywords:
       keywords['is_featured'] = eval(keywords['is_featured'])
     return keywords, schema, survey_content
-
-  def getContextEntity(self, request, page_name, params, kwargs):
-    context = responses.getUniversalContext(request)
-    responses.useJavaScript(context, params['js_uses_all'])
-    context['page_name'] = page_name
-    entity = None
-
-    # TODO(ajaksu) there has to be a better way in this universe to get these
-    kwargs['prefix'] = 'program'
-    kwargs['link_id'] = request.path.split('/')[-1]
-    kwargs['scope_path'] = '/'.join(request.path.split('/')[4:-1])
-
-    entity = survey_logic.getFromKeyFieldsOr404(kwargs)
-
-    if not self._public(request, entity, context):
-      error = out_of_band.Error('')
-      error = responses.errorResponse(
-          error, request, template=params['error_public'], context=context)
-      return error, None
-
-    return entity, context
 
   def getMenusForScope(self, entity, params, id, user):
     """List featured surveys if after the survey_start date 
@@ -923,5 +944,6 @@ json = decorators.view(view.exportSerialized)
 list = decorators.view(view.list)
 public = decorators.view(view.public)
 pick = decorators.view(view.pick)
+record = decorators.view(view.public)
 results = decorators.view(view.viewResults)
 take = decorators.view(view.take)

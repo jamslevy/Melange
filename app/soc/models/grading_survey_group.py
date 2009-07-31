@@ -50,14 +50,18 @@ class GradingSurveyGroup(linkable.Linkable):
   course only if they are filled in.
   """
 
+  #: Name to give to this group for easy human-readable identification.
+  name = db.StringProperty(
+      required=True, verbose_name=ugettext('Survey Group Name'))
+
   #: GradingProjectSurvey which belongs to this group.
   grading_survey = db.ReferenceProperty(
-      GradingProjectSurvey, required=True,
+      reference_class=GradingProjectSurvey, required=True,
       collection_name='grading_survey_groups')
 
   #: non-required ProjectSurvey that belongs to this group.
   student_survey = db.ReferenceProperty(
-      ProjectSurvey, required=False,
+      reference_class=ProjectSurvey, required=False,
       collection_name='project_survey_groups')
 
   #: DateTime when the last GradingRecord update was started for this group.

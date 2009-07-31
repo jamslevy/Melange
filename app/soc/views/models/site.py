@@ -36,6 +36,7 @@ from soc.views.helper import responses
 from soc.views.helper import widgets
 from soc.views.models import document as document_view
 from soc.views.models import presence_with_tos
+
 import soc.models.site
 import soc.logic.models.site
 import soc.logic.dicts
@@ -76,7 +77,7 @@ class View(presence_with_tos.View):
 
     new_params['create_extra_dynaproperties'] = {
         'link_id': forms.CharField(widget=forms.HiddenInput, required=True),
-        'clean_noreply_email': cleaning.clean_empty_field('noreply_email'),
+        'noreply_email': forms.EmailField(required=False),
         }
     new_params['edit_extra_dynaproperties'] = {
         'link_id': forms.CharField(widget=forms.HiddenInput, required=True),
@@ -186,6 +187,7 @@ class View(presence_with_tos.View):
     key_values = dicts.zip(keys, values)
 
     return self.edit(request, "edit", page_name, seed=key_values, **key_values)
+
 
   def _public(self, request, entity, context):
     """See base.View._public().
