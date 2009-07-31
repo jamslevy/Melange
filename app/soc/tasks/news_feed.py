@@ -143,7 +143,7 @@ def AddToFeedTask(request, *args, **kwargs):
 
 
 def sendFeedItemEmailNotifications(entity_key, acting_user, update_type, 
-payload,  context = {}, **kwargs):
+  payload,  context = {}, **kwargs):
   """
    Sends e-mail notification to user about new feed item. 
    Private payload info can be included in this message
@@ -158,7 +158,7 @@ payload,  context = {}, **kwargs):
          
   """  
 
-   # no from_user required
+  # no from_user required
   entity = db.get(entity_key)
   if acting_user: 
     sender_name = acting_user.name
