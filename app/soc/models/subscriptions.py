@@ -24,11 +24,11 @@ from google.appengine.ext import db
 
 import soc.models.user
 
-class Subscriptions(db.Model):
+class Subscriber(db.Model):
   """ Manages subscriptions for user
   """
   user = db.ReferenceProperty(reference_class=soc.models.user.User,
-                                collection_name="feed_subscriber",
+                                collection_name="subscriber",
                                 required=True)
   # universal toggle
   has_email_subscription = db.BooleanProperty(required=True)

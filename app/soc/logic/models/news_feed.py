@@ -28,7 +28,7 @@ from google.appengine.ext import db
 from soc.logic.models import base
 import soc.models.news_feed
 import soc.models.linkable 
-import soc.tasks.news_feed
+
 
 class Logic(base.Logic):
   """Logic methods for the Newsfeed.
@@ -43,6 +43,7 @@ class Logic(base.Logic):
 
   def addToFeed(self, sender, receivers, update_type, **kwargs):
     # see method for doc string
+    import soc.tasks.news_feed
     return soc.tasks.news_feed.scheduleAddToFeedTask(sender, receivers, 
     update_type, **kwargs)
 
@@ -50,7 +51,7 @@ class Logic(base.Logic):
   def retrieveFeed(self, entity, count=10, sort_order="-created"):
     """ Retrieves feed for a given entity 
     
-    Args:
+    Params:
       entity - entity rendering its news feed
       count - number of feed items to retrieve
       sort_order - sorting method 

@@ -35,7 +35,8 @@ class FeedItem(base.ModelWithFieldAttributes):
   FeedItem entities created for a single update. 
   
   """
-  # refers to the entity this feed item is about 
+  # refers to the entity this feed item is about
+  # note: using key because entity kind is arbitrary  
   sender_key = db.StringProperty(required=True)
   # refers to scope of feed where this item will appear 
   #receiver_key = db.StringProperty(required=True)
@@ -45,6 +46,7 @@ class FeedItem(base.ModelWithFieldAttributes):
                                 collection_name="feed_items",
                                 required=False)
                                 
+  # type of update
   update_type = db.StringProperty(required=True, choices=
                   ['created', 'updated', 'deleted'])  
   
@@ -54,18 +56,6 @@ class FeedItem(base.ModelWithFieldAttributes):
   #: date when the feed item was created
   created = db.DateTimeProperty(auto_now_add=True)
 
-        
+  # helper method to retrieve sender entity
   def sender(self):
     return db.get(self.sender_key)
-
-  def receiver(self):
-    return db.get(self.receiver_key)
-    
-
-
-class FeedItemCount(db.Model):
-  """Shared Counter of Feed Items for an Entity
-  """
-  entity = db.StringProperty()
-  count = db.IntegerProperty(default=0)
-

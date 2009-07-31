@@ -253,13 +253,21 @@ class Logic(base.Logic):
   def _onCreate(self, entity):
     """Send out a message to welcome the new user.
     """
-
     notifications.sendWelcomeMessage(entity)
     from soc.logic.models.subscriptions import logic as subscriptions_logic
     subscriptions_logic.createSubscriber(entity)
     
-
     super(Logic, self)._onCreate(entity)
+
+  def _onUpdate(self, entity):
+    """ createSubscriber is idempotent, so this can be used as a 
+    ad-hoc migration script 
+    """
+    from soc.logic.models.subscriptions import logic as subscriptions_logic
+    subscriptions_logic.createSubscriber(entity)
+        
+
+    super(Logic, self)._onUpdate(entity)
 
 
 logic = Logic()

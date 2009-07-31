@@ -20,6 +20,8 @@
 __authors__ = [
   'JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
+
+import os
   
 from django.template import loader
   
@@ -48,7 +50,7 @@ class NewsFeed():
   
   def __init__(self, entity):
     """ 
-    params:
+    Params:
       entity - arbitrary model entity 
     """
     self.entity = entity
@@ -119,7 +121,9 @@ class NewsFeed():
     if not url_name: 
       url_name = self.entity.kind().lower()
     params = {'url_name': url_name}
-    return getSubscribeRedirect(self.entity, params)
+    return ('http://%s%s' 
+    % ( os.environ['HTTP_HOST'],
+    getSubscribeRedirect(self.entity, params) ) )
     
     
   def linkToEntity(self, entity):

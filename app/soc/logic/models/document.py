@@ -27,6 +27,7 @@ from soc.cache import home
 from soc.logic.models import work
 from soc.logic.models import linkable as linkable_logic
 from soc.logic.models.news_feed import logic as newsfeed_logic
+from soc.logic.models.subscriptions import logic as subscription_logic
 import soc.models.document
 import soc.models.work
 
@@ -122,12 +123,14 @@ class Logic(work.Logic):
   def _onCreate(self, entity):
     self.getScope(entity)
     receivers = [entity.scope]
+    subscription_logic.updateSubscribersForEntity(entity)
     newsfeed_logic.addToFeed(entity, receivers, "created")
 
 
   def _onUpdate(self, entity):
     self.getScope(entity) # for older entities
     receivers = [entity.scope]
+    subscription_logic.updateSubscribersForEntity(entity)
     newsfeed_logic.addToFeed(entity, receivers, "updated")
 
 

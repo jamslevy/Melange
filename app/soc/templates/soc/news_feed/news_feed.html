@@ -12,7 +12,8 @@
 <div class="entry">
 <div class="title">
 <a href="{{ feed_item.link }}" >{{ feed_item.item.sender.title }}</a>
- was {{ feed_item.item.update_type }} by {{ feed_item.item.user.name }}
+ was {{ feed_item.item.update_type }} 
+ {% if feed_item.item.user %}by  {{ feed_item.item.user.name }}{% endif %}
 </div>
 <div class="time">{{ feed_item.item.created|timesince }} ago</div>
 

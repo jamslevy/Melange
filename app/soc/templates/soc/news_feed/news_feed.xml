@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 <title>{{ entity.kind.title }} Updates </title>
-<link rel="self" type="application/atom+xml" href="{# source #}"/>
+<link rel="self" type="application/atom+xml" href="{{ feed_url }}"/>
 <updated>{{ feed_items.0.created }}</updated>
-<id>{# source #}</id>
+<id>{{ feed_url }}</id>
 
 {% for feed_item in feed_items %}
 
 <entry>
 
 <title>{{ feed_item.item.sender.title }}
- was {{ feed_item.item.update_type }} by 
- {{ feed_item.item.user.name }}</title>
+ was {{ feed_item.item.update_type }} 
+ {% if feed_item.item.user %}by  {{ feed_item.item.user.name }}{% endif %}</title>
  
 <id>{{ feed_item.item.key }}</id>
 <updated>{{ feed_item.item.created }}</updated>
@@ -19,8 +19,7 @@
 <content type="html">
 <div class="title"> 
 <a href="/{{ feed_item.item.sender.kind.lower }}/show/{{ feed_item.item.sender.key.name }}" >
-{{ feed_item.item.sender.title }}</a>
- was {{ feed_item.item.update_type }} by {{ feed_item.item.user.name }}
+{{ feed_item.item.sender.title }}</a> was {{ feed_item.item.update_type }} {% if feed_item.item.user %}by  {{ feed_item.item.user.name }}{% endif %}.
 </div>
 <div class="time">{{ feed_item.item.created|timesince }} ago</div>
 {# additional information <div class="snippet"></div> #}

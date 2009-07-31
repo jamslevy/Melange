@@ -38,6 +38,9 @@ from soc.logic.models.document import logic as document_logic
 from soc.logic.models.ranker_root import logic as ranker_root_logic
 from soc.logic.models.survey import logic as survey_logic
 from soc.logic.models.user import logic as user_logic
+from soc.logic.models.program import logic as program_logic
+from soc.logic.models.organization import logic as org_logic
+from soc.logic.models.student_project import logic as project_logic
 
 from soc.logic import accounts
 from soc.logic import dicts
@@ -177,6 +180,7 @@ class OrganizationSeeder(Seeder):
     org = Organization(**properties)
     if entities is None:
       org.put()
+      org_logic._onCreate(org)
     else:
       entities.append(org)
 
@@ -342,6 +346,7 @@ def seed(request, *args, **kwargs):
 
   gsoc2009 = Program(**program_properties)
   gsoc2009.put()
+  program_logic._onCreate(gsoc2009)
 
 
   timeline_properties = {
@@ -368,6 +373,7 @@ def seed(request, *args, **kwargs):
 
   ghop2009 = Program(**program_properties)
   ghop2009.put()
+  program_logic._onCreate(ghop2009)
 
 
   org_app_properties = {
@@ -552,6 +558,7 @@ def seed(request, *args, **kwargs):
 
   melange_project = StudentProject(**project_properties)
   melange_project.put()
+  project_logic._onCreate(melange_project)
 
   project_id = 'test_project2'
   project_properties.update({
@@ -563,6 +570,7 @@ def seed(request, *args, **kwargs):
       
   melange_project2 = StudentProject(**project_properties)
   melange_project2.put()
+  project_logic._onCreate(melange_project2)
     
   document_properties = {
       'key_name': 'site/site/home',
