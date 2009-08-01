@@ -106,7 +106,7 @@ class View(base.View):
     rights['delete'] = ['checkIsDeveloper'] # TODO: fix deletion of Surveys
     rights['list'] = ['checkDocumentList']
     rights['pick'] = ['checkDocumentPick']
-    rights['record'] = [('checkIsSurveyWritable', survey_logic)]
+    rights['record'] = [('checkIsSurveyReadable', survey_logic)]
     rights['results'] = [('checkIsSurveyWritable', survey_logic)]
     rights['take'] = [('checkIsSurveyTakeable', survey_logic)]
 
@@ -149,7 +149,6 @@ class View(base.View):
     new_params['record_template'] = 'soc/survey/record.html'
     new_params['take_template'] = 'soc/survey/take.html'
 
-    # TODO: which one of these are leftovers from Document?
     new_params['no_create_raw'] = True
     new_params['no_create_with_scope'] = True
     new_params['no_create_with_key_fields'] = True
@@ -689,10 +688,10 @@ class View(base.View):
     For params see base.View.public().
     """
 
-    survey_logic = params['logic']
+    params['logic'] = params['logic']
 
     try:
-      entity = survey_logic.getFromKeyFieldsOr404(kwargs)
+      entity = params['logic'].getFromKeyFieldsOr404(kwargs)
     except out_of_band.Error, error:
       return responses.errorResponse(
           error, request, template=params['error_public'])
@@ -703,12 +702,17 @@ class View(base.View):
     context['page_name'] = "%s titled '%s'" % (page_name, entity.title)
     context['entity'] = entity
 
-    results_logic = survey_logic.getRecordLogic()
+    results_logic = params['logic'].getRecordLogic()
 
     user = user_logic.getForCurrentAccount()
 
-    context['properties'] = entity.survey_content.orderedProperties()
+    # only show truncated preview of first answer
+    context['first_question'] = entity.survey_content.orderedProperties(
+    )[0]
 
+    context['record_redirect'] = redirects.getSurveyRecordRedirect(
+    entity, params)
+    
     filter = self._params.get('filter') or {}
 
     filter['survey'] = entity
@@ -739,18 +743,13 @@ class View(base.View):
 
     For params see base.View.public()
     """
-
-
-
     try:
       entity = params['logic'].getFromKeyFieldsOr404(kwargs)
     except out_of_band.Error, error:
       return responses.errorResponse(
           error, request, template=params['error_public'])
-          
     # get the context for this webpage
     context = responses.getUniversalContext(request)
-
     record = None
     if request.GET.get('record_id'):
       # TODO(JamesLevy): Access Check Required
@@ -765,7 +764,6 @@ class View(base.View):
     survey_form = surveys.SurveyTakeForm(survey_content=entity.survey_content,
                                          survey_record=record,
                                          survey_logic=self._params['logic'])
-
 
     template = params['record_template']
     context['entity'] = entity

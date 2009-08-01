@@ -393,10 +393,11 @@ def getTakeProjectSurveyRedirect(entity, info):
 
 
 def getSurveyRecordRedirect(entity, params):
-  """Returns the redirect for taking a Survey for the given Student Project.
+  """Returns the redirect for view a Survey Record
+  for the given Student Project.
 
   Args:
-      entity: a Survey entity
+      entity: a Survey Record entity
       params: params for view
       
   """
