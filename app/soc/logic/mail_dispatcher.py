@@ -63,10 +63,12 @@ __authors__ = [
   '"Pawel Solyga" <pawel.solyga@gmail.com',
   ]
 
-
+import logging
+  
 from django.template import loader
 
 from google.appengine.api import mail
+from google.appengine.api.labs import taskqueue
 
 from soc.logic import dicts
 
@@ -97,30 +99,17 @@ def sendMailFromTemplate(template, context):
 
 
 def sendMail(context):
-  """Sends out an email using context to supply the needed information.
+  """See sendMailTask
+  
+  TODO (james):
+  context can now only be a shallow dictionary object
+  should memcached be used to store context instead, and then
+  memcache key be sent in task params?
 
-  Args:
-    context : The context supplied to the email message (dictionary)
-
-  Raises:
-    Error that corresponds with the first problem it finds iff the message
-    is not properly initialized.
-
-    List of all possible errors:
-      http://code.google.com/appengine/docs/mail/exceptions.html
   """
-
-  # construct the EmailMessage from the given context
-  message = mail.EmailMessage(**context)
-  message.check_initialized()
-
-  try:
-    # send the message
-    message.send()
-  except mail.Error, exception:
-    import logging
-    logging.info(context)
-    logging.exception(exception)
+  task = taskqueue.Task(params=context, url='/tasks/mail/sendmail')
+  task.add()
+  
 
 def getDefaultMailSender():
   """Returns the sender that currently can be used to send emails.
@@ -133,7 +122,6 @@ def getDefaultMailSender():
     - None if there is no address to return
   """
 
-  import logging
 
   from soc.logic import accounts
   from soc.logic.models import user as user_logic
