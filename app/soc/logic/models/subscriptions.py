@@ -80,7 +80,7 @@ class Logic(base.Logic):
     of a new FeedItem
     """
     return [i.user for i in soc.models.subscriptions.Subscriber.all(
-    ).filter('subscriptions', entity)] 
+    )]#.filter('subscriptions', entity)] 
 
 
   def updateSubscribersForEntity(self, entity):

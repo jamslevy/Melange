@@ -61,13 +61,16 @@ Usage:
 __authors__ = [
   '"Lennard de Rijk" <ljvderijk@gmail.com>',
   '"Pawel Solyga" <pawel.solyga@gmail.com',
+  '"James Levy" <jamesalexanderlevy@gmail.com>',
   ]
 
 import logging
+import time
   
 from django.template import loader
 
 from google.appengine.api import mail
+from google.appengine.api import memcache
 from google.appengine.api.labs import taskqueue
 
 from soc.logic import dicts
@@ -99,16 +102,22 @@ def sendMailFromTemplate(template, context):
 
 
 def sendMail(context):
-  """See sendMailTask
+  """Creates new tasks.mail.sendMail task.
   
-  TODO (james):
-  context can now only be a shallow dictionary object
-  should memcached be used to store context instead, and then
-  memcache key be sent in task params?
-
+  Because context may contain non-string args, it is stored in the memcache
+  and the memcache key is passed to the sendMail task.
+  
+  Args:
+    context:  The context supplied to the template and email (dictionary)
+  
   """
-  task = taskqueue.Task(params=context, url='/tasks/mail/sendmail')
-  task.add()
+  # the key can be anything, as long as it is unique
+  memcache_key = str(time.time())
+  # save mail dict to the memcache
+  memcache.set(memcache_key, context, namespace='mail')
+  params = {'memcache_key': memcache_key}
+  task = taskqueue.Task(params=params, url='/tasks/mail/sendmail')
+  task.add(queue_name='mail')
   
 
 def getDefaultMailSender():

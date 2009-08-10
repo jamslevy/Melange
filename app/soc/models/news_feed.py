@@ -36,8 +36,8 @@ class FeedItem(base.ModelWithFieldAttributes):
   
   """
   # refers to the entity this feed item is about
-  # note: using key because entity kind is arbitrary  
-  sender_key = db.StringProperty(required=True)
+  sender = db.ReferenceProperty(reference_class=None,
+               required=True)
   # refers to scope of feed where this item will appear 
   #receiver_key = db.StringProperty(required=True)
   receivers = db.ListProperty(db.Key)
@@ -56,6 +56,3 @@ class FeedItem(base.ModelWithFieldAttributes):
   #: date when the feed item was created
   created = db.DateTimeProperty(auto_now_add=True)
 
-  # helper method to retrieve sender entity
-  def sender(self):
-    return db.get(self.sender_key)

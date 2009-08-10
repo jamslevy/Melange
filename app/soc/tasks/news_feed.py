@@ -22,6 +22,7 @@ __authors__ = [
 
 import logging
 import os
+import time
 
 from django import http
 
@@ -32,6 +33,7 @@ from soc.logic import accounts
 from soc.logic import mail_dispatcher
 import soc.logic.helper.notifications
 import soc.logic.models as model_logic
+from soc.logic.models.news_feed import logic as news_feed_logic
 from soc.logic.models.subscriptions import logic as subscriptions_logic
 from soc.logic.models.user import logic as user_logic
 import soc.models.news_feed
@@ -60,15 +62,17 @@ def scheduleAddToFeedTask(sender, receivers, update_type, **kwargs):
                 for this event
     update_type - create, update, delete, etc.
   """
-  
+  #create unique feed_item_key for this item, in case task repeats
+  feed_item_key = sender.key().id_or_name() + str(time.time())
   # optional payload message for this item 
   payload = kwargs.get('payload', None)
     
   task_params = {
+      'feed_item_key' : feed_item_key,
       'payload': payload,
       'receivers': [receiver.key() for receiver in receivers],
       'sender_key': sender.key(),
-      'update_type': update_type,
+      'update_type': update_type
       }
   
   user = user_logic.getForCurrentAccount()  
@@ -84,11 +88,12 @@ def AddToFeedTask(request, *args, **kwargs):
   and one receiver entity
   
   Params:
+    feed_item_key - key_name used for feed item 
     sender_key - key for the entity sending the event
     receivers - entities assigned to get item in their feed
     update_type - create, update, delete, etc.
     payload - optional payload message for this feed item
-    user_key - user who made the update 
+    user_key - key_name of user who made the update 
   """
   params = request.POST
   """
@@ -96,9 +101,10 @@ def AddToFeedTask(request, *args, **kwargs):
     return error_handler.logErrorAndReturnOK(
         'no user specified for AddToFeedTask')
   """
+  feed_item_key = params.get('feed_item_key')
   user_key = params.get('user_key', None)
   if user_key:
-    acting_user = user_logic._model.get_by_key_name(user_key)
+    acting_user = user_logic.getFromKeyName(user_key)
   else:
     acting_user = None
   sender_key = params.get('sender_key')
@@ -120,20 +126,21 @@ def AddToFeedTask(request, *args, **kwargs):
   payload = params.get('payload')
   
   # save item to datastore
-  new_feed_item = soc.models.news_feed.FeedItem( 
-  sender_key= str(sender_key), #TODO(james): db.Key
+  feed_item_properties = dict( 
+  sender= db.Key(sender_key),
   receivers = receivers,
   update_type = update_type
   )
   
   if payload: 
-    new_feed_item.payload = payload
+    feed_item_properties['payload'] = payload
 
   if acting_user: 
-    new_feed_item.user = acting_user
-        
-  db.put(new_feed_item)
-  
+    feed_item_properties['user'] = acting_user
+    
+  new_feed_item = news_feed_logic.updateOrCreateFromKeyName(
+  feed_item_properties, feed_item_key)
+
   sendFeedItemEmailNotifications(sender_key, acting_user,
                                  update_type, payload, **kwargs)
                   
@@ -189,7 +196,6 @@ def sendFeedItemEmailNotifications(entity_key, acting_user, update_type,
         # message configuration
         'to_name': to_user.name,
         'to': accounts.denormalizeAccount(to_user.account).email(),  
-                
         'sender_name': sender_name,
         'sender': accounts.denormalizeAccount(sender.account).email(),
         # feed item info

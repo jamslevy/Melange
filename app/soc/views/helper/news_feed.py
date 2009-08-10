@@ -92,7 +92,7 @@ class NewsFeed():
       feed_item_list.append(
       { 
        "item": item,
-       "link": self.linkToEntity(item.sender())
+       "link": self.linkToEntity(item.sender)
       })
     return feed_item_list 
 

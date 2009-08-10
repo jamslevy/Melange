@@ -18,7 +18,7 @@
 """
 
 __authors__ = [
-  'JamesLevy" <jamesalexanderlevy@gmail.com>',
+  '"JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
 import logging
