@@ -170,7 +170,6 @@ def sendHubNotification(receiver):
   """
   news_feed = NewsFeed(receiver)
   # resolve the URL of the entity's ATOM feed
-  # 'http://' + os.environ.get('HTTP_HOST') + 
   entity_feed_url = news_feed.getFeedUrl()
   headers = {'content-type': 'application/x-www-form-urlencoded'}
   post_params = {
