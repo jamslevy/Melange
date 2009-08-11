@@ -23,9 +23,11 @@ __authors__ = [
 import logging
 import os
 import time
+import urllib
 
 from django import http
 
+from google.appengine.api import urlfetch
 from google.appengine.api.labs import taskqueue
 from google.appengine.ext import db
 
@@ -39,9 +41,11 @@ from soc.logic.models.user import logic as user_logic
 import soc.models.news_feed
 import soc.models.linkable 
 from soc.tasks.helper import error_handler
-from soc.views.helper.news_feed import news_feed
+from soc.views.helper.news_feed import NewsFeed, news_feed
+
 
 TASK_FEED_URL = 'tasks/news_feed/addtofeed'
+HUB_URL = 'http://pubsubhubbub.appspot.com/'
 
 def getDjangoURLPatterns():
   """Returns the URL patterns for the tasks in this module.
@@ -141,15 +145,49 @@ def AddToFeedTask(request, *args, **kwargs):
   new_feed_item = news_feed_logic.updateOrCreateFromKeyName(
   feed_item_properties, feed_item_key)
 
-  sendFeedItemEmailNotifications(sender_key, acting_user,
+
+  sender = db.get(sender_key)
+  sendFeedItemEmailNotifications(sender, acting_user,
                                  update_type, payload, **kwargs)
-                  
+
+  # send update ping for each receiver's feed
+  receiver_entities = db.get(receivers)
+  for receiver in receiver_entities:
+    sendHubNotification(receiver)                  
   # task completed, return OK
   return http.HttpResponse('OK')
 
 
-
-def sendFeedItemEmailNotifications(entity_key, acting_user, update_type, 
+def sendHubNotification(receiver):
+  """
+  Sends PubSubHubbub Ping to Third-Party Hub
+  
+  TODO (james): Since this method may be called multiple times, is there 
+  a way to batch the URLfetches for more efficiency?
+  
+  Params:
+         receiver - the receiver entity with a newly updated feed
+  """
+  news_feed = NewsFeed(receiver)
+  # resolve the URL of the entity's ATOM feed
+  # 'http://' + os.environ.get('HTTP_HOST') + 
+  entity_feed_url = news_feed.getFeedUrl()
+  headers = {'content-type': 'application/x-www-form-urlencoded'}
+  post_params = {
+    'hub.mode': 'publish',
+    'hub.url': entity_feed_url,
+  }
+  payload = urllib.urlencode(post_params)
+  try:
+    # can these be sent in a batch?
+    response = urlfetch.fetch(HUB_URL, method='POST', payload=payload)
+  except urlfetch.Error:
+    logging.exception('Failed to deliver publishing message to %s', HUB_URL)
+  else:
+    logging.info('URL fetch status_code=%d, content="%s"',
+                 response.status_code, response.content)
+                   
+def sendFeedItemEmailNotifications(entity, acting_user, update_type, 
   payload,  context = {}, **kwargs):
   """
    Sends e-mail notification to user about new feed item. 
@@ -157,7 +195,7 @@ def sendFeedItemEmailNotifications(entity_key, acting_user, update_type,
    (while it is not included in the Atom feed)
   
   Params:
-         entity_key - entity being updated
+         entity - entity being updated
          acting_user - use who performed feed action (or None)
          update_type - type of update (created, updated, deleted)
          payload - extra information for message
@@ -165,8 +203,7 @@ def sendFeedItemEmailNotifications(entity_key, acting_user, update_type,
          
   """  
 
-  # no from_user required
-  entity = db.get(entity_key)
+
   if acting_user: 
     sender_name = acting_user.name
     sender = acting_user
