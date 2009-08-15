@@ -23,6 +23,7 @@ __authors__ = [
 
 import os
   
+
 from django.template import loader
   
 from soc.cache import news_feed
@@ -55,17 +56,17 @@ class NewsFeed():
     """
     self.entity = entity
 
-
-    
-
-    
       
   def getFeed(self): 
     """gets HTML version of Newsfeed for entity
     """ 
     feed_items = self.retrieveFeed()
     feed_url = self.getFeedUrl()
-    context = { 'feed_items': feed_items, 'feed_url': feed_url }
+    context = { 
+                'entity_key': self.entity.key(), 
+                'feed_items': feed_items, 
+                'feed_url': feed_url 
+              }
     return loader.render_to_string('soc/news_feed/news_feed.html',
                                      dictionary=context)
     
@@ -138,5 +139,49 @@ class NewsFeed():
     getPublicRedirect(entity, params)  ) )
 
 
-
 news_feed = NewsFeed(None)
+
+
+
+"""
+
+Ajax Methods
+
+"""
+
+import logging
+
+from django import http
+
+from soc.logic.models.subscriptions import logic as subscription_logic
+
+def edit_subscription(request, *args, **kwargs):
+  if request.GET.get('entity_key'):
+    entity_key = request.GET.get('entity_key')
+  else:
+    return http.HttpResponseServerError()
+  if request.GET.get('subscribe') == 'true':
+    subscribe = True
+  elif request.GET.get('subscribe') == 'false':
+    subscribe = False
+  else:
+    return http.HttpResponseServerError()
+  subscription_logic.editEntitySubscription(entity_key, subscribe)
+  return http.HttpResponse('OK')
+    
+
+def getDjangoURLPatterns():
+  """Returns the URL patterns for the tasks in this module.
+  """
+
+  patterns = [(
+      r'ajax/news_feed/edit_subscription$',
+      'soc.views.helper.news_feed.edit_subscription')]
+
+  return patterns
+  
+      
+
+
+
+

@@ -106,7 +106,22 @@ class Logic(base.Logic):
     subscriber.has_email_subscription = is_subscribed
     db.put(subscriber)
           
-
+  def editEntitySubscription(self, entity_key, subscribe):
+    """ Edit subscription for a single entity
+    """
+    entity_key = db.Key(entity_key)
+    user = user_logic.getForCurrentAccount() 
+    subscriber = self.getSubscriberForUser(user)
+    if subscribe and entity_key not in subscriber.subscriptions:
+      subscriber.subscriptions.append(entity_key)
+      logging.info('added subscription for entity_key %s for user %s'
+      % (entity_key, user.key().name()))
+    elif not subscribe and entity_key in subscriber.subscriptions:
+      subscriber.subscriptions.remove(entity_key)
+      logging.info('removed subscription for entity_key %s for user %s'
+      % (entity_key, user.key().name()))
+    else: return
+    db.put(subscriber)
 
 class UpdateLogic():
   """ 

@@ -36,6 +36,7 @@ from soc.views.models import grading_survey_group
 from soc.views.models import host
 from soc.views.models import job
 from soc.views.models import mentor
+from soc.views.helper import news_feed
 from soc.views.models import notification
 from soc.views.models import organization
 from soc.views.models import org_admin
@@ -108,6 +109,9 @@ class Callback(object):
     self.core.registerSitemapEntry(user_self.view.getDjangoURLPatterns())
     self.core.registerSitemapEntry(user.view.getDjangoURLPatterns())
 
+    # register ajax URLs
+    self.core.registerSitemapEntry(news_feed.getDjangoURLPatterns())
+    
     # register task URL's
     self.core.registerSitemapEntry(grading_group_tasks.getDjangoURLPatterns())
     self.core.registerSitemapEntry(mail_tasks.getDjangoURLPatterns())

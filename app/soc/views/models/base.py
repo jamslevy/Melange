@@ -750,7 +750,8 @@ class View(object):
   def subscribe(self, request, page_name=None, params=None, **kwargs):
     """
     
-    Returns ATOM feed of recent updates 
+    Returns ATOM feed of recent updates
+     
     """
     
     entity = self._params.get('logic').getFromKeyFields(kwargs)

@@ -55,7 +55,12 @@ class View(project_survey.View):
     rights['edit'] = [('checkIsSurveyWritable', grading_survey_logic)]
     rights['delete'] = ['checkIsDeveloper'] # TODO: fix deletion of Surveys
     rights['list'] = ['checkDocumentList']
-    rights['results'] = [('checkIsSurveyWritable', grading_survey_logic)]
+    rights['record'] = [('checkHasAny', [
+        [('checkIsAllowedToViewProjectSurveyRecordAs',
+          [grading_survey_logic, 'mentor', 'id']),
+        ('checkIsSurveyReadable', [grading_survey_logic]),
+        ]])]
+    rights['results'] = ['checkIsDeveloper'] # TODO: proper access check
     rights['take'] = [('checkIsSurveyTakeable', grading_survey_logic),
                       ('checkIsAllowedToTakeProjectSurveyAs',
                        [grading_survey_logic, 'mentor', 'project'])]
@@ -65,6 +70,8 @@ class View(project_survey.View):
     new_params['rights'] = rights
 
     new_params['name'] = "Grading Project Survey"
+
+    new_params['survey_take_form'] = GradeSurveyTakeForm
 
     # used for sending reminders
     new_params['survey_type'] = 'grading'
@@ -77,24 +84,6 @@ class View(project_survey.View):
     params = dicts.merge(params, new_params, sub_merge=True)
 
     super(View, self).__init__(params=params)
-
-  def _getSurveyTakeForm(self, survey, record, params, post_dict=None):
-    """Returns the specific SurveyTakeForm needed for the take view.
-
-    For args see survey.View._getSurveyTakeForm().
-
-    Returns:
-        An instance of GradeSurveyTakeForm.
-    """
-
-    grade_choices = (('pass', 'Pass'), ('fail', 'Fail'))
-    survey_form = GradeSurveyTakeForm(survey_content=survey.survey_content,
-                                      survey_record=record,
-                                      survey_logic=params['logic'],
-                                      grade_choices=grade_choices,
-                                      data=post_dict)
-
-    return survey_form
 
   def _constructFilterForProjectSelection(self, survey, params):
     """Returns the filter needed for the Project selection view.
@@ -122,11 +111,11 @@ class View(project_survey.View):
     # TODO: Ensure that this doesn't break when someone is a mentor for
     # a lot of organizations.
 
-    # TODO(ljvderijk) transform StudentProject to handle multiple surveys
     fields = {'mentor': mentor_entities,
               'status': 'accepted'}
 
     return fields
+
 
 class GradeSurveyTakeForm(surveys.SurveyTakeForm):
   """Extends SurveyTakeForm by adding a grade field.
@@ -135,16 +124,7 @@ class GradeSurveyTakeForm(surveys.SurveyTakeForm):
   should be the same as the base class's if this argument is missing).
   """
 
-  def __init__(self, *args, **kwargs):
-    """Store grade choices and initialize the form.
-
-    params:
-      grade_choices: pair of tuples representing the grading choices
-    """
-
-    self.grade_choices = kwargs.pop('grade_choices', None)
-
-    super(GradeSurveyTakeForm, self).__init__(*args, **kwargs)
+  DEF_GRADE_CHOICES = (('pass', 'Pass'), ('fail', 'Fail'))
 
   def setCleaners(self, post_dict=None):
     """Ensures that the grade field is added to the clean data.
@@ -188,8 +168,7 @@ class GradeSurveyTakeForm(surveys.SurveyTakeForm):
     # remap bool to string values as the ChoiceField validates on 'choices'.
     vals_grade = {True: 'pass', False: 'fail'}
 
-    if self.grade_choices:
-      self.data['grade'] = vals_grade.get(grade, None) or grade
+    self.data['grade'] = vals_grade.get(grade, None) or grade
 
     return super(GradeSurveyTakeForm, self).getFields(post_dict)
 
@@ -200,16 +179,15 @@ class GradeSurveyTakeForm(surveys.SurveyTakeForm):
     # add common survey fields
     fields = super(GradeSurveyTakeForm, self).insertFields()
 
-    if self.grade_choices:
-      # add empty option to choices
-      grade_choices = (('', "Choose a Grade"),) + tuple(self.grade_choices)
+    # add empty option to choices
+    grade_choices = (('', "Choose a Grade"),) + tuple(self.DEF_GRADE_CHOICES)
 
-      gradeField = forms.fields.ChoiceField(choices=grade_choices,
-                                            required=True,
-                                            widget=forms.Select(),
-                                            initial=self.data.get('grade'))
-      # add the grade field at the form's bottom
-      fields.insert(len(fields) + 1, 'grade', gradeField)
+    gradeField = forms.fields.ChoiceField(choices=grade_choices,
+                                          required=True,
+                                          widget=forms.Select(),
+                                          initial=self.data.get('grade'))
+    # add the grade field at the form's bottom
+    fields.insert(len(fields) + 1, 'grade', gradeField)
 
     return fields
 

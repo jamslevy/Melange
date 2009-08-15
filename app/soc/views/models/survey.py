@@ -761,7 +761,7 @@ class View(base.View):
       except ValueError:
         logging.warning('non-integer record_id %s passed as argument \
         to view survey record.' % str(request.GET.get('record_id')))
-    survey_form = surveys.SurveyTakeForm(survey_content=entity.survey_content,
+    survey_form = surveys.SurveyRecordForm(survey_content=entity.survey_content,
                                          survey_record=record,
                                          survey_logic=self._params['logic'])
 
