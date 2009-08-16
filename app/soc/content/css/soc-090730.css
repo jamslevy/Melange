@@ -864,3 +864,6 @@ div #survey_widget td > fieldset > label {
 a#feed_icon img{
   margin:-1px 0;
 }
+img#subscribe{
+  cursor:pointer;
+}

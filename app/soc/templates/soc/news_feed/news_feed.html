@@ -3,7 +3,7 @@
 <script type="text/javascript">
 $(function(){
 
-$('img#subscribe').click(function(){
+$('img#subscribe.enabled').click(function(){
 
 if ($(this).hasClass('subscribed')){
 $(this).attr('src', "/soc/content/images/watched_n.gif"); 
@@ -16,7 +16,7 @@ $(this).toggleClass('subscribed');
 var subscribe_status = $(this).hasClass('subscribed');
 
 $.ajax({
-  type: "GET", 
+  type: "POST", 
   url: '/ajax/news_feed/edit_subscription',
   datatype: "json",
   data:
@@ -39,9 +39,9 @@ $.ajax({
 </script>
 <h2>
 {% if subscribed %}
-<img class="subscribed" id="subscribe" src="/soc/content/images/watched_y.gif"/></a>
+<img class="subscribed enabled" id="subscribe" src="/soc/content/images/watched_y.gif"/></a>
 {% else %}
-<img id="subscribe" src="/soc/content/images/watched_n.gif"/></a>
+<img id="subscribe" {% if account %} class="enabled" {% endif %} src="/soc/content/images/watched_n.gif"/></a>
 {% endif %}
 <a id="feed_icon" href="{{ feed_url }}">
 <img src="/soc/content/images/feed.gif"/></a>

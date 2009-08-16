@@ -28,6 +28,7 @@ from django.template import loader
   
 from soc.cache import news_feed
 from soc.logic.models.news_feed import logic as newsfeed_logic
+from soc.logic.models.user import logic as user_logic
 from soc.views.helper.redirects import getPublicRedirect
 from soc.views.helper.redirects import getSubscribeRedirect
 
@@ -62,7 +63,12 @@ class NewsFeed():
     """ 
     feed_items = self.retrieveFeed()
     feed_url = self.getFeedUrl()
+    account = user_logic.getForCurrentAccount()
+    is_subscribed = subscription_logic.isSubscribed(
+                account, self.entity)
     context = { 
+                'account': account,
+                'subscribed': is_subscribed,
                 'entity_key': self.entity.key(), 
                 'feed_items': feed_items, 
                 'feed_url': feed_url 
@@ -156,13 +162,13 @@ from django import http
 from soc.logic.models.subscriptions import logic as subscription_logic
 
 def edit_subscription(request, *args, **kwargs):
-  if request.GET.get('entity_key'):
-    entity_key = request.GET.get('entity_key')
+  if request.POST.get('entity_key'):
+    entity_key = request.POST.get('entity_key')
   else:
     return http.HttpResponseServerError()
-  if request.GET.get('subscribe') == 'true':
+  if request.POST.get('subscribe') == 'true':
     subscribe = True
-  elif request.GET.get('subscribe') == 'false':
+  elif request.POST.get('subscribe') == 'false':
     subscribe = False
   else:
     return http.HttpResponseServerError()

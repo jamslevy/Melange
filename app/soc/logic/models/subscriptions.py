@@ -43,8 +43,12 @@ class Logic(base.Logic):
     super(Logic, self).__init__(model, scope_logic=scope_logic)
 
 
-  def createSubscriber(self, user, has_email_subscription=True):
+  def createSubscriber(self, user, has_email_subscription=False):
     """ creates news feed subscriber for user (added to onCreate hook)
+    
+    Args:
+        user - user parent of subscriber
+        has_email_subscription - toggle on email subscription for user
     """
     # check if there already is a subscriber for this user
     subscriber = self.getFromKeyName(self.getSubscriberKeyName(
@@ -62,55 +66,55 @@ class Logic(base.Logic):
 
   def getSubscriberKeyName(self, user_key_name):
     """ standardized key name format 
+    
+    Args:
+         user_key_name - key name of user
     """
     return "subscriber_" + user_key_name
 
 
   def getSubscriberForUser(self, user):
     """ standardized key name format 
+    Args:
+     user - user parent of subscriber
     """
     subscriber = user.subscriber.get()
     if not subscriber:
       subscriber = self.createSubscriber(user)
     return subscriber
     
-        
-  def getSubscribedUsersForFeedItem(self, entity):
-    """ retrieve all users who are subscribed to the sender entity
-    of a new FeedItem
+  def isSubscribed(self, user, entity):
+    """ return Bool indicating if user is subscribed to an entity
+    
+    Args:
+         user - user to check 
+         entity - subscription entity 
     """
-    return [i.user for i in soc.models.subscriptions.Subscriber.all(
-    )]#.filter('subscriptions', entity)] 
-
-
-  def updateSubscribersForEntity(self, entity):
-    """ add subscription to all users with an active role for this 
-    entity 
-    """
-    update_method = getattr(update_logic, entity.kind().lower(), None)
-    if update_method:
-      users = update_method(entity)
-      update_logic.addEntitySubscriptionForUsers(users, entity)
-    # in case no update method is found
-    else: 
-      logging.error('no subscriber update method found for entity kind\
-      %s' % entity.kind().lower())
-      return None
-
-  def editSubscription(self, entity, is_subscribed):
+    if not user: return
+    subscriber = self.getSubscriberForUser(user)
+    return (entity.key() in subscriber.subscriptions)
+    
+  def editSubscription(self, user, is_subscribed):
     """ Through the Edit Profile page, a user
     can toggle a global e-mail subscription setting. Subscribe-by-star 
     UI controls subscription to individual entities) 
+    
+    Args:
+        user - user updating their global subscription preference 
     """
-    subscriber = self.getSubscriberForUser(entity)
+    subscriber = self.getSubscriberForUser(user)
     subscriber.has_email_subscription = is_subscribed
     db.put(subscriber)
           
   def editEntitySubscription(self, entity_key, subscribe):
     """ Edit subscription for a single entity
+    
+    Args:
+      entity_key - key of subscription entity
+      subscribe - Boolean describing current subscribe status
     """
     entity_key = db.Key(entity_key)
-    user = user_logic.getForCurrentAccount() 
+    user = self._scope_logic.getForCurrentAccount() 
     subscriber = self.getSubscriberForUser(user)
     if subscribe and entity_key not in subscriber.subscriptions:
       subscriber.subscriptions.append(entity_key)
@@ -123,9 +127,57 @@ class Logic(base.Logic):
     else: return
     db.put(subscriber)
 
+  def getSubscribedUsersForFeedItem(self, entity):
+    """ retrieve all users who are subscribed to the sender entity
+    of a new FeedItem
+    Args:
+        entity - feed item entity
+    """
+    return [i.user for i in soc.models.subscriptions.Subscriber.all(
+    ).filter('subscriptions', entity)] 
+
+
+  def updateSubscribersForEntity(self, entity):
+    """ Automated method to add subscription to all users with 
+    an active role for this entity 
+    
+    Args:
+         entity - entity subject of subscription
+    """
+    update_method = getattr(update_logic, entity.kind().lower(), None)
+    if update_method:
+      users = update_method(entity)
+      update_logic.addEntitySubscriptionForUsers(users, entity)
+    # in case no update method is found
+    else: 
+      logging.error('no subscriber update method found for entity kind\
+      %s' % entity.kind().lower())
+      return None
+
+
 class UpdateLogic():
   """ 
   Update the subscribers for an entity
+  
+  """
+
+  def addEntitySubscriptionForUsers(self, users, entity):
+    """ 
+    add a new subscription for users for a given entity.
+    
+    Args:
+         users - list of users
+         entity - subscription entity
+    """
+    subscribers = [ logic.getSubscriberForUser(user) for user in users ]
+    for subscriber in subscribers:
+      if entity.key() not in subscriber.subscriptions:
+        subscriber.subscriptions.append(entity.key())
+    db.put(subscribers)
+
+  """ 
+  
+  Model-specific methods 
   
   TODO (James): 
   
@@ -135,15 +187,8 @@ class UpdateLogic():
   
   The only option appears to be creating new logic infrastructure,
   but leveraging any existing logic would surely be better. 
-  """
-
-  def addEntitySubscriptionForUsers(self, users, entity):
-    subscribers = [ logic.getSubscriberForUser(user) for user in users ]
-    for subscriber in subscribers:
-      if entity.key() not in subscriber.subscriptions:
-        subscriber.subscriptions.append(entity.key())
-    db.put(subscribers)
-        
+  
+  """        
       
   def document(self, entity):
     users = []#user_logic.getForFields({})
