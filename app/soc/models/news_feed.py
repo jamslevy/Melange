@@ -48,7 +48,7 @@ class FeedItem(base.ModelWithFieldAttributes):
                                 
   # type of update
   update_type = db.StringProperty(required=True, choices=
-                  ['created', 'updated', 'deleted'])  
+                  ['created', 'updated', 'deleted', 'commented on'])  
   
   # a message or markup that go along with the feed item
   payload = db.TextProperty(required=False)

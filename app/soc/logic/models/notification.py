@@ -19,6 +19,7 @@
 
 __authors__ = [
   '"Lennard de Rijk" <ljvderijk@gmail.com>',
+  '"JamesLevy" <jamesalexanderlevy@gmail.com>',
   ]
 
 
@@ -28,9 +29,37 @@ from soc.cache import sidebar
 from soc.logic.helper import notifications
 from soc.logic.models import base
 from soc.logic.models import user as user_logic
+from soc.logic.models.subscriptions import logic as subscription_logic
+from soc.logic.models.news_feed import logic as newsfeed_logic
 
 import soc.models.notification
 
+
+
+class NewsFeedNotification():
+  """
+  
+  Not based on Notification model because no special notification model
+  is required.
+  
+  """
+  
+  def sendNotification(self, notification_msg, entity):
+    """ Comment on an entity, sending e-mails and RSS updates
+    via Newsfeed logic 
+    
+    Args:
+        notification_msg - Text comment made for entity
+        entity - entity being commented on 
+    """
+    # TODO: No generalized way to reliably get parent's parent 
+    # without model-specific logic
+    receivers = [entity.scope]
+    subscription_logic.updateSubscribersForEntity(entity)
+    newsfeed_logic.addToFeed(entity, receivers, "commented on", 
+    payload=notification_msg)
+
+     
 
 class Logic(base.Logic):
   """Logic methods for the Notification model.

@@ -127,11 +127,10 @@ class Logic(base.Logic):
     else: return
     db.put(subscriber)
 
-  def getSubscribedUsersForFeedItem(self, entity):
-    """ retrieve all users who are subscribed to the sender entity
-    of a new FeedItem
+  def getSubscribedUsersForEntity(self, entity):
+    """ retrieve all users who are subscribed to an entity.
     Args:
-        entity - feed item entity
+        entity - subscription entity
     """
     return [i.user for i in soc.models.subscriptions.Subscriber.all(
     ).filter('subscriptions', entity)] 

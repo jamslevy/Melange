@@ -147,7 +147,7 @@ def AddToFeedTask(request, *args, **kwargs):
 
 
   sender = db.get(sender_key)
-  sendFeedItemEmailNotifications(sender, acting_user,
+  sendFeedItemEmailNotifications(sender, receivers, acting_user,
                                  update_type, payload, **kwargs)
 
   # send update ping for each receiver's feed
@@ -186,7 +186,7 @@ def sendHubNotification(receiver):
     logging.info('URL fetch status_code=%d, content="%s"',
                  response.status_code, response.content)
                    
-def sendFeedItemEmailNotifications(entity, acting_user, update_type, 
+def sendFeedItemEmailNotifications(entity, receivers, acting_user, update_type, 
   payload,  context = {}, **kwargs):
   """
    Sends e-mail notification to user about new feed item. 
@@ -195,6 +195,7 @@ def sendFeedItemEmailNotifications(entity, acting_user, update_type,
   
   Params:
          entity - entity being updated
+         receivers - receiver entities for this update
          acting_user - use who performed feed action (or None)
          update_type - type of update (created, updated, deleted)
          payload - extra information for message
@@ -213,21 +214,20 @@ def sendFeedItemEmailNotifications(entity, acting_user, update_type,
   else: 
     entity_title  = entity.key().name()
   
-  subject = "%s - %s (%s) has been %s" % (
+  subject = "%s - %s (%s) has been %s." % (
   os.environ['APPLICATION_ID'].capitalize(),
   entity_title, entity.kind(), update_type)
-  
-    
-  # this should be a user query function and there should be
-  # an access check for the receiver and then a check against a 
-  # no_subscribe ListProperty for user for both sender and recevier.
-  to_users = subscriptions_logic.getSubscribedUsersForFeedItem(entity)
-  logging.info(to_users)
+  # get users for e-mail notification
+  to_users = []
+  for receiver in receivers:
+    to_users.extend(
+    subscriptions_logic.getSubscribedUsersForEntity(receiver))
+  logging.info('subscribed users: %s' % to_users)
   # get site name
   site_entity = model_logic.site.logic.getSingleton()
   site_name = site_entity.site_name
    
-  for to_user in to_users:
+  for to_user in set(to_users):
     messageProperties = {
         # message configuration
         'to_name': to_user.name,
